@@ -6,11 +6,13 @@ import { Product } from "./ProductTypes";
 type ProductFormProps = {
   products: Product[];
   onSave: (product: Product) => void;
+  editingProduct?: Product | null;
 };
 
 export default function ProductForm({
   products,
   onSave,
+  editingProduct,
 }: ProductFormProps) {
   const [productCode, setProductCode] = useState("");
   const [productName, setProductName] = useState("");
@@ -21,13 +23,26 @@ export default function ProductForm({
   const [salePrice, setSalePrice] = useState("");
   const [mrp, setMrp] = useState("");
   const [openingStock, setOpeningStock] = useState("");
+useEffect(() => {
+  if (!editingProduct) return;
 
-  useEffect(() => {
-    setProductCode(
-      `P${String(products.length + 1).padStart(4, "0")}`
-    );
-  }, [products]);
+  setProductCode(editingProduct.code);
+  setProductName(editingProduct.name);
+  setHsnCode(editingProduct.hsn);
+  setGst(editingProduct.gst);
+  setUnit(editingProduct.unit);
+  setPurchasePrice(String(editingProduct.purchase));
+  setSalePrice(String(editingProduct.sale));
+  setMrp(String(editingProduct.mrp));
+  setOpeningStock(String(editingProduct.stock));
+}, [editingProduct]);
+ useEffect(() => {
+  if (editingProduct) return;
 
+  setProductCode(
+    `P${String(products.length + 1).padStart(4, "0")}`
+  );
+}, [products, editingProduct]);
   const resetForm = () => {
     setProductName("");
     setHsnCode("");
@@ -45,8 +60,9 @@ export default function ProductForm({
       return;
     }
 
-    const product: Product = {
-      code: productCode,
+   const product: Product = {
+  id: editingProduct ? editingProduct.id : crypto.randomUUID(),
+  code: productCode,
       name: productName,
       hsn: hsnCode,
       gst,
@@ -56,7 +72,9 @@ export default function ProductForm({
       mrp: Number(mrp) || 0,
       stock: Number(openingStock) || 0,
     };
-
+if (editingProduct) {
+  product.id = editingProduct.id;
+}
     onSave(product);
 
     alert("Product Saved Successfully");
@@ -175,7 +193,7 @@ export default function ProductForm({
             marginRight: "10px",
           }}
         >
-          💾 Save Product
+         {editingProduct ? "💾 Update Product" : "💾 Save Product"}
         </button>
 
         <button
@@ -190,6 +208,22 @@ export default function ProductForm({
           }}
         >
           🔄 Reset
+          {editingProduct && (
+  <button
+    onClick={resetForm}
+    style={{
+      background: "#dc2626",
+      color: "#fff",
+      padding: "12px 25px",
+      border: "none",
+      borderRadius: "6px",
+      cursor: "pointer",
+      marginLeft: "10px",
+    }}
+  >
+    ❌ Cancel Edit
+  </button>
+)}
         </button>
       </div>
     </div>

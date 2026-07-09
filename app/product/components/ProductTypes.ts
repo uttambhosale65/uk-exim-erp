@@ -1,9 +1,12 @@
 export type Product = {
+  id: string;
+
   code: string;
   name: string;
   hsn: string;
   gst: string;
   unit: string;
+
   purchase: number;
   sale: number;
   mrp: number;
