@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import SupplierForm from "../components/supplier/SupplierForm";
+import SupplierForm from "../components/SupplierForm";
 import SupplierTable from "../components/supplier/SupplierTable";
 
 import { Supplier } from "../components/supplier/SupplierTypes";
