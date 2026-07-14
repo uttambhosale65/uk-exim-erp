@@ -48,7 +48,7 @@ export default function SupplierPage() {
       >
         🚚 UK EXIM ERP - Supplier Master
       </h1>
-
+<p>Next Supplier Code : {supplierCode}</p>
       <SupplierForm
         supplierCode={supplierCode}
         onSave={addSupplier}

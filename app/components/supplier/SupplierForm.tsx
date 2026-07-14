@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Supplier } from "./SupplierTypes";
 
 type SupplierFormProps = {
@@ -12,59 +12,100 @@ export default function SupplierForm({
   supplierCode,
   onSave,
 }: SupplierFormProps) {
-  const emptySupplier: Supplier = {
+  const [supplier, setSupplier] = useState<Supplier>({
     id: crypto.randomUUID(),
     code: supplierCode,
+
     name: "",
     contactPerson: "",
+
     mobile: "",
     email: "",
+
     gst: "",
     pan: "",
+
     address: "",
     city: "",
     state: "",
     country: "India",
     pinCode: "",
+
     openingBalance: 0,
     creditLimit: 0,
+
     status: "Active",
-  };
+  });
 
-  const [supplier, setSupplier] = useState<Supplier>(emptySupplier);
+  useEffect(() => {
+    setSupplier((prev) => ({
+      ...prev,
+      code: supplierCode,
+    }));
+  }, [supplierCode]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  function handleChange(
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement
+    >
+  ) {
     const { name, value } = e.target;
 
     setSupplier((prev) => ({
       ...prev,
       [name]:
-        name === "openingBalance" || name === "creditLimit"
+        name === "openingBalance" ||
+        name === "creditLimit"
           ? Number(value)
           : value,
     }));
-  };
+  }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  function handleSubmit(
+    e: React.FormEvent
+  ) {
     e.preventDefault();
 
     onSave(supplier);
-
     setSupplier({
-      ...emptySupplier,
       id: crypto.randomUUID(),
       code: supplierCode,
+
+      name: "",
+      contactPerson: "",
+
+      mobile: "",
+      email: "",
+
+      gst: "",
+      pan: "",
+
+      address: "",
+      city: "",
+      state: "",
+      country: "India",
+      pinCode: "",
+
+      openingBalance: 0,
+      creditLimit: 0,
+
+      status: "Active",
     });
-  };
+  }
+
   return (
     <form onSubmit={handleSubmit}>
       <h2>Supplier Master</h2>
 
-      <input value={supplier.code} readOnly />
+      <input
+        type="text"
+        value={supplier.code}
+        readOnly
+        placeholder="Supplier Code"
+      />
 
       <input
+        type="text"
         name="name"
         placeholder="Supplier Name"
         value={supplier.name}
@@ -73,6 +114,7 @@ export default function SupplierForm({
       />
 
       <input
+        type="text"
         name="contactPerson"
         placeholder="Contact Person"
         value={supplier.contactPerson}
@@ -80,6 +122,7 @@ export default function SupplierForm({
       />
 
       <input
+        type="text"
         name="mobile"
         placeholder="Mobile"
         value={supplier.mobile}
@@ -87,6 +130,7 @@ export default function SupplierForm({
       />
 
       <input
+        type="email"
         name="email"
         placeholder="Email"
         value={supplier.email}
@@ -94,6 +138,7 @@ export default function SupplierForm({
       />
 
       <input
+        type="text"
         name="gst"
         placeholder="GST Number"
         value={supplier.gst}
@@ -101,6 +146,7 @@ export default function SupplierForm({
       />
 
       <input
+        type="text"
         name="pan"
         placeholder="PAN Number"
         value={supplier.pan}
@@ -108,6 +154,7 @@ export default function SupplierForm({
       />
 
       <input
+        type="text"
         name="address"
         placeholder="Address"
         value={supplier.address}
@@ -115,6 +162,7 @@ export default function SupplierForm({
       />
 
       <input
+        type="text"
         name="city"
         placeholder="City"
         value={supplier.city}
@@ -122,6 +170,7 @@ export default function SupplierForm({
       />
 
       <input
+        type="text"
         name="state"
         placeholder="State"
         value={supplier.state}
@@ -129,6 +178,7 @@ export default function SupplierForm({
       />
 
       <input
+        type="text"
         name="country"
         placeholder="Country"
         value={supplier.country}
@@ -136,6 +186,7 @@ export default function SupplierForm({
       />
 
       <input
+        type="text"
         name="pinCode"
         placeholder="PIN Code"
         value={supplier.pinCode}

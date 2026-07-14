@@ -2,16 +2,16 @@
 
 import { useEffect, useState } from "react";
 
-import PurchaseForm from "../components/purchase/PurchaseForm";
-import PurchaseTable from "../components/purchase/PurchaseTable";
+import PurchaseForm from "../components/customer/purchase/PurchaseForm";
+import PurchaseTable from "../components/customer/purchase/PurchaseTable";
 
-import { Purchase } from "../components/purchase/PurchaseTypes";
+import { Purchase } from "../components/customer/purchase/PurchaseTypes";
 
 import {
   loadPurchases,
   savePurchases,
   getNextPurchaseNo,
-} from "../components/purchase/PurchaseStorage";
+} from "../components/customer/purchase/PurchaseStorage";
 
 export default function PurchasePage() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -28,15 +28,15 @@ export default function PurchasePage() {
     setPurchaseNo(getNextPurchaseNo(purchases));
   }, [purchases]);
 
-  const addPurchase = (purchase: Purchase) => {
+  function addPurchase(purchase: Purchase) {
     setPurchases((prev) => [...prev, purchase]);
-  };
+  }
 
   return (
     <div
       style={{
-        padding: "20px",
-        maxWidth: "1200px",
+        padding: 20,
+        maxWidth: 1200,
         margin: "0 auto",
       }}
     >

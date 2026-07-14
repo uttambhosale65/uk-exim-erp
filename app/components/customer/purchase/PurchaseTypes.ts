@@ -11,6 +11,9 @@ export type Purchase = {
   productCode: string;
   productName: string;
 
+  hsn: string;
+  unit: string;
+
   qty: number;
   rate: number;
   amount: number;

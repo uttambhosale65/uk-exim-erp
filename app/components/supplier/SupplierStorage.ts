@@ -6,18 +6,40 @@ export function loadSuppliers(): Supplier[] {
   if (typeof window === "undefined") return [];
 
   const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
+
+  if (!data) return [];
+
+  try {
+    return JSON.parse(data) as Supplier[];
+  } catch {
+    return [];
+  }
 }
 
 export function saveSuppliers(suppliers: Supplier[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(suppliers));
+  if (typeof window === "undefined") return;
+
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(suppliers)
+  );
 }
 
-export function getNextSupplierCode(suppliers: Supplier[]): string {
-  if (suppliers.length === 0) return "SUP0001";
+export function getNextSupplierCode(
+  suppliers: Supplier[]
+): string {
+  if (suppliers.length === 0) {
+    return "SUP0001";
+  }
 
   const max = Math.max(
-    ...suppliers.map((s) => Number(s.code.replace("SUP", "")))
+    ...suppliers.map((supplier) => {
+      const number = Number(
+        supplier.code.replace("SUP", "")
+      );
+
+      return isNaN(number) ? 0 : number;
+    })
   );
 
   return `SUP${String(max + 1).padStart(4, "0")}`;
