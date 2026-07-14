@@ -15,18 +15,20 @@ export default function PurchaseForm({
   const [purchase, setPurchase] = useState<Purchase>({
     id: "",
     purchaseNo,
-    supplierName: "",
-    invoiceNo: "",
     purchaseDate: "",
+    invoiceNo: "",
+    supplierCode: "",
+    supplierName: "",
+    productCode: "",
     productName: "",
     qty: 0,
     rate: 0,
     amount: 0,
   });
 
-  function handleChange(
+  const handleChange = (
     e: React.ChangeEvent<HTMLInputElement>
-  ) {
+  ) => {
     const { name, value } = e.target;
 
     const updated = {
@@ -40,9 +42,11 @@ export default function PurchaseForm({
     updated.amount = updated.qty * updated.rate;
 
     setPurchase(updated);
-  }
+  };
 
-  function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
 
     onSave({
@@ -54,24 +58,26 @@ export default function PurchaseForm({
     setPurchase({
       id: "",
       purchaseNo,
-      supplierName: "",
-      invoiceNo: "",
       purchaseDate: "",
+      invoiceNo: "",
+      supplierCode: "",
+      supplierName: "",
+      productCode: "",
       productName: "",
       qty: 0,
       rate: 0,
       amount: 0,
     });
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit}>
       <h2>Purchase Entry</h2>
 
       <input
-        name="supplierName"
-        placeholder="Supplier Name"
-        value={purchase.supplierName}
+        type="date"
+        name="purchaseDate"
+        value={purchase.purchaseDate}
         onChange={handleChange}
       />
 
@@ -83,9 +89,23 @@ export default function PurchaseForm({
       />
 
       <input
-        type="date"
-        name="purchaseDate"
-        value={purchase.purchaseDate}
+        name="supplierCode"
+        placeholder="Supplier Code"
+        value={purchase.supplierCode}
+        onChange={handleChange}
+      />
+
+      <input
+        name="supplierName"
+        placeholder="Supplier Name"
+        value={purchase.supplierName}
+        onChange={handleChange}
+      />
+
+      <input
+        name="productCode"
+        placeholder="Product Code"
+        value={purchase.productCode}
         onChange={handleChange}
       />
 
@@ -99,7 +119,7 @@ export default function PurchaseForm({
       <input
         type="number"
         name="qty"
-        placeholder="Qty"
+        placeholder="Quantity"
         value={purchase.qty}
         onChange={handleChange}
       />

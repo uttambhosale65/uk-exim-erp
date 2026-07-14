@@ -17,9 +17,9 @@ export default function PurchaseTable({
         <thead>
           <tr>
             <th>Purchase No</th>
-            <th>Supplier</th>
-            <th>Invoice</th>
             <th>Date</th>
+            <th>Invoice</th>
+            <th>Supplier</th>
             <th>Product</th>
             <th>Qty</th>
             <th>Rate</th>
@@ -28,25 +28,25 @@ export default function PurchaseTable({
         </thead>
 
         <tbody>
-          {purchases.map((purchase) => (
-            <tr key={purchase.id}>
-              <td>{purchase.purchaseNo}</td>
-              <td>{purchase.supplierName}</td>
-              <td>{purchase.invoiceNo}</td>
-              <td>{purchase.purchaseDate}</td>
-              <td>{purchase.productName}</td>
-              <td>{purchase.qty}</td>
-              <td>{purchase.rate}</td>
-              <td>{purchase.amount}</td>
-            </tr>
-          ))}
-
-          {purchases.length === 0 && (
+          {purchases.length === 0 ? (
             <tr>
               <td colSpan={8} style={{ textAlign: "center" }}>
                 No Purchase Records
               </td>
             </tr>
+          ) : (
+            purchases.map((purchase) => (
+              <tr key={purchase.id}>
+                <td>{purchase.purchaseNo}</td>
+                <td>{purchase.purchaseDate}</td>
+                <td>{purchase.invoiceNo}</td>
+                <td>{purchase.supplierName}</td>
+                <td>{purchase.productName}</td>
+                <td>{purchase.qty}</td>
+                <td>{purchase.rate}</td>
+                <td>{purchase.amount}</td>
+              </tr>
+            ))
           )}
         </tbody>
       </table>

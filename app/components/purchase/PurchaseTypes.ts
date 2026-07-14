@@ -1,10 +1,16 @@
 export type Purchase = {
   id: string;
+
   purchaseNo: string;
-  supplierName: string;
-  invoiceNo: string;
   purchaseDate: string;
+  invoiceNo: string;
+
+  supplierCode: string;
+  supplierName: string;
+
+  productCode: string;
   productName: string;
+
   qty: number;
   rate: number;
   amount: number;

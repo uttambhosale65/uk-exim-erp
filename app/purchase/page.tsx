@@ -23,23 +23,31 @@ export default function PurchasePage() {
     setPurchaseNo(getNextPurchaseNo(data));
   }, []);
 
-  const handleSave = (purchase: Purchase) => {
-    const updated = [...purchases, purchase];
-    setPurchases(updated);
-    savePurchases(updated);
-    setPurchaseNo(getNextPurchaseNo(updated));
+  useEffect(() => {
+    savePurchases(purchases);
+    setPurchaseNo(getNextPurchaseNo(purchases));
+  }, [purchases]);
+
+  const addPurchase = (purchase: Purchase) => {
+    setPurchases((prev) => [...prev, purchase]);
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>📦 UK EXIM ERP - Purchase Master</h2>
+    <div
+      style={{
+        padding: "20px",
+        maxWidth: "1200px",
+        margin: "0 auto",
+      }}
+    >
+      <h1>📦 UK EXIM ERP - Purchase Master</h1>
 
       <PurchaseForm
         purchaseNo={purchaseNo}
-        onSave={handleSave}
+        onSave={addPurchase}
       />
 
-      <hr style={{ margin: "20px 0" }} />
+      <br />
 
       <PurchaseTable purchases={purchases} />
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Supplier } from "./supplier/SupplierTypes";
+import { Supplier } from "./SupplierTypes";
 
 type SupplierFormProps = {
   supplierCode: string;
