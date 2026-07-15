@@ -6,14 +6,71 @@ export function loadStock(): Stock[] {
   if (typeof window === "undefined") return [];
 
   const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
+
+  if (!data) return [];
+
+  try {
+    return JSON.parse(data);
+  } catch {
+    return [];
+  }
 }
 
 export function saveStock(stock: Stock[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(stock));
+  if (typeof window ==="undefined") return;
+
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(stock)
+  );
 }
 
 export function getNextStockId(stock: Stock[]): string {
-  const next = stock.length + 1;
-  return "STK" + next.toString().padStart(4, "0");
+  if (stock.length === 0) return "STK0001";
+
+  const max = Math.max(
+    ...stock.map((s) =>
+      Number(s.id.replace("STK", ""))
+    )
+  );
+
+  return `STK${String(max + 1).padStart(4, "0")}`;
+}
+
+export function updateStock(
+  productCode: string,
+  productName: string,
+  hsn: string,
+  unit: string,
+  qty: number
+) {
+  const stock = loadStock();
+
+  const index = stock.findIndex(
+    (item) => item.productCode === productCode
+  );
+
+  if (index >= 0) {
+    stock[index].purchaseQty += qty;
+    stock[index].currentStock += qty;
+  } else {
+    stock.push({
+      id: getNextStockId(stock),
+
+      productCode,
+      productName,
+
+      hsn,
+      unit,
+
+      openingStock: 0,
+
+      purchaseQty: qty,
+      salesQty: 0,
+
+      currentStock: qty,
+    });
+  }
+
+  saveStock(stock);
 }

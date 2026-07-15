@@ -16,6 +16,7 @@ export default function StockForm({
     id: "",
     productCode: "",
     productName: "",
+    hsn: "",
     unit: "",
     openingStock: 0,
     purchaseQty: 0,
@@ -56,6 +57,7 @@ export default function StockForm({
       id: "",
       productCode: "",
       productName: "",
+      hsn: "",
       unit: "",
       openingStock: 0,
       purchaseQty: 0,
@@ -79,6 +81,13 @@ export default function StockForm({
         name="productName"
         placeholder="Product Name"
         value={stock.productName}
+        onChange={handleChange}
+      />
+
+      <input
+        name="hsn"
+        placeholder="HSN"
+        value={stock.hsn}
         onChange={handleChange}
       />
 

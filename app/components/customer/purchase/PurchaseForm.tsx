@@ -8,6 +8,7 @@ import { Product } from "../../../product/components/ProductTypes";
 
 import { loadSuppliers } from "../../supplier/SupplierStorage";
 import { loadProducts } from "../../../product/components/ProductStorage";
+import { updateStock } from "../../stock/StockStorage";
 
 type PurchaseFormProps = {
   purchaseNo: string;
@@ -26,16 +27,12 @@ export default function PurchaseForm({
     purchaseNo,
     purchaseDate: "",
     invoiceNo: "",
-
     supplierCode: "",
     supplierName: "",
-
     productCode: "",
     productName: "",
-
     hsn: "",
     unit: "",
-
     qty: 0,
     rate: 0,
     amount: 0,
@@ -52,7 +49,7 @@ export default function PurchaseForm({
     >
   ) {
     const { name, value } = e.target;
-console.log("Changed:", name, value);
+
     let updated: Purchase = {
       ...purchase,
       [name]:
@@ -102,21 +99,25 @@ console.log("Changed:", name, value);
       purchaseNo,
     });
 
+    updateStock(
+      purchase.productCode,
+      purchase.productName,
+      purchase.hsn,
+      purchase.unit,
+      purchase.qty
+    );
+
     setPurchase({
       id: "",
       purchaseNo,
       purchaseDate: "",
       invoiceNo: "",
-
       supplierCode: "",
       supplierName: "",
-
       productCode: "",
       productName: "",
-
       hsn: "",
       unit: "",
-
       qty: 0,
       rate: 0,
       amount: 0,
@@ -124,7 +125,15 @@ console.log("Changed:", name, value);
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form
+  onSubmit={handleSubmit}
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "15px",
+    alignItems: "end",
+  }}
+>
       <h2>Purchase Entry</h2>
 
       <input
@@ -132,6 +141,7 @@ console.log("Changed:", name, value);
         name="purchaseDate"
         value={purchase.purchaseDate}
         onChange={handleChange}
+        style={{ width: "180px", padding: "8px", margin: "5px" }}
       />
 
       <input
@@ -140,12 +150,13 @@ console.log("Changed:", name, value);
         placeholder="Invoice No"
         value={purchase.invoiceNo}
         onChange={handleChange}
+        style={{ width: "180px", padding: "8px", margin: "5px" }}
       />
-
       <select
         name="supplierCode"
         value={purchase.supplierCode}
         onChange={handleChange}
+        style={{ width: "220px", padding: "8px", margin: "5px" }}
       >
         <option value="">Select Supplier</option>
 
@@ -158,10 +169,12 @@ console.log("Changed:", name, value);
           </option>
         ))}
       </select>
+
       <select
         name="productCode"
         value={purchase.productCode}
         onChange={handleChange}
+        style={{ width: "220px", padding: "8px", margin: "5px" }}
       >
         <option value="">Select Product</option>
 
@@ -180,6 +193,7 @@ console.log("Changed:", name, value);
         placeholder="HSN"
         value={purchase.hsn}
         readOnly
+        style={{ width: "120px", padding: "8px", margin: "5px" }}
       />
 
       <input
@@ -187,15 +201,22 @@ console.log("Changed:", name, value);
         placeholder="Unit"
         value={purchase.unit}
         readOnly
+        style={{ width: "120px", padding: "8px", margin: "5px" }}
       />
 
-      <input
-        type="number"
-        name="qty"
-        placeholder="Quantity"
-        value={purchase.qty}
-        onChange={handleChange}
-      />
+    <input
+  type="text"
+  name="qty"
+  placeholder="Quantity"
+  value={purchase.qty}
+  onChange={handleChange}
+  style={{
+    border: "2px solid red",
+    background: "yellow",
+    width: "120px",
+    padding: "8px",
+  }}
+/>
 
       <input
         type="number"
@@ -203,6 +224,7 @@ console.log("Changed:", name, value);
         placeholder="Purchase Rate"
         value={purchase.rate}
         onChange={handleChange}
+        style={{ width: "120px", padding: "8px", margin: "5px" }}
       />
 
       <input
@@ -210,6 +232,7 @@ console.log("Changed:", name, value);
         placeholder="Amount"
         value={purchase.amount}
         readOnly
+        style={{ width: "120px", padding: "8px", margin: "5px" }}
       />
 
       <br />
