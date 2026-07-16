@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 
+import Layout from "../components/ui/Layout";
+import Card from "../components/ui/Card";
+import PageTitle from "../components/ui/PageTitle";
+
 import PurchaseForm from "../components/customer/purchase/PurchaseForm";
 import PurchaseTable from "../components/customer/purchase/PurchaseTable";
 
@@ -33,73 +37,26 @@ export default function PurchasePage() {
   }
 
   return (
-    <div
-      style={{
-        backgroundColor: "#f4f6f9",
-        minHeight: "100vh",
-        padding: "30px",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "1400px",
-          margin: "0 auto",
-        }}
-      >
-        <div
-          style={{
-            background: "#ffffff",
-            borderRadius: "10px",
-            padding: "20px",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.10)",
-            marginBottom: "20px",
-          }}
-        >
-          <h1
-            style={{
-              margin: 0,
-              color: "#0f766e",
-            }}
-          >
-            📦 UK EXIM ERP
-          </h1>
+    <Layout title="UK EXIM ERP">
 
-          <p
-            style={{
-              marginTop: "8px",
-              color: "#666",
-            }}
-          >
-            Purchase Master
-          </p>
-        </div>
+      <PageTitle
+        title="📦 Purchase Master"
+        subtitle="Manage Purchase Entries"
+      />
 
-        <div
-          style={{
-            background: "#ffffff",
-            borderRadius: "10px",
-            padding: "20px",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.10)",
-            marginBottom: "20px",
-          }}
-        >
-          <PurchaseForm
-            purchaseNo={purchaseNo}
-            onSave={addPurchase}
-          />
-        </div>
+      <Card title="Purchase Entry">
+        <PurchaseForm
+          purchaseNo={purchaseNo}
+          onSave={addPurchase}
+        />
+      </Card>
 
-        <div
-          style={{
-            background: "#ffffff",
-            borderRadius: "10px",
-            padding: "20px",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.10)",
-          }}
-        >
-          <PurchaseTable purchases={purchases} />
-        </div>
-      </div>
-    </div>
+      <Card title="Purchase List">
+        <PurchaseTable
+          purchases={purchases}
+        />
+      </Card>
+
+    </Layout>
   );
 }

@@ -10,6 +10,10 @@ import { loadSuppliers } from "../../supplier/SupplierStorage";
 import { loadProducts } from "../../../product/components/ProductStorage";
 import { updateStock } from "../../stock/StockStorage";
 
+import Input from "../../ui/Input";
+import Select from "../../ui/Select";
+import Button from "../../ui/Button";
+
 type PurchaseFormProps = {
   purchaseNo: string;
   onSave: (purchase: Purchase) => void;
@@ -87,7 +91,6 @@ export default function PurchaseForm({
 
     setPurchase(updated);
   }
-
   function handleSubmit(
     e: React.FormEvent
   ) {
@@ -126,39 +129,39 @@ export default function PurchaseForm({
 
   return (
     <form
-  onSubmit={handleSubmit}
-  style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "15px",
-    alignItems: "end",
-  }}
->
-      <h2>Purchase Entry</h2>
-
-      <input
+      onSubmit={handleSubmit}
+      style={{
+        display: "grid",
+        gridTemplateColumns:
+          "repeat(auto-fit, minmax(250px, 1fr))",
+        gap: "20px",
+      }}
+    >
+      <Input
+        label="Purchase Date"
         type="date"
         name="purchaseDate"
         value={purchase.purchaseDate}
         onChange={handleChange}
-        style={{ width: "180px", padding: "8px", margin: "5px" }}
       />
 
-      <input
-        type="text"
+      <Input
+        label="Invoice No"
         name="invoiceNo"
-        placeholder="Invoice No"
         value={purchase.invoiceNo}
         onChange={handleChange}
-        style={{ width: "180px", padding: "8px", margin: "5px" }}
+        placeholder="Invoice Number"
       />
-      <select
+
+      <Select
+        label="Supplier"
         name="supplierCode"
         value={purchase.supplierCode}
         onChange={handleChange}
-        style={{ width: "220px", padding: "8px", margin: "5px" }}
       >
-        <option value="">Select Supplier</option>
+        <option value="">
+          Select Supplier
+        </option>
 
         {suppliers.map((supplier) => (
           <option
@@ -168,15 +171,17 @@ export default function PurchaseForm({
             {supplier.name}
           </option>
         ))}
-      </select>
+      </Select>
 
-      <select
+      <Select
+        label="Product"
         name="productCode"
         value={purchase.productCode}
         onChange={handleChange}
-        style={{ width: "220px", padding: "8px", margin: "5px" }}
       >
-        <option value="">Select Product</option>
+        <option value="">
+          Select Product
+        </option>
 
         {products.map((product) => (
           <option
@@ -186,61 +191,54 @@ export default function PurchaseForm({
             {product.name}
           </option>
         ))}
-      </select>
+      </Select>
 
-      <input
-        type="text"
-        placeholder="HSN"
+      <Input
+        label="HSN"
         value={purchase.hsn}
         readOnly
-        style={{ width: "120px", padding: "8px", margin: "5px" }}
       />
 
-      <input
-        type="text"
-        placeholder="Unit"
+      <Input
+        label="Unit"
         value={purchase.unit}
         readOnly
-        style={{ width: "120px", padding: "8px", margin: "5px" }}
+      />
+      <Input
+        label="Quantity"
+        type="number"
+        name="qty"
+        value={purchase.qty}
+        onChange={handleChange}
       />
 
-    <input
-  type="text"
-  name="qty"
-  placeholder="Quantity"
-  value={purchase.qty}
-  onChange={handleChange}
-  style={{
-    border: "2px solid red",
-    background: "yellow",
-    width: "120px",
-    padding: "8px",
-  }}
-/>
-
-      <input
+      <Input
+        label="Purchase Rate"
         type="number"
         name="rate"
-        placeholder="Purchase Rate"
         value={purchase.rate}
         onChange={handleChange}
-        style={{ width: "120px", padding: "8px", margin: "5px" }}
       />
 
-      <input
-        type="number"
-        placeholder="Amount"
+      <Input
+        label="Amount"
         value={purchase.amount}
         readOnly
-        style={{ width: "120px", padding: "8px", margin: "5px" }}
       />
 
-      <br />
-      <br />
-
-      <button type="submit">
-        Save Purchase
-      </button>
+      <div
+        style={{
+          gridColumn: "1 / -1",
+          display: "flex",
+          justifyContent: "flex-end",
+          marginTop: "10px",
+        }}
+      >
+        <Button
+          type="submit"
+          title="💾 Save Purchase"
+        />
+      </div>
     </form>
   );
 }
