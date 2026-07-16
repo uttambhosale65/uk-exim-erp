@@ -37,6 +37,20 @@ export default function PurchasePage() {
     setPurchases((prev) => [...prev, purchase]);
   }
 
+  function handleEditPurchase(purchase: Purchase) {
+    console.log("Edit Purchase", purchase);
+  }
+
+  function handleDeletePurchase(id: string) {
+    if (!confirm("Delete this purchase?")) return;
+
+    setPurchases((prev) =>
+      prev.filter(
+        (purchase) => purchase.id !== id
+      )
+    );
+  }
+
   const filteredPurchases = useMemo(() => {
     const text = search.toLowerCase();
 
@@ -60,7 +74,9 @@ export default function PurchasePage() {
   );
 
   const totalSuppliers = new Set(
-    purchases.map((purchase) => purchase.supplierCode)
+    purchases.map(
+      (purchase) => purchase.supplierCode
+    )
   ).size;
 
   return (
@@ -104,7 +120,6 @@ export default function PurchasePage() {
       </Card>
 
       <Card title="Purchase List">
-
         <input
           type="text"
           placeholder="🔍 Search Purchase No / Supplier / Product"
@@ -122,10 +137,11 @@ export default function PurchasePage() {
 
         <PurchaseTable
           purchases={filteredPurchases}
+          onEdit={handleEditPurchase}
+          onDelete={handleDeletePurchase}
         />
 
       </Card>
-
     </Layout>
   );
 }
