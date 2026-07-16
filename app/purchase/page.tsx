@@ -35,21 +35,71 @@ export default function PurchasePage() {
   return (
     <div
       style={{
-        padding: 20,
-        maxWidth: 1200,
-        margin: "0 auto",
+        backgroundColor: "#f4f6f9",
+        minHeight: "100vh",
+        padding: "30px",
       }}
     >
-      <h1>📦 UK EXIM ERP - Purchase Master</h1>
+      <div
+        style={{
+          maxWidth: "1400px",
+          margin: "0 auto",
+        }}
+      >
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: "10px",
+            padding: "20px",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.10)",
+            marginBottom: "20px",
+          }}
+        >
+          <h1
+            style={{
+              margin: 0,
+              color: "#0f766e",
+            }}
+          >
+            📦 UK EXIM ERP
+          </h1>
 
-      <PurchaseForm
-        purchaseNo={purchaseNo}
-        onSave={addPurchase}
-      />
+          <p
+            style={{
+              marginTop: "8px",
+              color: "#666",
+            }}
+          >
+            Purchase Master
+          </p>
+        </div>
 
-      <br />
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: "10px",
+            padding: "20px",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.10)",
+            marginBottom: "20px",
+          }}
+        >
+          <PurchaseForm
+            purchaseNo={purchaseNo}
+            onSave={addPurchase}
+          />
+        </div>
 
-      <PurchaseTable purchases={purchases} />
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: "10px",
+            padding: "20px",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.10)",
+          }}
+        >
+          <PurchaseTable purchases={purchases} />
+        </div>
+      </div>
     </div>
   );
 }

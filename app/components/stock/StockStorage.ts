@@ -17,7 +17,7 @@ export function loadStock(): Stock[] {
 }
 
 export function saveStock(stock: Stock[]) {
-  if (typeof window ==="undefined") return;
+  if (typeof window === "undefined") return;
 
   localStorage.setItem(
     STORAGE_KEY,
@@ -59,18 +59,36 @@ export function updateStock(
 
       productCode,
       productName,
-
       hsn,
       unit,
-
       openingStock: 0,
-
       purchaseQty: qty,
       salesQty: 0,
-
       currentStock: qty,
     });
   }
 
   saveStock(stock);
+}
+
+export function reduceStock(
+  productCode: string,
+  qty: number
+) {
+  const stock = loadStock();
+
+  const index = stock.findIndex(
+    (item) => item.productCode === productCode
+  );
+
+  if (index >= 0) {
+    stock[index].salesQty += qty;
+    stock[index].currentStock -= qty;
+
+    if (stock[index].currentStock < 0) {
+      stock[index].currentStock = 0;
+    }
+
+    saveStock(stock);
+  }
 }
