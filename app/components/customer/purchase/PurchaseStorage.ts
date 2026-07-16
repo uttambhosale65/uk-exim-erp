@@ -9,16 +9,12 @@ export function loadPurchases(): Purchase[] {
 
   if (!data) return [];
 
-  try {
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
+  return JSON.parse(data);
 }
 
 export function savePurchases(
   purchases: Purchase[]
-) {
+): void {
   if (typeof window === "undefined") return;
 
   localStorage.setItem(
@@ -27,25 +23,44 @@ export function savePurchases(
   );
 }
 
-export function getNextPurchaseNo(
-  purchases: Purchase[]
-) {
-  if (purchases.length === 0) {
-    return "PUR-0001";
-  }
+export function addPurchase(
+  purchase: Purchase
+): void {
+  const purchases = loadPurchases();
 
-  const last = purchases[purchases.length - 1];
+  purchases.push(purchase);
 
-  const number =
-    parseInt(last.purchaseNo.replace("PUR-", "")) + 1;
-
-  return `PUR-${number
-    .toString()
-    .padStart(4, "0")}`;
+  savePurchases(purchases);
 }
 
-export function clearPurchases() {
-  if (typeof window === "undefined") return;
+export function deletePurchase(
+  id: string
+): void {
+  const purchases = loadPurchases().filter(
+    (purchase) => purchase.id !== id
+  );
 
-  localStorage.removeItem(STORAGE_KEY);
+  savePurchases(purchases);
+}
+
+export function updatePurchase(
+  updatedPurchase: Purchase
+): void {
+  const purchases = loadPurchases().map((purchase) =>
+    purchase.id === updatedPurchase.id
+      ? updatedPurchase
+      : purchase
+  );
+
+  savePurchases(purchases);
+}
+
+export function getNextPurchaseNo(): string {
+  const purchases = loadPurchases();
+
+  const next = purchases.length + 1;
+
+  return `PUR-${next
+    .toString()
+    .padStart(4, "0")}`;
 }
