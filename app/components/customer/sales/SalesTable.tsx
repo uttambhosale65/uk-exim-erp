@@ -4,10 +4,12 @@ import { Sales } from "./SalesTypes";
 
 type SalesTableProps = {
   sales: Sales[];
+  onEdit: (sale: Sales) => void;
 };
 
 export default function SalesTable({
   sales,
+  onEdit,
 }: SalesTableProps) {
   return (
     <div style={{ marginTop: "30px" }}>
@@ -32,6 +34,7 @@ export default function SalesTable({
             <th>Qty</th>
             <th>Rate</th>
             <th>Amount</th>
+            <th>Action</th>
           </tr>
         </thead>
 
@@ -57,6 +60,11 @@ export default function SalesTable({
                 <td>{sale.qty}</td>
                 <td>{sale.rate}</td>
                 <td>{sale.amount}</td>
+                <td>
+  <button onClick={() => onEdit(sale)}>
+    Edit
+  </button>
+</td> 
               </tr>
             ))
           )}

@@ -13,11 +13,13 @@ import { reduceStock } from "../../stock/StockStorage";
 type SalesFormProps = {
   salesNo: string;
   onSave: (sales: Sales) => void;
+  editingSale: Sales | null;
 };
 
 export default function SalesForm({
   salesNo,
   onSave,
+  editingSale,
 }: SalesFormProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -46,7 +48,11 @@ export default function SalesForm({
     setCustomers(loadCustomers());
     setProducts(loadProducts());
   }, []);
-
+useEffect(() => {
+  if (editingSale) {
+    setSales(editingSale);
+  }
+}, [editingSale]);
   function handleChange(
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement
@@ -95,12 +101,14 @@ export default function SalesForm({
     e: React.FormEvent
   ) {
     e.preventDefault();
-
-    onSave({
-      ...sales,
-      id: Date.now().toString(),
-      salesNo,
-    });
+console.log("editingSale =", editingSale);
+   onSave({
+  ...sales,
+  id: editingSale ? editingSale.id : Date.now().toString(),
+  salesNo: editingSale
+    ? editingSale.salesNo
+    : salesNo,
+});
 
     reduceStock(
       sales.productCode,

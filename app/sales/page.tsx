@@ -16,7 +16,8 @@ import {
 export default function SalesPage() {
   const [sales, setSales] = useState<Sales[]>([]);
   const [salesNo, setSalesNo] = useState("");
-
+const [editingSale, setEditingSale] =
+  useState<Sales | null>(null);
   useEffect(() => {
     const data = loadSales();
     setSales(data);
@@ -27,10 +28,24 @@ export default function SalesPage() {
     saveSales(sales);
     setSalesNo(getNextSalesNo(sales));
   }, [sales]);
-
+function handleEditSale(sale: Sales) {
+  setEditingSale(sale);
+}
   function addSales(sale: Sales) {
-    setSales((prev) => [...prev, sale]);
-  }
+  setSales((prev) => {
+    const exists = prev.some((s) => s.id === sale.id);
+
+    if (exists) {
+      return prev.map((s) =>
+        s.id === sale.id ? sale : s
+      );
+    }
+
+    return [...prev, sale];
+  });
+
+  setEditingSale(null);
+}
 
   return (
     <div
@@ -42,14 +57,18 @@ export default function SalesPage() {
     >
       <h1>🛒 UK EXIM ERP - Sales Master</h1>
 
-      <SalesForm
-        salesNo={salesNo}
-        onSave={addSales}
-      />
+     <SalesForm
+  salesNo={salesNo}
+  onSave={addSales}
+  editingSale={editingSale}
+/>
 
       <br />
 
-      <SalesTable sales={sales} />
+      <SalesTable
+  sales={sales}
+  onEdit={handleEditSale}
+/>
     </div>
   );
 }
