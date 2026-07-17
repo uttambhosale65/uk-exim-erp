@@ -17,11 +17,13 @@ import Button from "../../ui/Button";
 type PurchaseFormProps = {
   purchaseNo: string;
   onSave: (purchase: Purchase) => void;
+  editingPurchase: Purchase | null;
 };
 
 export default function PurchaseForm({
   purchaseNo,
   onSave,
+  editingPurchase,
 }: PurchaseFormProps) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -45,8 +47,12 @@ export default function PurchaseForm({
   useEffect(() => {
     setSuppliers(loadSuppliers());
     setProducts(loadProducts());
-  }, []);
-
+ }, []);
+useEffect(() => {
+  if (editingPurchase) {
+    setPurchase(editingPurchase);
+  }
+}, [editingPurchase]);
   function handleChange(
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement
@@ -97,10 +103,12 @@ export default function PurchaseForm({
     e.preventDefault();
 
     onSave({
-      ...purchase,
-      id: Date.now().toString(),
-      purchaseNo,
-    });
+  ...purchase,
+  id: editingPurchase ? editingPurchase.id : Date.now().toString(),
+  purchaseNo: editingPurchase
+    ? editingPurchase.purchaseNo
+    : purchaseNo,
+});
 
     updateStock(
       purchase.productCode,
@@ -234,10 +242,14 @@ export default function PurchaseForm({
           marginTop: "10px",
         }}
       >
-        <Button
-          type="submit"
-          title="💾 Save Purchase"
-        />
+       <Button
+  type="submit"
+  title={
+    editingPurchase
+      ? "✏️ Update Purchase"
+      : "💾 Save Purchase"
+  }
+/>
       </div>
     </form>
   );

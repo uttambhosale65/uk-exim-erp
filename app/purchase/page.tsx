@@ -21,7 +21,8 @@ export default function PurchasePage() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [purchaseNo, setPurchaseNo] = useState("");
   const [search, setSearch] = useState("");
-
+const [editingPurchase, setEditingPurchase] =
+  useState<Purchase | null>(null);
   useEffect(() => {
     const data = loadPurchases();
     setPurchases(data);
@@ -33,13 +34,23 @@ export default function PurchasePage() {
     setPurchaseNo(getNextPurchaseNo());
   }, [purchases]);
 
-  function addPurchase(purchase: Purchase) {
-    setPurchases((prev) => [...prev, purchase]);
-  }
+ function addPurchase(purchase: Purchase) {
+  setPurchases((prev) => {
+    if (editingPurchase) {
+      return prev.map((p) =>
+        p.id === purchase.id ? purchase : p
+      );
+    }
 
-  function handleEditPurchase(purchase: Purchase) {
-    console.log("Edit Purchase", purchase);
-  }
+    return [...prev, purchase];
+  });
+
+  setEditingPurchase(null);
+}
+
+ function handleEditPurchase(purchase: Purchase) {
+  setEditingPurchase(purchase);
+}
 
   function handleDeletePurchase(id: string) {
     if (!confirm("Delete this purchase?")) return;
@@ -114,9 +125,10 @@ export default function PurchasePage() {
 
       <Card title="Purchase Entry">
         <PurchaseForm
-          purchaseNo={purchaseNo}
-          onSave={addPurchase}
-        />
+  purchaseNo={purchaseNo}
+  onSave={addPurchase}
+  editingPurchase={editingPurchase}
+/>
       </Card>
 
       <Card title="Purchase List">
