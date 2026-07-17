@@ -5,36 +5,36 @@ const STORAGE_KEY = "uk-exim-stock";
 export function loadStock(): Stock[] {
   if (typeof window === "undefined") return [];
 
-  const data = localStorage.getItem(STORAGE_KEY);
-
-  if (!data) return [];
-
   try {
-    return JSON.parse(data);
-  } catch {
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error("Error loading stock:", error);
     return [];
   }
 }
 
-export function saveStock(stock: Stock[]) {
+export function saveStock(stock: Stock[]): void {
   if (typeof window === "undefined") return;
 
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(stock)
-  );
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stock));
+  } catch (error) {
+    console.error("Error saving stock:", error);
+  }
 }
 
 export function getNextStockId(stock: Stock[]): string {
   if (stock.length === 0) return "STK0001";
 
-  const max = Math.max(
-    ...stock.map((s) =>
-      Number(s.id.replace("STK", ""))
-    )
+  const maxId = Math.max(
+    ...stock.map((item) => {
+      const number = Number(item.id.replace("STK", ""));
+      return isNaN(number) ? 0 : number;
+    })
   );
 
-  return `STK${String(max + 1).padStart(4, "0")}`;
+  return `STK${String(maxId + 1).padStart(4, "0")}`;
 }
 
 export function updateStock(
@@ -43,7 +43,7 @@ export function updateStock(
   hsn: string,
   unit: string,
   qty: number
-) {
+): void {
   const stock = loadStock();
 
   const index = stock.findIndex(
@@ -52,11 +52,13 @@ export function updateStock(
 
   if (index >= 0) {
     stock[index].purchaseQty += qty;
-    stock[index].currentStock += qty;
+    stock[index].currentStock =
+      stock[index].openingStock +
+      stock[index].purchaseQty -
+      stock[index].salesQty;
   } else {
     stock.push({
       id: getNextStockId(stock),
-
       productCode,
       productName,
       hsn,
@@ -74,21 +76,43 @@ export function updateStock(
 export function reduceStock(
   productCode: string,
   qty: number
-) {
+): void {
   const stock = loadStock();
 
   const index = stock.findIndex(
     (item) => item.productCode === productCode
   );
 
-  if (index >= 0) {
-    stock[index].salesQty += qty;
-    stock[index].currentStock -= qty;
+  if (index === -1) return;
 
-    if (stock[index].currentStock < 0) {
-      stock[index].currentStock = 0;
-    }
+  stock[index].salesQty += qty;
 
-    saveStock(stock);
+  stock[index].currentStock =
+    stock[index].openingStock +
+    stock[index].purchaseQty -
+    stock[index].salesQty;
+
+  if (stock[index].currentStock < 0) {
+    stock[index].currentStock = 0;
   }
+
+  saveStock(stock);
+}
+
+export function deleteStock(id: string): Stock[] {
+  const updatedStock = loadStock().filter(
+    (item) => item.id !== id
+  );
+
+  saveStock(updatedStock);
+
+  return updatedStock;
+}
+
+export function findStockById(
+  id: string
+): Stock | undefined {
+  return loadStock().find(
+    (item) => item.id === id
+  );
 }

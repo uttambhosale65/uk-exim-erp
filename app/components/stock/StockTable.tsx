@@ -4,10 +4,12 @@ import { Stock } from "./StockTypes";
 
 type StockTableProps = {
   stock: Stock[];
+  onEdit: (item: Stock) => void;
 };
 
 export default function StockTable({
   stock,
+  onEdit,
 }: StockTableProps) {
   return (
     <div>
@@ -23,13 +25,14 @@ export default function StockTable({
             <th>Purchase</th>
             <th>Sales</th>
             <th>Current Stock</th>
+            <th>Action</th>
           </tr>
         </thead>
 
         <tbody>
           {stock.length === 0 ? (
             <tr>
-              <td colSpan={7} style={{ textAlign: "center" }}>
+              <td colSpan={8} style={{ textAlign: "center" }}>
                 No Stock Records
               </td>
             </tr>
@@ -43,6 +46,12 @@ export default function StockTable({
                 <td>{item.purchaseQty}</td>
                 <td>{item.salesQty}</td>
                 <td>{item.currentStock}</td>
+
+                <td>
+                  <button onClick={() => onEdit(item)}>
+                    Edit
+                  </button>
+                </td>
               </tr>
             ))
           )}

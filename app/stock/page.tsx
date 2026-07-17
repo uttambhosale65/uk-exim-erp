@@ -16,6 +16,7 @@ import {
 export default function StockPage() {
   const [stock, setStock] = useState<Stock[]>([]);
   const [stockId, setStockId] = useState("");
+  const [editingStock, setEditingStock] = useState<Stock | null>(null);
 
   useEffect(() => {
     const data = loadStock();
@@ -28,9 +29,29 @@ export default function StockPage() {
     setStockId(getNextStockId(stock));
   }, [stock]);
 
-  const addStock = (item: Stock) => {
-    setStock((prev) => [...prev, item]);
-  };
+  function handleEditStock(item: Stock) {
+    setEditingStock(item);
+  }
+
+  function handleDeleteStock(id: string) {
+    setStock((prev) => prev.filter((item) => item.id !== id));
+
+    if (editingStock?.id === id) {
+      setEditingStock(null);
+    }
+  }
+
+  function handleSaveStock(item: Stock) {
+    if (editingStock) {
+      setStock((prev) =>
+        prev.map((s) => (s.id === item.id ? item : s))
+      );
+
+      setEditingStock(null);
+    } else {
+      setStock((prev) => [...prev, item]);
+    }
+  }
 
   return (
     <div
@@ -44,12 +65,17 @@ export default function StockPage() {
 
       <StockForm
         stockId={stockId}
-        onSave={addStock}
+        editingStock={editingStock}
+        onSave={handleSaveStock}
       />
 
       <br />
 
-      <StockTable stock={stock} />
+      <StockTable
+        stock={stock}
+        onEdit={handleEditStock}
+        onDelete={handleDeleteStock}
+      />
     </div>
   );
 }
