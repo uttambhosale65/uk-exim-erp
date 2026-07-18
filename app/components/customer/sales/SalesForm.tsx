@@ -23,11 +23,15 @@ export default function SalesForm({
 }: SalesFormProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [availableStock, setAvailableStock] =
+  useState(0);
 
   const [sales, setSales] = useState<Sales>({
     id: "",
     salesNo,
-    salesDate: "",
+    salesDate: new Date()
+  .toISOString()
+  .split("T")[0],
     invoiceNo: "",
 
     customerCode: "",
@@ -39,9 +43,15 @@ export default function SalesForm({
     hsn: "",
     unit: "",
 
-    qty: 0,
+    qty: 1,
     rate: 0,
     amount: 0,
+    gst: 0,
+taxableAmount: 0,
+cgst: 0,
+sgst: 0,
+igst: 0,
+grandTotal: 0,
   });
 
   useEffect(() => {
@@ -90,17 +100,47 @@ useEffect(() => {
         updated.hsn = product.hsn;
         updated.unit = product.unit;
         updated.rate = product.sale;
+        updated.gst = parseFloat(product.gst);
+        setAvailableStock(product.stock);
       }
     }
 
-    updated.amount = updated.qty * updated.rate;
+    updated.amount =
+  Number(updated.qty) *
+  Number(updated.rate);
+  updated.taxableAmount = updated.amount;
 
+updated.cgst =
+  (updated.taxableAmount * updated.gst) / 200;
+
+updated.sgst =
+  (updated.taxableAmount * updated.gst) / 200;
+
+updated.igst = 0;
+
+updated.grandTotal =
+  updated.taxableAmount +
+  updated.cgst +
+  updated.sgst;
+console.log(
+  "GST =", updated.gst,
+  "Amount =", updated.amount,
+  "CGST =", updated.cgst,
+  "SGST =", updated.sgst,
+  "Grand Total =", updated.grandTotal
+);
     setSales(updated);
   }
   function handleSubmit(
     e: React.FormEvent
   ) {
     e.preventDefault();
+    if (sales.qty > availableStock) {
+  alert(
+    "Insufficient Stock! Please check available quantity."
+  );
+  return;
+}
 console.log("editingSale =", editingSale);
    onSave({
   ...sales,
@@ -110,10 +150,12 @@ console.log("editingSale =", editingSale);
     : salesNo,
 });
 
-    reduceStock(
-      sales.productCode,
-      sales.qty
-    );
+   if (!editingSale) {
+  reduceStock(
+    sales.productCode,
+    sales.qty
+  );
+}
 
     setSales({
       id: "",
@@ -130,15 +172,30 @@ console.log("editingSale =", editingSale);
       hsn: "",
       unit: "",
 
-      qty: 0,
+      qty: 1,
       rate: 0,
       amount: 0,
+      gst: 0,
+taxableAmount: 0,
+cgst: 0,
+sgst: 0,
+igst: 0,
+grandTotal: 0,
     });
   }
 
   return (
     <form onSubmit={handleSubmit}>
       <h2>Sales Entry</h2>
+      <div
+  style={{
+    marginBottom: "15px",
+    fontWeight: "bold",
+    color: "#0d6efd",
+  }}
+>
+  Sales No : {sales.salesNo || salesNo}
+</div>
 
       <input
         type="date"
@@ -148,12 +205,11 @@ console.log("editingSale =", editingSale);
       />
 
       <input
-        type="text"
-        name="invoiceNo"
-        placeholder="Invoice No"
-        value={sales.invoiceNo}
-        onChange={handleChange}
-      />
+  type="text"
+  name="invoiceNo"
+  value={sales.invoiceNo || sales.salesNo}
+  readOnly
+/>
 
       <select
         name="customerCode"
@@ -212,12 +268,12 @@ console.log("editingSale =", editingSale);
       />
 
       <input
-        type="number"
-        name="rate"
-        placeholder="Sales Rate"
-        value={sales.rate}
-        onChange={handleChange}
-      />
+  type="number"
+  name="rate"
+  placeholder="Sales Rate"
+  value={sales.rate}
+  readOnly
+/>
 
       <input
         type="number"
@@ -225,7 +281,43 @@ console.log("editingSale =", editingSale);
         placeholder="Amount"
         readOnly
       />
+      <input
+  type="number"
+  value={sales.gst}
+  placeholder="GST %"
+  readOnly
+/>
 
+<input
+  type="number"
+  value={sales.cgst}
+  placeholder="CGST"
+  readOnly
+/>
+
+<input
+  type="number"
+  value={sales.sgst}
+  placeholder="SGST"
+  readOnly
+/>
+
+<input
+  type="number"
+  value={sales.grandTotal}
+  placeholder="Grand Total"
+  readOnly
+/>
+<div
+  style={{
+    color: "#0d6efd",
+    fontWeight: "bold",
+    marginTop: "8px",
+    marginBottom: "10px",
+  }}
+>
+  Available Stock : {availableStock}
+</div>
       <br />
       <br />
 

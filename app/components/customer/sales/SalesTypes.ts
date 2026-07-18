@@ -17,4 +17,11 @@ export type Sales = {
   qty: number;
   rate: number;
   amount: number;
+
+  gst: number;
+  taxableAmount: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  grandTotal: number;
 };

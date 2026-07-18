@@ -16,8 +16,9 @@ import {
 export default function SalesPage() {
   const [sales, setSales] = useState<Sales[]>([]);
   const [salesNo, setSalesNo] = useState("");
-const [editingSale, setEditingSale] =
-  useState<Sales | null>(null);
+  const [editingSale, setEditingSale] =
+    useState<Sales | null>(null);
+
   useEffect(() => {
     const data = loadSales();
     setSales(data);
@@ -28,24 +29,38 @@ const [editingSale, setEditingSale] =
     saveSales(sales);
     setSalesNo(getNextSalesNo(sales));
   }, [sales]);
-function handleEditSale(sale: Sales) {
-  setEditingSale(sale);
-}
+
+  function handleEditSale(sale: Sales) {
+    setEditingSale(sale);
+  }
+
+  function handleDeleteSale(id: string) {
+    if (!confirm("Delete this Sales Record?")) return;
+
+    setSales((prev) =>
+      prev.filter((sale) => sale.id !== id)
+    );
+
+    setEditingSale(null);
+  }
+
   function addSales(sale: Sales) {
-  setSales((prev) => {
-    const exists = prev.some((s) => s.id === sale.id);
-
-    if (exists) {
-      return prev.map((s) =>
-        s.id === sale.id ? sale : s
+    setSales((prev) => {
+      const exists = prev.some(
+        (s) => s.id === sale.id
       );
-    }
 
-    return [...prev, sale];
-  });
+      if (exists) {
+        return prev.map((s) =>
+          s.id === sale.id ? sale : s
+        );
+      }
 
-  setEditingSale(null);
-}
+      return [...prev, sale];
+    });
+
+    setEditingSale(null);
+  }
 
   return (
     <div
@@ -57,18 +72,19 @@ function handleEditSale(sale: Sales) {
     >
       <h1>🛒 UK EXIM ERP - Sales Master</h1>
 
-     <SalesForm
-  salesNo={salesNo}
-  onSave={addSales}
-  editingSale={editingSale}
-/>
+      <SalesForm
+        salesNo={salesNo}
+        onSave={addSales}
+        editingSale={editingSale}
+      />
 
       <br />
 
       <SalesTable
-  sales={sales}
-  onEdit={handleEditSale}
-/>
+        sales={sales}
+        onEdit={handleEditSale}
+        onDelete={handleDeleteSale}
+      />
     </div>
   );
 }

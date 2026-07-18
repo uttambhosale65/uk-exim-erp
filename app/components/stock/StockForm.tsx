@@ -53,7 +53,7 @@ export default function StockForm({
         name === "salesQty"
           ? Math.max(0, Number(value))
           : value,
-    };
+    } as Stock;
 
     updated.currentStock =
       updated.openingStock +
@@ -86,96 +86,140 @@ export default function StockForm({
     });
   }
 
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "10px",
+    border: "1px solid #ccc",
+    borderRadius: "6px",
+    fontSize: "14px",
+    boxSizing: "border-box",
+  };
+
   return (
     <form
       onSubmit={handleSubmit}
       style={{
         border: "1px solid #ddd",
-        padding: "20px",
         borderRadius: "8px",
+        padding: "20px",
         marginBottom: "20px",
+        background: "#fff",
       }}
     >
-      <h2>
+      <h2 style={{ marginBottom: "20px" }}>
         {editingStock ? "✏️ Edit Stock" : "📦 Stock Entry"}
       </h2>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2,1fr)",
-          gap: "10px",
-        }}
-      >
-        <input
-          name="productCode"
-          placeholder="Product Code"
-          value={stock.productCode}
-          onChange={handleChange}
-          required
-        />
+      <>
+  <div>
+    <label style={{ fontWeight: "bold" }}>Product Code *</label>
+    <input
+      style={inputStyle}
+      name="productCode"
+      placeholder="Enter Product Code"
+      value={stock.productCode}
+      onChange={handleChange}
+      required
+    />
+  </div>
 
-        <input
-          name="productName"
-          placeholder="Product Name"
-          value={stock.productName}
-          onChange={handleChange}
-          required
-        />
+  <div>
+    <label style={{ fontWeight: "bold" }}>Product Name *</label>
+    <input
+      style={inputStyle}
+      name="productName"
+      placeholder="Enter Product Name"
+      value={stock.productName}
+      onChange={handleChange}
+      required
+    />
+  </div>
 
-        <input
-          name="hsn"
-          placeholder="HSN"
-          value={stock.hsn}
-          onChange={handleChange}
-        />
+  <div>
+    <label style={{ fontWeight: "bold" }}>HSN Code</label>
+    <input
+      style={inputStyle}
+      name="hsn"
+      placeholder="Enter HSN Code"
+      value={stock.hsn}
+      onChange={handleChange}
+    />
+  </div>
 
-        <input
-          name="unit"
-          placeholder="Unit"
-          value={stock.unit}
-          onChange={handleChange}
-        />
+  <div>
+    <label style={{ fontWeight: "bold" }}>Unit</label>
+    <input
+      style={inputStyle}
+      name="unit"
+      placeholder="Packet / Kg / Box"
+      value={stock.unit}
+      onChange={handleChange}
+    />
+  </div>
 
-        <input
-          type="number"
-          name="openingStock"
-          placeholder="Opening Stock"
-          value={stock.openingStock}
-          onChange={handleChange}
-          min={0}
-        />
+  <div>
+    <label style={{ fontWeight: "bold" }}>Opening Stock</label>
+    <input
+      style={inputStyle}
+      type="number"
+      name="openingStock"
+      value={stock.openingStock}
+      onChange={handleChange}
+      min={0}
+    />
+  </div>
 
-        <input
-          type="number"
-          name="purchaseQty"
-          placeholder="Purchase Qty"
-          value={stock.purchaseQty}
-          onChange={handleChange}
-          min={0}
-        />
+  <div>
+    <label style={{ fontWeight: "bold" }}>Purchase Qty</label>
+    <input
+      style={inputStyle}
+      type="number"
+      name="purchaseQty"
+      value={stock.purchaseQty}
+      onChange={handleChange}
+      min={0}
+    />
+  </div>
 
-        <input
-          type="number"
-          name="salesQty"
-          placeholder="Sales Qty"
-          value={stock.salesQty}
-          onChange={handleChange}
-          min={0}
-        />
+  <div>
+    <label style={{ fontWeight: "bold" }}>Sales Qty</label>
+    <input
+      style={inputStyle}
+      type="number"
+      name="salesQty"
+      value={stock.salesQty}
+      onChange={handleChange}
+      min={0}
+    />
+  </div>
 
-        <input
-          value={stock.currentStock}
-          readOnly
-          placeholder="Current Stock"
-        />
+  <div>
+    <label style={{ fontWeight: "bold" }}>Current Stock</label>
+    <input
+      style={{
+        ...inputStyle,
+        background: "#f5f5f5",
+        fontWeight: "bold",
+      }}
+      value={stock.currentStock}
+      readOnly
+    />
+  </div>
+</>
+
+      <div style={{ marginTop: "20px" }}>
+        <button
+          type="submit"
+          style={{
+            padding: "10px 20px",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+          }}
+        >
+          {editingStock ? "Update Stock" : "Save Stock"}
+        </button>
       </div>
-
-      <br />
-
-      <button type="submit">
-        {editingStock ? "Update Stock" : "Save Stock"}
-      </button>
     </form>
   );
 }

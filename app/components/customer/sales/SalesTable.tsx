@@ -5,11 +5,13 @@ import { Sales } from "./SalesTypes";
 type SalesTableProps = {
   sales: Sales[];
   onEdit: (sale: Sales) => void;
+  onDelete: (id: string) => void;
 };
 
 export default function SalesTable({
   sales,
   onEdit,
+  onDelete,
 }: SalesTableProps) {
   return (
     <div style={{ marginTop: "30px" }}>
@@ -34,6 +36,8 @@ export default function SalesTable({
             <th>Qty</th>
             <th>Rate</th>
             <th>Amount</th>
+            <th>GST %</th>
+            <th>Grand Total</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -42,7 +46,7 @@ export default function SalesTable({
           {sales.length === 0 ? (
             <tr>
               <td
-                colSpan={9}
+                colSpan={12}
                 style={{ textAlign: "center" }}
               >
                 No Sales Records
@@ -60,11 +64,30 @@ export default function SalesTable({
                 <td>{sale.qty}</td>
                 <td>{sale.rate}</td>
                 <td>{sale.amount}</td>
+                <td>{sale.gst}</td>
+                <td>{sale.grandTotal}</td>
+
                 <td>
-  <button onClick={() => onEdit(sale)}>
-    Edit
-  </button>
-</td> 
+                  <button
+                    onClick={() => onEdit(sale)}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    onClick={() => onDelete(sale.id)}
+                    style={{
+                      marginLeft: "8px",
+                      backgroundColor: "red",
+                      color: "white",
+                      border: "none",
+                      padding: "5px 10px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
             ))
           )}
