@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Customer } from "./CustomerTypes";
 
 type CustomerFormProps = {
@@ -15,39 +15,58 @@ export default function CustomerForm({
   const emptyCustomer = (): Customer => ({
     id: crypto.randomUUID(),
     code: customerCode,
+
     name: "",
     contactPerson: "",
+
     mobile: "",
     email: "",
+
     gst: "",
     pan: "",
+
     address: "",
     city: "",
     state: "",
     country: "India",
     pinCode: "",
+
     openingBalance: 0,
     creditLimit: 0,
+
     status: "Active",
   });
 
-  const [customer, setCustomer] = useState<Customer>(emptyCustomer());
+  const [customer, setCustomer] =
+    useState<Customer>(emptyCustomer());
+
+  useEffect(() => {
+    setCustomer((prev) => ({
+      ...prev,
+      code: customerCode,
+    }));
+  }, [customerCode]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
 
     setCustomer((prev) => ({
       ...prev,
       [name]:
-        name === "openingBalance" || name === "creditLimit"
+        name === "openingBalance" ||
+        name === "creditLimit"
           ? Number(value)
           : value,
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
 
     onSave(customer);
@@ -60,117 +79,243 @@ export default function CustomerForm({
 
   return (
     <form onSubmit={handleSubmit}>
-      <h2>Customer Master</h2>
-
-      <input value={customer.code} readOnly />
-
-      <input
-        name="name"
-        placeholder="Customer Name"
-        value={customer.name}
-        onChange={handleChange}
-        required
-      />
-
-      <input
-        name="contactPerson"
-        placeholder="Contact Person"
-        value={customer.contactPerson}
-        onChange={handleChange}
-      />
-
-      <input
-        name="mobile"
-        placeholder="Mobile"
-        value={customer.mobile}
-        onChange={handleChange}
-      />
-
-      <input
-        name="email"
-        placeholder="Email"
-        value={customer.email}
-        onChange={handleChange}
-      />
-
-      <input
-        name="gst"
-        placeholder="GST Number"
-        value={customer.gst}
-        onChange={handleChange}
-      />
-
-      <input
-        name="pan"
-        placeholder="PAN Number"
-        value={customer.pan}
-        onChange={handleChange}
-      />
-
-      <input
-        name="address"
-        placeholder="Address"
-        value={customer.address}
-        onChange={handleChange}
-      />
-
-      <input
-        name="city"
-        placeholder="City"
-        value={customer.city}
-        onChange={handleChange}
-      />
-
-      <input
-        name="state"
-        placeholder="State"
-        value={customer.state}
-        onChange={handleChange}
-      />
-
-      <input
-        name="country"
-        placeholder="Country"
-        value={customer.country}
-        onChange={handleChange}
-      />
-
-      <input
-        name="pinCode"
-        placeholder="PIN Code"
-        value={customer.pinCode}
-        onChange={handleChange}
-      />
-
-      <input
-        type="number"
-        name="openingBalance"
-        placeholder="Opening Balance"
-        value={customer.openingBalance}
-        onChange={handleChange}
-      />
-
-      <input
-        type="number"
-        name="creditLimit"
-        placeholder="Credit Limit"
-        value={customer.creditLimit}
-        onChange={handleChange}
-      />
-
-      <select
-        name="status"
-        value={customer.status}
-        onChange={handleChange}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(6, minmax(160px, 1fr))",
+          gap: "10px",
+        }}
       >
-        <option value="Active">Active</option>
-        <option value="Inactive">Inactive</option>
-      </select>
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Customer Code
+          </label>
+          <input
+            type="text"
+            value={customer.code}
+            readOnly
+            style={inputStyle}
+          />
+        </div>
 
-      <br />
-      <br />
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Customer Name *
+          </label>
+          <input
+            type="text"
+            name="name"
+            value={customer.name}
+            onChange={handleChange}
+            required
+            style={inputStyle}
+          />
+        </div>
 
-      <button type="submit">Save Customer</button>
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Contact Person
+          </label>
+          <input
+            type="text"
+            name="contactPerson"
+            value={customer.contactPerson}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Mobile
+          </label>
+          <input
+            type="text"
+            name="mobile"
+            value={customer.mobile}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Email
+          </label>
+          <input
+            type="email"
+            name="email"
+            value={customer.email}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            GST Number
+          </label>
+          <input
+            type="text"
+            name="gst"
+            value={customer.gst}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            PAN Number
+          </label>
+          <input
+            type="text"
+            name="pan"
+            value={customer.pan}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ gridColumn: "span 2" }}>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Address
+          </label>
+          <input
+            type="text"
+            name="address"
+            value={customer.address}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            City
+          </label>
+          <input
+            type="text"
+            name="city"
+            value={customer.city}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            State
+          </label>
+          <input
+            type="text"
+            name="state"
+            value={customer.state}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Country
+          </label>
+          <input
+            type="text"
+            name="country"
+            value={customer.country}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            PIN Code
+          </label>
+          <input
+            type="text"
+            name="pinCode"
+            value={customer.pinCode}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Opening Balance
+          </label>
+          <input
+            type="number"
+            name="openingBalance"
+            value={customer.openingBalance}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Credit Limit
+          </label>
+          <input
+            type="number"
+            name="creditLimit"
+            value={customer.creditLimit}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Status
+          </label>
+          <select
+            name="status"
+            value={customer.status}
+            onChange={handleChange}
+            style={inputStyle}
+          >
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-end",
+          }}
+        >
+          <button
+            type="submit"
+            style={{
+              width: "100%",
+              height: "40px",
+              border: "none",
+              borderRadius: "6px",
+              background: "#2563eb",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Save Customer
+          </button>
+        </div>
+      </div>
     </form>
   );
 }
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  height: "40px",
+  padding: "0 10px",
+  border: "1px solid #d1d5db",
+  borderRadius: "6px",
+  fontSize: "14px",
+  boxSizing: "border-box",
+  outline: "none",
+};

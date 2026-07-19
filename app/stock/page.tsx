@@ -2,80 +2,72 @@
 
 import { useEffect, useState } from "react";
 
-import StockForm from "../components/stock/StockForm";
-import StockTable from "../components/stock/StockTable";
+import Layout from "../components/ui/Layout";
+import Card from "../components/ui/Card";
+import PageTitle from "../components/ui/PageTitle";
 
+import StockTable from "../components/stock/StockTable";
 import { Stock } from "../components/stock/StockTypes";
 
 import {
   loadStock,
   saveStock,
-  getNextStockId,
 } from "../components/stock/StockStorage";
 
 export default function StockPage() {
   const [stock, setStock] = useState<Stock[]>([]);
-  const [stockId, setStockId] = useState("");
-  const [editingStock, setEditingStock] = useState<Stock | null>(null);
+  const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    const data = loadStock();
-    setStock(data);
-    setStockId(getNextStockId(data));
-  }, []);
+ useEffect(() => {
+  const loadData = () => {
+    setStock(loadStock());
+  };
+
+  loadData();
+
+  window.addEventListener("focus", loadData);
+
+  return () => {
+    window.removeEventListener("focus", loadData);
+  };
+}, []);
 
   useEffect(() => {
     saveStock(stock);
-    setStockId(getNextStockId(stock));
   }, [stock]);
 
-  function handleEditStock(item: Stock) {
-    setEditingStock(item);
-  }
-
-  function handleDeleteStock(id: string) {
-    setStock((prev) => prev.filter((item) => item.id !== id));
-
-    if (editingStock?.id === id) {
-      setEditingStock(null);
-    }
-  }
-
-  function handleSaveStock(item: Stock) {
-    if (editingStock) {
-      setStock((prev) =>
-        prev.map((s) => (s.id === item.id ? item : s))
-      );
-
-      setEditingStock(null);
-    } else {
-      setStock((prev) => [...prev, item]);
-    }
-  }
+  const filteredStock = stock.filter((item) =>
+    `${item.productCode} ${item.productName}`
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
 
   return (
-    <div
-      style={{
-        padding: "20px",
-        maxWidth: "1200px",
-        margin: "0 auto",
-      }}
-    >
-      <h1>📦 UK EXIM ERP - Stock Master</h1>
-
-      <StockForm
-        stockId={stockId}
-        editingStock={editingStock}
-        onSave={handleSaveStock}
+    <Layout title="UK EXIM ERP">
+      <PageTitle
+        title="📦 Stock Register"
+        subtitle="Live Stock Position"
       />
 
-      <br />
+      <Card title="Stock Register">
+        <input
+          type="text"
+          placeholder="🔍 Search Product Code / Product Name"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            width: "100%",
+            height: "40px",
+            padding: "0 12px",
+            border: "1px solid #d1d5db",
+            borderRadius: "6px",
+            marginBottom: "12px",
+            boxSizing: "border-box",
+          }}
+        />
 
-      <StockTable
-        stock={stock}
-        onEdit={handleEditStock}
-        onDelete={handleDeleteStock}
-      />
-    </div>
+        <StockTable stock={filteredStock} />
+      </Card>
+    </Layout>
   );
 }

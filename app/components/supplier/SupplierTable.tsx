@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Supplier } from "./SupplierTypes";
 
 type SupplierTableProps = {
@@ -10,69 +9,84 @@ type SupplierTableProps = {
 export default function SupplierTable({
   suppliers,
 }: SupplierTableProps) {
-  const [search, setSearch] = useState("");
-
-  const filteredSuppliers = suppliers.filter(
-    (supplier) =>
-      supplier.name.toLowerCase().includes(search.toLowerCase()) ||
-      supplier.code.toLowerCase().includes(search.toLowerCase()) ||
-      supplier.contactPerson
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      supplier.mobile.includes(search)
-  );
-
   return (
-    <div style={{ marginTop: "20px" }}>
-      <h2>Supplier List</h2>
-
-      <input
-        type="text"
-        placeholder="Search Supplier..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{
-          width: "300px",
-          padding: "10px",
-          marginBottom: "15px",
-        }}
-      />
-
+    <div>
       <table
         style={{
           width: "100%",
           borderCollapse: "collapse",
+          border: "1px solid #dbe3ea",
+          fontSize: "14px",
         }}
-        border={1}
-        cellPadding={8}
       >
         <thead>
-          <tr>
-            <th>Code</th>
-            <th>Supplier Name</th>
-            <th>Contact Person</th>
-            <th>Mobile</th>
-            <th>City</th>
-            <th>Status</th>
+          <tr
+            style={{
+              background: "#2563eb",
+              color: "#ffffff",
+            }}
+          >
+            <th style={thStyle}>Code</th>
+            <th style={thStyle}>Supplier Name</th>
+            <th style={thStyle}>Contact Person</th>
+            <th style={thStyle}>Mobile</th>
+            <th style={thStyle}>City</th>
+            <th style={thStyle}>GST No.</th>
+            <th style={thStyle}>Status</th>
           </tr>
         </thead>
 
         <tbody>
-          {filteredSuppliers.length === 0 ? (
+          {suppliers.length === 0 ? (
             <tr>
-              <td colSpan={6} style={{ textAlign: "center" }}>
+              <td
+                colSpan={7}
+                style={{
+                  padding: "20px",
+                  textAlign: "center",
+                  color: "#6b7280",
+                }}
+              >
                 No Suppliers Found
               </td>
             </tr>
           ) : (
-            filteredSuppliers.map((supplier) => (
-              <tr key={supplier.id}>
-                <td>{supplier.code}</td>
-                <td>{supplier.name}</td>
-                <td>{supplier.contactPerson}</td>
-                <td>{supplier.mobile}</td>
-                <td>{supplier.city}</td>
-                <td>{supplier.status}</td>
+            suppliers.map((supplier, index) => (
+              <tr
+                key={supplier.id}
+                style={{
+                  background:
+                    index % 2 === 0
+                      ? "#ffffff"
+                      : "#f8fafc",
+                }}
+              >
+                <td style={tdStyle}>{supplier.code}</td>
+                <td style={tdStyle}>{supplier.name}</td>
+                <td style={tdStyle}>{supplier.contactPerson}</td>
+                <td style={tdStyle}>{supplier.mobile}</td>
+                <td style={tdStyle}>{supplier.city}</td>
+                <td style={tdStyle}>{supplier.gst}</td>
+                <td style={tdStyle}>
+                  <span
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "12px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      background:
+                        supplier.status === "Active"
+                          ? "#dcfce7"
+                          : "#fee2e2",
+                      color:
+                        supplier.status === "Active"
+                          ? "#166534"
+                          : "#991b1b",
+                    }}
+                  >
+                    {supplier.status}
+                  </span>
+                </td>
               </tr>
             ))
           )}
@@ -81,3 +95,19 @@ export default function SupplierTable({
     </div>
   );
 }
+
+const thStyle: React.CSSProperties = {
+  padding: "10px",
+  textAlign: "left",
+  fontWeight: 600,
+  fontSize: "13px",
+  borderBottom: "1px solid #1d4ed8",
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: "10px",
+  borderBottom: "1px solid #e5e7eb",
+  fontSize: "13px",
+  color: "#374151",
+  verticalAlign: "middle",
+};

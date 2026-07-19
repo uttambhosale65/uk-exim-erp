@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 
+import Layout from "../components/ui/Layout";
+import Card from "../components/ui/Card";
+import PageTitle from "../components/ui/PageTitle";
+
 import SupplierForm from "../components/supplier/SupplierForm";
 import SupplierTable from "../components/supplier/SupplierTable";
 
@@ -16,6 +20,7 @@ import {
 export default function SupplierPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [supplierCode, setSupplierCode] = useState("");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const data = loadSuppliers();
@@ -32,29 +37,47 @@ export default function SupplierPage() {
     setSuppliers((prev) => [...prev, supplier]);
   };
 
+  const filteredSuppliers = suppliers.filter((s) =>
+    `${s.name} ${s.contactPerson} ${s.mobile} ${s.city} ${s.gst}`
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
+
   return (
-    <div
-      style={{
-        padding: "20px",
-        maxWidth: "1200px",
-        margin: "0 auto",
-      }}
-    >
-      <h1
-        style={{
-          color: "#14532d",
-          marginBottom: "20px",
-        }}
-      >
-        🚚 UK EXIM ERP - Supplier Master
-      </h1>
-<p>Next Supplier Code : {supplierCode}</p>
-      <SupplierForm
-        supplierCode={supplierCode}
-        onSave={addSupplier}
+    <Layout title="UK EXIM ERP">
+      <PageTitle
+        title="🚚 Supplier Master"
+        subtitle="Supplier Entry & Supplier Register"
       />
 
-      <SupplierTable suppliers={suppliers} />
-    </div>
+      <Card title="Supplier Entry">
+        <SupplierForm
+          supplierCode={supplierCode}
+          onSave={addSupplier}
+        />
+      </Card>
+
+      <Card title="Supplier Register">
+        <input
+          type="text"
+          placeholder="🔍 Search Supplier Name / Contact / Mobile"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            width: "100%",
+            height: "40px",
+            padding: "0 12px",
+            border: "1px solid #d1d5db",
+            borderRadius: "6px",
+            marginBottom: "12px",
+            fontSize: "14px",
+            outline: "none",
+            boxSizing: "border-box",
+          }}
+        />
+
+        <SupplierTable suppliers={filteredSuppliers} />
+      </Card>
+    </Layout>
   );
 }

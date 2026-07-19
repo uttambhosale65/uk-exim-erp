@@ -116,3 +116,14 @@ export function findStockById(
     (item) => item.id === id
   );
 }
+export function getCurrentStock(
+  productCode: string
+): number {
+  const stock = loadStock();
+
+  const item = stock.find(
+    (s) => s.productCode === productCode
+  );
+
+  return item ? item.currentStock : 0;
+}

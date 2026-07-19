@@ -15,16 +15,17 @@ export default function Input({
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "6px",
-        marginBottom: "15px",
+        gap: "4px",
+        marginBottom: "8px",
       }}
     >
       {label && (
         <label
           style={{
-            fontSize: "14px",
+            fontSize: "13px",
             fontWeight: 600,
             color: "#374151",
+            lineHeight: "18px",
           }}
         >
           {label}
@@ -35,13 +36,28 @@ export default function Input({
         {...props}
         style={{
           width: "100%",
-          padding: "10px 12px",
-          border: "1px solid #d1d5db",
-          borderRadius: "8px",
+          height: "40px",
+          padding: "8px 10px",
+          border: "1px solid #cbd5e1",
+          borderRadius: "6px",
           fontSize: "14px",
+          background: "#ffffff",
+          color: "#111827",
           outline: "none",
           boxSizing: "border-box",
+          transition: "all 0.2s ease",
           ...(props.style || {}),
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = "#2563eb";
+          e.currentTarget.style.boxShadow =
+            "0 0 0 2px rgba(37,99,235,0.15)";
+          props.onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = "#cbd5e1";
+          e.currentTarget.style.boxShadow = "none";
+          props.onBlur?.(e);
         }}
       />
     </div>

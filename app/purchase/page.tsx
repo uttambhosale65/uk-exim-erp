@@ -18,42 +18,58 @@ import {
 } from "../components/customer/purchase/PurchaseStorage";
 
 export default function PurchasePage() {
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [purchaseNo, setPurchaseNo] = useState("");
-  const [search, setSearch] = useState("");
-const [editingPurchase, setEditingPurchase] =
-  useState<Purchase | null>(null);
+  const [purchases, setPurchases] =
+    useState<Purchase[]>([]);
+
+  const [purchaseNo, setPurchaseNo] =
+    useState("");
+
+  const [search, setSearch] =
+    useState("");
+
+  const [editingPurchase, setEditingPurchase] =
+    useState<Purchase | null>(null);
+
   useEffect(() => {
     const data = loadPurchases();
+
     setPurchases(data);
+
     setPurchaseNo(getNextPurchaseNo());
   }, []);
 
   useEffect(() => {
     savePurchases(purchases);
+
     setPurchaseNo(getNextPurchaseNo());
   }, [purchases]);
 
- function addPurchase(purchase: Purchase) {
-  setPurchases((prev) => {
-    if (editingPurchase) {
-      return prev.map((p) =>
-        p.id === purchase.id ? purchase : p
-      );
-    }
+  function addPurchase(
+    purchase: Purchase
+  ) {
+    setPurchases((prev) => {
+      if (editingPurchase) {
+        return prev.map((p) =>
+          p.id === purchase.id ? purchase : p
+        );
+      }
 
-    return [...prev, purchase];
-  });
+      return [...prev, purchase];
+    });
 
-  setEditingPurchase(null);
-}
+    setEditingPurchase(null);
+  }
 
- function handleEditPurchase(purchase: Purchase) {
-  setEditingPurchase(purchase);
-}
+  function handleEditPurchase(
+    purchase: Purchase
+  ) {
+    setEditingPurchase(purchase);
+  }
 
-  function handleDeletePurchase(id: string) {
-    if (!confirm("Delete this purchase?")) return;
+  function handleDeletePurchase(
+    id: string
+  ) {
+    if (!confirm("Delete this Purchase?")) return;
 
     setPurchases((prev) =>
       prev.filter(
@@ -65,94 +81,65 @@ const [editingPurchase, setEditingPurchase] =
   const filteredPurchases = useMemo(() => {
     const text = search.toLowerCase();
 
-    return purchases.filter((purchase) =>
-      purchase.purchaseNo.toLowerCase().includes(text) ||
-      purchase.supplierName.toLowerCase().includes(text) ||
-      purchase.productName.toLowerCase().includes(text)
+    return purchases.filter(
+      (purchase) =>
+        purchase.purchaseNo
+          .toLowerCase()
+          .includes(text) ||
+        purchase.supplierName
+          .toLowerCase()
+          .includes(text) ||
+        purchase.productName
+          .toLowerCase()
+          .includes(text)
     );
   }, [purchases, search]);
-
-  const totalPurchases = purchases.length;
-
-  const totalAmount = purchases.reduce(
-    (sum, purchase) => sum + purchase.amount,
-    0
-  );
-
-  const totalQty = purchases.reduce(
-    (sum, purchase) => sum + purchase.qty,
-    0
-  );
-
-  const totalSuppliers = new Set(
-    purchases.map(
-      (purchase) => purchase.supplierCode
-    )
-  ).size;
-
   return (
     <Layout title="UK EXIM ERP">
-
       <PageTitle
         title="📦 Purchase Master"
-        subtitle="Manage Purchase Entries"
+        subtitle="Purchase Entry & Purchase Register"
       />
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "20px",
-          marginBottom: "25px",
-        }}
-      >
-        <Card title="📦 Total Purchases">
-          <h2>{totalPurchases}</h2>
-        </Card>
-
-        <Card title="💰 Total Amount">
-          <h2>₹ {totalAmount}</h2>
-        </Card>
-
-        <Card title="📦 Total Quantity">
-          <h2>{totalQty}</h2>
-        </Card>
-
-        <Card title="🏭 Suppliers">
-          <h2>{totalSuppliers}</h2>
-        </Card>
-      </div>
 
       <Card title="Purchase Entry">
         <PurchaseForm
-  purchaseNo={purchaseNo}
-  onSave={addPurchase}
-  editingPurchase={editingPurchase}
-/>
+          purchaseNo={purchaseNo}
+          onSave={addPurchase}
+          editingPurchase={editingPurchase}
+        />
       </Card>
 
-      <Card title="Purchase List">
-        <input
-          type="text"
-          placeholder="🔍 Search Purchase No / Supplier / Product"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+      <Card title="Purchase Register">
+        <div
           style={{
-            width: "100%",
-            padding: "12px",
-            marginBottom: "20px",
-            border: "1px solid #d1d5db",
-            borderRadius: "8px",
-            fontSize: "15px",
+            marginBottom: "12px",
           }}
-        />
+        >
+          <input
+            type="text"
+            placeholder="🔍 Search Purchase No / Supplier / Product"
+            value={search}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
+            style={{
+              width: "100%",
+              height: "40px",
+              padding: "0 12px",
+              border: "1px solid #cbd5e1",
+              borderRadius: "6px",
+              fontSize: "14px",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
 
         <PurchaseTable
           purchases={filteredPurchases}
           onEdit={handleEditPurchase}
           onDelete={handleDeletePurchase}
         />
-
       </Card>
     </Layout>
   );

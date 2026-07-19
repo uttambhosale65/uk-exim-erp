@@ -28,7 +28,7 @@ export default function PurchaseForm({
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
-  const [purchase, setPurchase] = useState<Purchase>({
+  const emptyPurchase: Purchase = {
     id: "",
     purchaseNo,
     purchaseDate: "",
@@ -42,21 +42,28 @@ export default function PurchaseForm({
     qty: 0,
     rate: 0,
     amount: 0,
-  });
+  };
+
+  const [purchase, setPurchase] = useState<Purchase>(emptyPurchase);
 
   useEffect(() => {
     setSuppliers(loadSuppliers());
     setProducts(loadProducts());
- }, []);
-useEffect(() => {
-  if (editingPurchase) {
-    setPurchase(editingPurchase);
-  }
-}, [editingPurchase]);
+  }, []);
+
+  useEffect(() => {
+    if (editingPurchase) {
+      setPurchase(editingPurchase);
+    } else {
+      setPurchase({
+        ...emptyPurchase,
+        purchaseNo,
+      });
+    }
+  }, [editingPurchase, purchaseNo]);
+
   function handleChange(
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) {
     const { name, value } = e.target;
 
@@ -97,18 +104,19 @@ useEffect(() => {
 
     setPurchase(updated);
   }
-  function handleSubmit(
-    e: React.FormEvent
-  ) {
+
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     onSave({
-  ...purchase,
-  id: editingPurchase ? editingPurchase.id : Date.now().toString(),
-  purchaseNo: editingPurchase
-    ? editingPurchase.purchaseNo
-    : purchaseNo,
-});
+      ...purchase,
+      id: editingPurchase
+        ? editingPurchase.id
+        : Date.now().toString(),
+      purchaseNo: editingPurchase
+        ? editingPurchase.purchaseNo
+        : purchaseNo,
+    });
 
     updateStock(
       purchase.productCode,
@@ -119,32 +127,26 @@ useEffect(() => {
     );
 
     setPurchase({
-      id: "",
+      ...emptyPurchase,
       purchaseNo,
-      purchaseDate: "",
-      invoiceNo: "",
-      supplierCode: "",
-      supplierName: "",
-      productCode: "",
-      productName: "",
-      hsn: "",
-      unit: "",
-      qty: 0,
-      rate: 0,
-      amount: 0,
     });
   }
-
   return (
     <form
       onSubmit={handleSubmit}
       style={{
         display: "grid",
-        gridTemplateColumns:
-          "repeat(auto-fit, minmax(250px, 1fr))",
-        gap: "20px",
+        gridTemplateColumns: "repeat(6, minmax(160px, 1fr))",
+        gap: "10px",
+        alignItems: "end",
       }}
     >
+      <Input
+        label="Purchase No"
+        value={purchase.purchaseNo}
+        readOnly
+      />
+
       <Input
         label="Purchase Date"
         type="date"
@@ -167,9 +169,7 @@ useEffect(() => {
         value={purchase.supplierCode}
         onChange={handleChange}
       >
-        <option value="">
-          Select Supplier
-        </option>
+        <option value="">Select Supplier</option>
 
         {suppliers.map((supplier) => (
           <option
@@ -187,9 +187,7 @@ useEffect(() => {
         value={purchase.productCode}
         onChange={handleChange}
       >
-        <option value="">
-          Select Product
-        </option>
+        <option value="">Select Product</option>
 
         {products.map((product) => (
           <option
@@ -212,6 +210,7 @@ useEffect(() => {
         value={purchase.unit}
         readOnly
       />
+
       <Input
         label="Quantity"
         type="number"
@@ -236,20 +235,23 @@ useEffect(() => {
 
       <div
         style={{
-          gridColumn: "1 / -1",
           display: "flex",
-          justifyContent: "flex-end",
-          marginTop: "10px",
+          alignItems: "end",
+          justifyContent: "stretch",
         }}
       >
-       <Button
-  type="submit"
-  title={
-    editingPurchase
-      ? "✏️ Update Purchase"
-      : "💾 Save Purchase"
-  }
-/>
+        <Button
+          type="submit"
+          title={
+            editingPurchase
+              ? "✏️ Update Purchase"
+              : "💾 Save Purchase"
+          }
+          style={{
+            width: "100%",
+            height: "40px",
+          }}
+        />
       </div>
     </form>
   );

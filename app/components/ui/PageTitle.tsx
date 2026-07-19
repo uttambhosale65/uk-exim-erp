@@ -12,26 +12,32 @@ export default function PageTitle({
   return (
     <div
       style={{
-        marginBottom: "25px",
+        marginBottom: "4px",
       }}
     >
-      <h1
+      <h2
         style={{
           margin: 0,
-          fontSize: "30px",
-          fontWeight: "bold",
-          color: "#0f766e",
+          fontSize: "18px",
+          fontWeight: 700,
+          color: "#1f2937",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          lineHeight: "22px",
         }}
       >
         {title}
-      </h1>
+      </h2>
 
       {subtitle && (
         <p
           style={{
-            marginTop: "8px",
+            margin: "2px 0 0 0",
             color: "#6b7280",
-            fontSize: "15px",
+            fontSize: "13px",
+            fontWeight: 500,
+            lineHeight: "18px",
           }}
         >
           {subtitle}

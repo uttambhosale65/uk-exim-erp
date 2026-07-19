@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 
+import Layout from "../components/ui/Layout";
+import Card from "../components/ui/Card";
+import PageTitle from "../components/ui/PageTitle";
+
 import SalesForm from "../components/customer/sales/SalesForm";
 import SalesTable from "../components/customer/sales/SalesTable";
 
@@ -18,6 +22,8 @@ export default function SalesPage() {
   const [salesNo, setSalesNo] = useState("");
   const [editingSale, setEditingSale] =
     useState<Sales | null>(null);
+
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const data = loadSales();
@@ -62,29 +68,54 @@ export default function SalesPage() {
     setEditingSale(null);
   }
 
+  const filteredSales = sales.filter((s) =>
+    `${s.salesNo} ${s.customerName} ${s.productName}`
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
+
   return (
-    <div
-      style={{
-        padding: 20,
-        maxWidth: 1200,
-        margin: "0 auto",
-      }}
-    >
-      <h1>🛒 UK EXIM ERP - Sales Master</h1>
-
-      <SalesForm
-        salesNo={salesNo}
-        onSave={addSales}
-        editingSale={editingSale}
+    <Layout title="UK EXIM ERP">
+      <PageTitle
+        title="🛒 Sales Master"
+        subtitle="Sales Entry & Sales Register"
       />
 
-      <br />
+      <Card title="Sales Entry">
+        <SalesForm
+          salesNo={salesNo}
+          onSave={addSales}
+          editingSale={editingSale}
+        />
+      </Card>
 
-      <SalesTable
-        sales={sales}
-        onEdit={handleEditSale}
-        onDelete={handleDeleteSale}
-      />
-    </div>
+      <Card title="Sales Register">
+        <input
+          type="text"
+          placeholder="🔍 Search Sales No / Customer / Product"
+          value={search}
+          onChange={(e) =>
+            setSearch(e.target.value)
+          }
+          style={{
+            width: "100%",
+            height: "40px",
+            padding: "0 12px",
+            border: "1px solid #d1d5db",
+            borderRadius: "6px",
+            marginBottom: "12px",
+            fontSize: "14px",
+            outline: "none",
+            boxSizing: "border-box",
+          }}
+        />
+
+        <SalesTable
+          sales={filteredSales}
+          onEdit={handleEditSale}
+          onDelete={handleDeleteSale}
+        />
+      </Card>
+    </Layout>
   );
 }

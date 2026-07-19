@@ -2,38 +2,55 @@
 
 import React from "react";
 
-type ButtonProps =
-  React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    title: string;
-  };
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  children?: React.ReactNode;
+  title?: string;
+  variant?: "primary" | "secondary" | "danger";
+};
 
 export default function Button({
+  children,
   title,
+  variant = "primary",
+  style,
   ...props
 }: ButtonProps) {
+  const background =
+    variant === "secondary"
+      ? "#6b7280"
+      : variant === "danger"
+      ? "#dc2626"
+      : "#2563eb";
+
   return (
     <button
       {...props}
       style={{
-        background: "#0f766e",
-        color: "#ffffff",
+        height: "40px",
+        minWidth: "110px",
+        padding: "0 18px",
         border: "none",
-        borderRadius: "8px",
-        padding: "12px 20px",
-        fontSize: "15px",
-        fontWeight: "bold",
-        cursor: "pointer",
-        transition: "0.3s",
-        ...(props.style || {}),
+        borderRadius: "6px",
+        background,
+        color: "#fff",
+        fontSize: "14px",
+        fontWeight: 600,
+        cursor: props.disabled ? "not-allowed" : "pointer",
+        opacity: props.disabled ? 0.6 : 1,
+        transition: "0.2s",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+        ...style,
       }}
-      onMouseOver={(e) => {
-        e.currentTarget.style.background = "#115e59";
+      onMouseEnter={(e) => {
+        if (!props.disabled) {
+          e.currentTarget.style.filter = "brightness(0.95)";
+        }
       }}
-      onMouseOut={(e) => {
-        e.currentTarget.style.background = "#0f766e";
+      onMouseLeave={(e) => {
+        e.currentTarget.style.filter = "brightness(1)";
       }}
     >
-      {title}
+      {children ?? title ?? "Button"}
     </button>
   );
 }

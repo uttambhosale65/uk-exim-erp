@@ -15,24 +15,26 @@ export default function Card({
     <div
       style={{
         background: "#ffffff",
-        borderRadius: "12px",
-        padding: "20px",
-        marginBottom: "20px",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-        border: "1px solid #e5e7eb",
+        border: "1px solid #dbe3ea",
+        borderRadius: "6px",
+        padding: "10px",
+        marginBottom: "10px",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
       }}
     >
       {title && (
-        <h2
+        <div
           style={{
-            margin: "0 0 20px 0",
+            fontSize: "16px",
+            fontWeight: 700,
             color: "#1f2937",
-            fontSize: "20px",
-            fontWeight: 600,
+            marginBottom: "6px",
+            paddingBottom: "6px",
+            borderBottom: "1px solid #e5e7eb",
           }}
         >
           {title}
-        </h2>
+        </div>
       )}
 
       {children}
