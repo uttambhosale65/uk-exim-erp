@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import ProductForm from "./components/ProductForm";
 import ProductTable from "./components/ProductTable";
 import { Product } from "./components/ProductTypes";
@@ -8,76 +8,53 @@ import {
   loadProducts,
   saveProducts,
 } from "./components/ProductStorage";
+
 export default function ProductPage() {
-  const [products, setProducts] = useState<Product[]>([ 
-    { 
-      
-      
-      id: "1",
-      code: "P0001",
-      name: "Turmeric Powder 100g",
-      hsn: "09103030",
-      gst: "5%",
-      unit: "Packet",
-      purchase: 40,
-      sale: 50,
-      mrp: 60,
-      stock: 100,
-    },
-    {
-      id: "2",
-      code: "P0002",
-      name: "Turmeric Powder 200g",
-      hsn: "09103030",
-      gst: "5%",
-      unit: "Packet",
-      purchase: 75,
-      sale: 90,
-      mrp: 100,
-      stock: 80,
-    },
-  ]);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-useEffect(() => {
-  const data = loadProducts();
+  const [products, setProducts] = useState<Product[]>(loadProducts());
 
-  if (data.length > 0) {
-    setProducts(data);
-  }
-}, []);
+  const [editingProduct, setEditingProduct] =
+    useState<Product | null>(null);
 
-useEffect(() => {
-  saveProducts(products);
-}, [products]);
- const addProduct = (product: Product) => {
-  if (editingProduct) {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === product.id ? product : p))
-    );
+  const handleSave = (product: Product) => {
+    let updatedProducts: Product[];
+
+    if (editingProduct) {
+      updatedProducts = products.map((item) =>
+        item.id === product.id ? product : item
+      );
+    } else {
+      updatedProducts = [...products, product];
+    }
+
+    setProducts(updatedProducts);
+    saveProducts(updatedProducts);
 
     setEditingProduct(null);
-  } else {
-    setProducts((prev) => [...prev, product]);
-  }
-};
+  };
 
-  const editProduct = (product: Product) => {
-  setEditingProduct(product);
-};
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+  };
 
-  const deleteProduct = (id: string) => {
-    const ok = confirm("Are you sure you want to delete this product?");
-    if (!ok) return;
+  const handleDelete = (id: string) => {
+    const updatedProducts = products.filter(
+      (item) => item.id !== id
+    );
 
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+    setProducts(updatedProducts);
+    saveProducts(updatedProducts);
+
+    if (editingProduct?.id === id) {
+      setEditingProduct(null);
+    }
   };
 
   return (
     <div
       style={{
-        padding: "30px",
-        background: "#f5f5f5",
-        minHeight: "100vh",
+        padding: "20px",
+        maxWidth: "1400px",
+        margin: "0 auto",
       }}
     >
       <h1
@@ -86,19 +63,19 @@ useEffect(() => {
           marginBottom: "20px",
         }}
       >
-        📦 UK EXIM ERP - Product Master
+        📦 Product Master
       </h1>
 
       <ProductForm
-  products={products}
-  onSave={addProduct}
-  editingProduct={editingProduct}
-/>
+        products={products}
+        onSave={handleSave}
+        editingProduct={editingProduct}
+      />
 
       <ProductTable
         products={products}
-        onEdit={editProduct}
-        onDelete={deleteProduct}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
       />
     </div>
   );
