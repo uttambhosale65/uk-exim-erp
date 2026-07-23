@@ -160,7 +160,13 @@ export default function ProductForm({
       <h2 style={{ color: "#14532d", marginBottom: "20px" }}>
         📦 Product Master
       </h2>
-
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "20px",
+  }}
+></div>
       <label>Product Code</label>
       <input
         type="text"
