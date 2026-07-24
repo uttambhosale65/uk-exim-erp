@@ -1,8 +1,8 @@
 "use client";
-
+import SupplierMaster from "./components/supplier/SupplierMaster";
 import { useState } from "react";
 import ProductMaster from "./product/components/ProductMaster";
-
+import CustomerMaster from "./components/customer/CustomerMaster";
 export default function Home() {
   const [activePage, setActivePage] = useState("dashboard");
 
@@ -12,6 +12,7 @@ export default function Home() {
     borderRadius: "6px",
     cursor: "pointer",
     fontSize: "13px",
+    transition: "0.2s",
   };
 
   const activeMenu = {
@@ -27,6 +28,110 @@ export default function Home() {
     padding: "16px",
     boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
     minHeight: "90px",
+  };
+
+  const renderPage = () => {
+    switch (activePage) {
+      case "products":
+        return <ProductMaster />;
+case "customers":
+  return <CustomerMaster />;
+
+    case "suppliers":
+  return <SupplierMaster />;
+      case "grn":
+        return (
+          <>
+            <h2>📥 Goods Receipt Note (GRN)</h2>
+            <p>Coming Soon...</p>
+          </>
+        );
+
+      case "issue":
+        return (
+          <>
+            <h2>📤 Issue (Sales)</h2>
+            <p>Coming Soon...</p>
+          </>
+        );
+
+      case "stock":
+        return (
+          <>
+            <h2>📦 Stock Report</h2>
+            <p>Coming Soon...</p>
+          </>
+        );
+
+      case "sales":
+        return (
+          <>
+            <h2>💰 Sales Report</h2>
+            <p>Coming Soon...</p>
+          </>
+        );
+
+      case "purchase":
+        return (
+          <>
+            <h2>🛒 Purchase Report</h2>
+            <p>Coming Soon...</p>
+          </>
+        );
+
+      case "settings":
+        return (
+          <>
+            <h2>⚙️ Settings</h2>
+            <p>Coming Soon...</p>
+          </>
+        );
+
+      default:
+        return (
+          <>
+            <h2 style={{ marginTop: 0 }}>Dashboard</h2>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: "15px",
+              }}
+            >
+              <div style={card}>
+                <h3>📦 Products</h3>
+                <h1>0</h1>
+              </div>
+
+              <div style={card}>
+                <h3>👥 Customers</h3>
+                <h1>0</h1>
+              </div>
+
+              <div style={card}>
+                <h3>🚚 Suppliers</h3>
+                <h1>0</h1>
+              </div>
+
+              <div style={card}>
+                <h3>📦 Stock</h3>
+                <h1>0</h1>
+              </div>
+
+              <div style={card}>
+                <h3>💰 Sales</h3>
+                <h1>₹0</h1>
+              </div>
+
+              <div style={card}>
+                <h3>🛒 Purchase</h3>
+                <h1>₹0</h1>
+              </div>
+            </div>
+          </>
+        );
+    }
   };
 
   return (
@@ -74,39 +179,95 @@ export default function Home() {
           📦 Products
         </div>
 
-        <div style={menuItem}>
+        <div
+          style={
+            activePage === "customers"
+              ? activeMenu
+              : menuItem
+          }
+          onClick={() => setActivePage("customers")}
+        >
           👥 Customers
         </div>
 
-        <div style={menuItem}>
+        <div
+          style={
+            activePage === "suppliers"
+              ? activeMenu
+              : menuItem
+          }
+          onClick={() => setActivePage("suppliers")}
+        >
           🚚 Suppliers
         </div>
 
         <h4>TRANSACTIONS</h4>
 
-        <div style={menuItem}>
+        <div
+          style={
+            activePage === "grn"
+              ? activeMenu
+              : menuItem
+          }
+          onClick={() => setActivePage("grn")}
+        >
           📥 GRN
         </div>
 
-        <div style={menuItem}>
+        <div
+          style={
+            activePage === "issue"
+              ? activeMenu
+              : menuItem
+          }
+          onClick={() => setActivePage("issue")}
+        >
           📤 Issue (Sales)
         </div>
 
         <h4>REPORTS</h4>
 
-        <div style={menuItem}>
+        <div
+          style={
+            activePage === "stock"
+              ? activeMenu
+              : menuItem
+          }
+          onClick={() => setActivePage("stock")}
+        >
           📦 Stock
         </div>
 
-        <div style={menuItem}>
+        <div
+          style={
+            activePage === "sales"
+              ? activeMenu
+              : menuItem
+          }
+          onClick={() => setActivePage("sales")}
+        >
           💰 Sales
         </div>
 
-        <div style={menuItem}>
+        <div
+          style={
+            activePage === "purchase"
+              ? activeMenu
+              : menuItem
+          }
+          onClick={() => setActivePage("purchase")}
+        >
           🛒 Purchase
         </div>
 
-        <div style={menuItem}>
+        <div
+          style={
+            activePage === "settings"
+              ? activeMenu
+              : menuItem
+          }
+          onClick={() => setActivePage("settings")}
+        >
           ⚙️ Settings
         </div>
       </aside>
@@ -135,6 +296,7 @@ export default function Home() {
             👋 Welcome Uttam
           </strong>
         </header>
+
         <div
           style={{
             flex: 1,
@@ -142,53 +304,7 @@ export default function Home() {
             overflow: "auto",
           }}
         >
-          {activePage === "dashboard" && (
-            <>
-              <h2 style={{ marginTop: 0 }}>Dashboard</h2>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: "15px",
-                }}
-              >
-                <div style={card}>
-                  <h3>📦 Products</h3>
-                  <h1>0</h1>
-                </div>
-
-                <div style={card}>
-                  <h3>👥 Customers</h3>
-                  <h1>0</h1>
-                </div>
-
-                <div style={card}>
-                  <h3>🚚 Suppliers</h3>
-                  <h1>0</h1>
-                </div>
-
-                <div style={card}>
-                  <h3>📦 Stock</h3>
-                  <h1>0</h1>
-                </div>
-
-                <div style={card}>
-                  <h3>💰 Sales</h3>
-                  <h1>₹0</h1>
-                </div>
-
-                <div style={card}>
-                  <h3>🛒 Purchase</h3>
-                  <h1>₹0</h1>
-                </div>
-              </div>
-            </>
-          )}
-
-          {activePage === "products" && (
-            <ProductMaster />
-          )}
+          {renderPage()}
         </div>
       </main>
     </div>

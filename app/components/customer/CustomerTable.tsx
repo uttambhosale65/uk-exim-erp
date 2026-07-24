@@ -5,10 +5,14 @@ import { Customer } from "./CustomerTypes";
 
 type CustomerTableProps = {
   customers: Customer[];
+  onEdit: (customer: Customer) => void;
+  onDelete: (id: string) => void;
 };
 
 export default function CustomerTable({
   customers,
+  onEdit,
+  onDelete,
 }: CustomerTableProps) {
   const [search, setSearch] = useState("");
 
@@ -66,6 +70,7 @@ export default function CustomerTable({
             <th style={thStyle}>City</th>
             <th style={thStyle}>GST No.</th>
             <th style={thStyle}>Status</th>
+            <th style={thStyle}>Actions</th>
           </tr>
         </thead>
 
@@ -73,7 +78,7 @@ export default function CustomerTable({
           {filteredCustomers.length === 0 ? (
             <tr>
               <td
-                colSpan={7}
+                colSpan={8}
                 style={{
                   padding: "20px",
                   textAlign: "center",
@@ -100,6 +105,7 @@ export default function CustomerTable({
                 <td style={tdStyle}>{customer.mobile}</td>
                 <td style={tdStyle}>{customer.city}</td>
                 <td style={tdStyle}>{customer.gst}</td>
+
                 <td style={tdStyle}>
                   <span
                     style={{
@@ -120,6 +126,37 @@ export default function CustomerTable({
                     {customer.status}
                   </span>
                 </td>
+
+                <td style={tdStyle}>
+                  <button
+                    onClick={() => onEdit(customer)}
+                    style={{
+                      marginRight: "8px",
+                      padding: "6px 10px",
+                      border: "none",
+                      borderRadius: "4px",
+                      background: "#2563eb",
+                      color: "#fff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ✏️ Edit
+                  </button>
+
+                  <button
+                    onClick={() => onDelete(customer.id)}
+                    style={{
+                      padding: "6px 10px",
+                      border: "none",
+                      borderRadius: "4px",
+                      background: "#dc2626",
+                      color: "#fff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    🗑️ Delete
+                  </button>
+                </td>
               </tr>
             ))
           )}
@@ -128,7 +165,6 @@ export default function CustomerTable({
     </div>
   );
 }
-
 const thStyle: React.CSSProperties = {
   padding: "10px",
   textAlign: "left",

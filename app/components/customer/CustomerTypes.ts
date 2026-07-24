@@ -25,4 +25,9 @@ export type Customer = {
 
   // Status
   status: "Active" | "Inactive";
+
+  // Optional (Recommended)
+  whatsapp?: string;
+  paymentTerms?: string;
+  remarks?: string;
 };

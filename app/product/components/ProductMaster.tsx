@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ProductForm from "./ProductForm";
 import ProductTable from "./ProductTable";
 import { Product } from "./ProductTypes";
 import {
   loadProducts,
   saveProducts,
+  getNextProductCode,
 } from "./ProductStorage";
 
 export default function ProductMaster() {
@@ -16,6 +17,13 @@ export default function ProductMaster() {
   const [editingProduct, setEditingProduct] =
     useState<Product | null>(null);
 
+  const productCode = useMemo(() => {
+    if (editingProduct) {
+      return editingProduct.code;
+    }
+
+    return getNextProductCode(products);
+  }, [products, editingProduct]);
   const handleSave = (product: Product) => {
     let updatedProducts: Product[];
 
@@ -50,6 +58,9 @@ export default function ProductMaster() {
     }
   };
 
+  const handleCancelEdit = () => {
+    setEditingProduct(null);
+  };
   return (
     <div
       style={{
@@ -64,10 +75,12 @@ export default function ProductMaster() {
       >
         📦 Product Master
       </h2>
+
       <ProductForm
-        products={products}
-        onSave={handleSave}
+        productCode={productCode}
         editingProduct={editingProduct}
+        onSave={handleSave}
+        onCancelEdit={handleCancelEdit}
       />
 
       <ProductTable

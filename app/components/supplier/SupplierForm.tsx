@@ -5,12 +5,16 @@ import { Supplier } from "./SupplierTypes";
 
 type SupplierFormProps = {
   supplierCode: string;
+  editingSupplier?: Supplier | null;
   onSave: (supplier: Supplier) => void;
+  onCancelEdit?: () => void;
 };
 
 export default function SupplierForm({
   supplierCode,
+  editingSupplier,
   onSave,
+  onCancelEdit,
 }: SupplierFormProps) {
   const emptySupplier = (): Supplier => ({
     id: crypto.randomUUID(),
@@ -41,11 +45,15 @@ export default function SupplierForm({
     useState<Supplier>(emptySupplier());
 
   useEffect(() => {
-    setSupplier((prev) => ({
-      ...prev,
-      code: supplierCode,
-    }));
-  }, [supplierCode]);
+    if (editingSupplier) {
+      setSupplier(editingSupplier);
+    } else {
+      setSupplier({
+        ...emptySupplier(),
+        code: supplierCode,
+      });
+    }
+  }, [editingSupplier, supplierCode]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -76,20 +84,26 @@ export default function SupplierForm({
       code: supplierCode,
     });
   };
-
   return (
     <form onSubmit={handleSubmit}>
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(6, minmax(160px, 1fr))",
+          gridTemplateColumns:
+            "repeat(6, minmax(160px, 1fr))",
           gap: "10px",
         }}
       >
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             Supplier Code
           </label>
+
           <input
             type="text"
             value={supplier.code}
@@ -99,9 +113,15 @@ export default function SupplierForm({
         </div>
 
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             Supplier Name *
           </label>
+
           <input
             type="text"
             name="name"
@@ -113,9 +133,15 @@ export default function SupplierForm({
         </div>
 
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             Contact Person
           </label>
+
           <input
             type="text"
             name="contactPerson"
@@ -126,9 +152,15 @@ export default function SupplierForm({
         </div>
 
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             Mobile
           </label>
+
           <input
             type="text"
             name="mobile"
@@ -139,9 +171,15 @@ export default function SupplierForm({
         </div>
 
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             Email
           </label>
+
           <input
             type="email"
             name="email"
@@ -152,9 +190,15 @@ export default function SupplierForm({
         </div>
 
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             GST Number
           </label>
+
           <input
             type="text"
             name="gst"
@@ -163,10 +207,17 @@ export default function SupplierForm({
             style={inputStyle}
           />
         </div>
+
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             PAN Number
           </label>
+
           <input
             type="text"
             name="pan"
@@ -177,9 +228,15 @@ export default function SupplierForm({
         </div>
 
         <div style={{ gridColumn: "span 2" }}>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             Address
           </label>
+
           <input
             type="text"
             name="address"
@@ -188,11 +245,16 @@ export default function SupplierForm({
             style={inputStyle}
           />
         </div>
-
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             City
           </label>
+
           <input
             type="text"
             name="city"
@@ -203,9 +265,15 @@ export default function SupplierForm({
         </div>
 
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             State
           </label>
+
           <input
             type="text"
             name="state"
@@ -216,9 +284,15 @@ export default function SupplierForm({
         </div>
 
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             Country
           </label>
+
           <input
             type="text"
             name="country"
@@ -229,9 +303,15 @@ export default function SupplierForm({
         </div>
 
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             PIN Code
           </label>
+
           <input
             type="text"
             name="pinCode"
@@ -242,9 +322,15 @@ export default function SupplierForm({
         </div>
 
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             Opening Balance
           </label>
+
           <input
             type="number"
             name="openingBalance"
@@ -255,9 +341,15 @@ export default function SupplierForm({
         </div>
 
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             Credit Limit
           </label>
+
           <input
             type="number"
             name="creditLimit"
@@ -268,9 +360,15 @@ export default function SupplierForm({
         </div>
 
         <div>
-          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
             Status
           </label>
+
           <select
             name="status"
             value={supplier.status}
@@ -281,17 +379,17 @@ export default function SupplierForm({
             <option value="Inactive">Inactive</option>
           </select>
         </div>
-
         <div
           style={{
             display: "flex",
             alignItems: "flex-end",
+            gap: "8px",
           }}
         >
           <button
             type="submit"
             style={{
-              width: "100%",
+              flex: 1,
               height: "40px",
               border: "none",
               borderRadius: "6px",
@@ -302,8 +400,30 @@ export default function SupplierForm({
               cursor: "pointer",
             }}
           >
-            Save Supplier
+            {editingSupplier
+              ? "Update Supplier"
+              : "Save Supplier"}
           </button>
+
+          {editingSupplier && (
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              style={{
+                flex: 1,
+                height: "40px",
+                border: "none",
+                borderRadius: "6px",
+                background: "#6b7280",
+                color: "#ffffff",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          )}
         </div>
       </div>
     </form>

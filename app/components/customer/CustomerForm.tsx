@@ -5,35 +5,43 @@ import { Customer } from "./CustomerTypes";
 
 type CustomerFormProps = {
   customerCode: string;
+  editingCustomer?: Customer | null;
   onSave: (customer: Customer) => void;
+  onCancelEdit?: () => void;
 };
 
 export default function CustomerForm({
   customerCode,
+  editingCustomer,
   onSave,
+  onCancelEdit,
 }: CustomerFormProps) {
   const emptyCustomer = (): Customer => ({
     id: crypto.randomUUID(),
     code: customerCode,
 
+    // Basic Details
     name: "",
     contactPerson: "",
-
     mobile: "",
     email: "",
 
+    // Tax Details
     gst: "",
     pan: "",
 
+    // Address
     address: "",
     city: "",
     state: "",
     country: "India",
     pinCode: "",
 
+    // Financial
     openingBalance: 0,
     creditLimit: 0,
 
+    // Status
     status: "Active",
   });
 
@@ -41,11 +49,15 @@ export default function CustomerForm({
     useState<Customer>(emptyCustomer());
 
   useEffect(() => {
-    setCustomer((prev) => ({
-      ...prev,
-      code: customerCode,
-    }));
-  }, [customerCode]);
+    if (editingCustomer) {
+      setCustomer(editingCustomer);
+    } else {
+      setCustomer((prev) => ({
+        ...prev,
+        code: customerCode,
+      }));
+    }
+  }, [customerCode, editingCustomer]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -75,6 +87,28 @@ export default function CustomerForm({
       ...emptyCustomer(),
       code: customerCode,
     });
+
+    onCancelEdit?.();
+  };
+
+  const handleReset = () => {
+    setCustomer({
+      ...emptyCustomer(),
+      code: customerCode,
+    });
+
+    onCancelEdit?.();
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    height: "40px",
+    padding: "0 10px",
+    border: "1px solid #d1d5db",
+    borderRadius: "6px",
+    fontSize: "14px",
+    boxSizing: "border-box",
+    outline: "none",
   };
 
   return (
@@ -82,7 +116,8 @@ export default function CustomerForm({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(6, minmax(160px, 1fr))",
+          gridTemplateColumns:
+            "repeat(6, minmax(160px, 1fr))",
           gap: "10px",
         }}
       >
@@ -130,10 +165,12 @@ export default function CustomerForm({
             Mobile
           </label>
           <input
-            type="text"
+            type="tel"
             name="mobile"
             value={customer.mobile}
             onChange={handleChange}
+            maxLength={10}
+            pattern="[0-9]{10}"
             style={inputStyle}
           />
         </div>
@@ -160,9 +197,14 @@ export default function CustomerForm({
             name="gst"
             value={customer.gst}
             onChange={handleChange}
-            style={inputStyle}
+            maxLength={15}
+            style={{
+              ...inputStyle,
+              textTransform: "uppercase",
+            }}
           />
         </div>
+
         <div>
           <label style={{ fontSize: "12px", fontWeight: 600 }}>
             PAN Number
@@ -172,7 +214,11 @@ export default function CustomerForm({
             name="pan"
             value={customer.pan}
             onChange={handleChange}
-            style={inputStyle}
+            maxLength={10}
+            style={{
+              ...inputStyle,
+              textTransform: "uppercase",
+            }}
           />
         </div>
 
@@ -227,7 +273,6 @@ export default function CustomerForm({
             style={inputStyle}
           />
         </div>
-
         <div>
           <label style={{ fontSize: "12px", fontWeight: 600 }}>
             PIN Code
@@ -286,12 +331,14 @@ export default function CustomerForm({
           style={{
             display: "flex",
             alignItems: "flex-end",
+            gap: "10px",
+            gridColumn: "span 2",
           }}
         >
           <button
             type="submit"
             style={{
-              width: "100%",
+              flex: 1,
               height: "40px",
               border: "none",
               borderRadius: "6px",
@@ -301,21 +348,27 @@ export default function CustomerForm({
               cursor: "pointer",
             }}
           >
-            Save Customer
+            💾 {editingCustomer ? "Update Customer" : "Save Customer"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleReset}
+            style={{
+              flex: 1,
+              height: "40px",
+              border: "none",
+              borderRadius: "6px",
+              background: "#6b7280",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Reset
           </button>
         </div>
       </div>
     </form>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  height: "40px",
-  padding: "0 10px",
-  border: "1px solid #d1d5db",
-  borderRadius: "6px",
-  fontSize: "14px",
-  boxSizing: "border-box",
-  outline: "none",
-};

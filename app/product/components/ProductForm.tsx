@@ -4,323 +4,372 @@ import { useEffect, useState } from "react";
 import { Product } from "./ProductTypes";
 
 type ProductFormProps = {
-  products: Product[];
-  onSave: (product: Product) => void;
+  productCode: string;
   editingProduct?: Product | null;
+  onSave: (product: Product) => void;
+  onCancelEdit?: () => void;
 };
 
 export default function ProductForm({
-  products,
-  onSave,
+  productCode,
   editingProduct,
+  onSave,
+  onCancelEdit,
 }: ProductFormProps) {
-  const [productCode, setProductCode] = useState("");
-  const [productName, setProductName] = useState("");
-  const [category, setCategory] = useState("Spices");
+  const emptyProduct = (): Product => ({
+    id: crypto.randomUUID(),
+    code: productCode,
 
-  const [hsnCode, setHsnCode] = useState("");
-  const [gst, setGst] = useState("5%");
+    // Basic Details
+    name: "",
+    category: "Spices",
 
-  const [unit, setUnit] = useState<"Gram" | "KG">("Gram");
-  const [netWeight, setNetWeight] = useState("");
+    // Tax Details
+    hsn: "",
+    gst: "5%",
 
-  const [purchasePrice, setPurchasePrice] = useState("");
-  const [salePrice, setSalePrice] = useState("");
-  const [mrp, setMrp] = useState("");
+    // Product Details
+    unit: "Gram",
+    netWeight: 0,
 
-  const [openingStock, setOpeningStock] = useState("");
-  const [minimumStock, setMinimumStock] = useState("");
+    // Pricing
+    purchase: 0,
+    sale: 0,
+    mrp: 0,
 
-  const [active, setActive] = useState(true);
+    // Stock
+    stock: 0,
+    minimumStock: 0,
 
-  useEffect(() => {
-    if (!editingProduct) return;
+    // Status
+    active: true,
+  });
 
-    setProductCode(editingProduct.code);
-    setProductName(editingProduct.name);
-    setCategory(editingProduct.category);
-
-    setHsnCode(editingProduct.hsn);
-    setGst(editingProduct.gst);
-
-    setUnit(editingProduct.unit);
-    setNetWeight(String(editingProduct.netWeight));
-
-    setPurchasePrice(String(editingProduct.purchase));
-    setSalePrice(String(editingProduct.sale));
-    setMrp(String(editingProduct.mrp));
-
-    setOpeningStock(String(editingProduct.stock));
-    setMinimumStock(String(editingProduct.minimumStock));
-
-    setActive(editingProduct.active);
-  }, [editingProduct]);
+  const [product, setProduct] =
+    useState<Product>(emptyProduct());
 
   useEffect(() => {
-    if (editingProduct) return;
-
-    setProductCode(
-      `P${String(products.length + 1).padStart(4, "0")}`
-    );
-  }, [products, editingProduct]);
-  const resetForm = () => {
-    setProductName("");
-    setCategory("Spices");
-
-    setHsnCode("");
-    setGst("5%");
-
-    setUnit("Gram");
-    setNetWeight("");
-
-    setPurchasePrice("");
-    setSalePrice("");
-    setMrp("");
-
-    setOpeningStock("");
-    setMinimumStock("");
-
-    setActive(true);
-
-    if (!editingProduct) {
-      setProductCode(
-        `P${String(products.length + 1).padStart(4, "0")}`
-      );
+    if (editingProduct) {
+      setProduct(editingProduct);
+    } else {
+      setProduct((prev) => ({
+        ...prev,
+        code: productCode,
+      }));
     }
+  }, [productCode, editingProduct]);
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value, type } = e.target;
+
+    if (type === "checkbox") {
+      const checked = (
+        e.target as HTMLInputElement
+      ).checked;
+
+      setProduct((prev) => ({
+        ...prev,
+        [name]: checked,
+      }));
+
+      return;
+    }
+
+    setProduct((prev) => ({
+      ...prev,
+      [name]:
+        name === "netWeight" ||
+        name === "purchase" ||
+        name === "sale" ||
+        name === "mrp" ||
+        name === "stock" ||
+        name === "minimumStock"
+          ? Number(value)
+          : value,
+    }));
   };
 
-  const saveProduct = () => {
-    if (productName.trim() === "") {
+  const handleSubmit = (
+    e: React.FormEvent
+  ) => {
+    e.preventDefault();
+
+    if (!product.name.trim()) {
       alert("Please enter Product Name");
       return;
     }
 
-    if (netWeight.trim() === "") {
-      alert("Please enter Net Weight");
-      return;
-    }
-
-    const product: Product = {
-      id: editingProduct
-        ? editingProduct.id
-        : crypto.randomUUID(),
-
-      code: productCode,
-      name: productName,
-      category: category,
-
-      hsn: hsnCode,
-      gst: gst,
-
-      unit: unit,
-      netWeight: Number(netWeight),
-
-      purchase: Number(purchasePrice) || 0,
-      sale: Number(salePrice) || 0,
-      mrp: Number(mrp) || 0,
-
-      stock: Number(openingStock) || 0,
-      minimumStock: Number(minimumStock) || 0,
-
-      active: active,
-    };
-
     onSave(product);
 
-    alert(
-      editingProduct
-        ? "Product Updated Successfully"
-        : "Product Saved Successfully"
-    );
+    setProduct({
+      ...emptyProduct(),
+      code: productCode,
+    });
 
-    resetForm();
+    onCancelEdit?.();
   };
 
-  const inputStyle = {
+  const handleReset = () => {
+    setProduct({
+      ...emptyProduct(),
+      code: productCode,
+    });
+
+    onCancelEdit?.();
+  };
+
+  const inputStyle: React.CSSProperties = {
     width: "100%",
-    padding: "10px",
-    marginTop: "5px",
-    marginBottom: "15px",
-    borderRadius: "6px",
+    height: "40px",
+    padding: "0 10px",
     border: "1px solid #d1d5db",
-    fontSize: "15px",
+    borderRadius: "6px",
+    fontSize: "14px",
+    boxSizing: "border-box",
     outline: "none",
-  } as const;
+  };
 
   return (
-    <div
-      style={{
-        background: "#ffffff",
-        padding: "20px",
-        borderRadius: "10px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-        marginBottom: "30px",
-      }}
-    >
-      <h2 style={{ color: "#14532d", marginBottom: "20px" }}>
-        📦 Product Master
-      </h2>
-<div
-  style={{
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "20px",
-  }}
-></div>
-      <label>Product Code</label>
-      <input
-        type="text"
-        value={productCode}
-        readOnly
-        style={inputStyle}
-      />
-
-      <label>Product Name</label>
-      <input
-        type="text"
-        value={productName}
-        onChange={(e) => setProductName(e.target.value)}
-        style={inputStyle}
-      />
-
-      <label>Category</label>
-      <input
-        type="text"
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        style={inputStyle}
-      />
-
-      <label>HSN Code</label>
-      <input
-        type="text"
-        value={hsnCode}
-        onChange={(e) => setHsnCode(e.target.value)}
-        style={inputStyle}
-      />
-
-      <label>GST</label>
-      <select
-        value={gst}
-        onChange={(e) => setGst(e.target.value)}
-        style={inputStyle}
-      >
-        <option value="0%">0%</option>
-        <option value="5%">5%</option>
-        <option value="12%">12%</option>
-        <option value="18%">18%</option>
-        <option value="28%">28%</option>
-      </select>
-
-      <label>Unit of Measure</label>
-      <select
-        value={unit}
-        onChange={(e) =>
-          setUnit(e.target.value as "Gram" | "KG")
-        }
-        style={inputStyle}
-      >
-        <option value="Gram">Gram</option>
-        <option value="KG">KG</option>
-      </select>
-
-      <label>Net Weight</label>
-      <input
-        type="number"
-        value={netWeight}
-        onChange={(e) => setNetWeight(e.target.value)}
-        style={inputStyle}
-      />
-
-      <label>Purchase Price</label>
-      <input
-        type="number"
-        value={purchasePrice}
-        onChange={(e) => setPurchasePrice(e.target.value)}
-        style={inputStyle}
-      />
-
-      <label>Sale Price</label>
-      <input
-        type="number"
-        value={salePrice}
-        onChange={(e) => setSalePrice(e.target.value)}
-        style={inputStyle}
-      />
-
-      <label>MRP</label>
-      <input
-        type="number"
-        value={mrp}
-        onChange={(e) => setMrp(e.target.value)}
-        style={inputStyle}
-      />
-
-      <label>Opening Stock</label>
-      <input
-        type="number"
-        value={openingStock}
-        onChange={(e) => setOpeningStock(e.target.value)}
-        style={inputStyle}
-      />
-
-      <label>Minimum Stock</label>
-      <input
-        type="number"
-        value={minimumStock}
-        onChange={(e) => setMinimumStock(e.target.value)}
-        style={inputStyle}
-      />
-
-      <div style={{ marginBottom: "20px" }}>
-        <label>
-          <input
-            type="checkbox"
-            checked={active}
-            onChange={(e) => setActive(e.target.checked)}
-            style={{ marginRight: "8px" }}
-          />
-          Active Product
-        </label>
-      </div>
-
+    <form onSubmit={handleSubmit}>
       <div
         style={{
-          display: "flex",
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(6, minmax(160px, 1fr))",
           gap: "10px",
-          flexWrap: "wrap",
         }}
       >
-        <button
-          type="button"
-          onClick={saveProduct}
-          style={{
-            background: "#14532d",
-            color: "#fff",
-            border: "none",
-            padding: "10px 20px",
-            borderRadius: "6px",
-            cursor: "pointer",
-          }}
-        >
-          {editingProduct ? "💾 Update Product" : "💾 Save Product"}
-        </button>
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Product Code
+          </label>
+          <input
+            type="text"
+            value={product.code}
+            readOnly
+            style={inputStyle}
+          />
+        </div>
 
-        <button
-          type="button"
-          onClick={resetForm}
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Product Name *
+          </label>
+          <input
+            type="text"
+            name="name"
+            value={product.name}
+            onChange={handleChange}
+            required
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Category
+          </label>
+          <input
+            type="text"
+            name="category"
+            value={product.category}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            HSN Code
+          </label>
+          <input
+            type="text"
+            name="hsn"
+            value={product.hsn}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            GST
+          </label>
+          <select
+            name="gst"
+            value={product.gst}
+            onChange={handleChange}
+            style={inputStyle}
+          >
+            <option value="0%">0%</option>
+            <option value="5%">5%</option>
+            <option value="12%">12%</option>
+            <option value="18%">18%</option>
+            <option value="28%">28%</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Unit
+          </label>
+          <select
+            name="unit"
+            value={product.unit}
+            onChange={handleChange}
+            style={inputStyle}
+          >
+            <option value="Gram">Gram</option>
+            <option value="KG">KG</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Net Weight
+          </label>
+          <input
+            type="number"
+            name="netWeight"
+            value={product.netWeight}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Purchase Price
+          </label>
+          <input
+            type="number"
+            name="purchase"
+            value={product.purchase}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Sale Price
+          </label>
+          <input
+            type="number"
+            name="sale"
+            value={product.sale}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            MRP
+          </label>
+          <input
+            type="number"
+            name="mrp"
+            value={product.mrp}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Opening Stock
+          </label>
+          <input
+            type="number"
+            name="stock"
+            value={product.stock}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Minimum Stock
+          </label>
+          <input
+            type="number"
+            name="minimumStock"
+            value={product.minimumStock}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: "12px", fontWeight: 600 }}>
+            Status
+          </label>
+
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              height: "40px",
+              gap: "8px",
+            }}
+          >
+            <input
+              type="checkbox"
+              name="active"
+              checked={product.active}
+              onChange={handleChange}
+            />
+            Active Product
+          </label>
+        </div>
+
+        <div
           style={{
-            background: "#6b7280",
-            color: "#fff",
-            border: "none",
-            padding: "10px 20px",
-            borderRadius: "6px",
-            cursor: "pointer",
+            display: "flex",
+            alignItems: "flex-end",
+            gap: "10px",
+            gridColumn: "span 2",
           }}
         >
-          🔄 Reset
-        </button>
+          <button
+            type="button"
+            onClick={handleReset}
+            style={{
+              flex: 1,
+              height: "40px",
+              border: "none",
+              borderRadius: "6px",
+              background: "#6b7280",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            🔄 Reset
+          </button>
+
+          <button
+            type="submit"
+            style={{
+              flex: 1,
+              height: "40px",
+              border: "none",
+              borderRadius: "6px",
+              background: "#14532d",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            💾 {editingProduct ? "Update Product" : "Save Product"}
+          </button>
+        </div>
       </div>
-    </div>
+    </form>
   );
 }

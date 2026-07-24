@@ -1,16 +1,61 @@
 "use client";
 
+import { useState } from "react";
 import { Supplier } from "./SupplierTypes";
 
 type SupplierTableProps = {
   suppliers: Supplier[];
+  onEdit: (supplier: Supplier) => void;
+  onDelete: (id: string) => void;
 };
 
 export default function SupplierTable({
   suppliers,
+  onEdit,
+  onDelete,
 }: SupplierTableProps) {
+  const [search, setSearch] = useState("");
+
+  const filteredSuppliers = suppliers.filter(
+    (supplier) =>
+      supplier.name
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      supplier.code
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      supplier.contactPerson
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      supplier.mobile.includes(search) ||
+      supplier.city
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      supplier.gst
+        .toLowerCase()
+        .includes(search.toLowerCase())
+  );
+
   return (
     <div>
+      <input
+        type="text"
+        placeholder="🔍 Search Supplier..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{
+          width: "100%",
+          height: "40px",
+          padding: "0 12px",
+          marginBottom: "12px",
+          border: "1px solid #d1d5db",
+          borderRadius: "6px",
+          fontSize: "14px",
+          outline: "none",
+          boxSizing: "border-box",
+        }}
+      />
+
       <table
         style={{
           width: "100%",
@@ -33,14 +78,15 @@ export default function SupplierTable({
             <th style={thStyle}>City</th>
             <th style={thStyle}>GST No.</th>
             <th style={thStyle}>Status</th>
+            <th style={thStyle}>Actions</th>
           </tr>
         </thead>
 
         <tbody>
-          {suppliers.length === 0 ? (
+          {filteredSuppliers.length === 0 ? (
             <tr>
               <td
-                colSpan={7}
+                colSpan={8}
                 style={{
                   padding: "20px",
                   textAlign: "center",
@@ -51,7 +97,7 @@ export default function SupplierTable({
               </td>
             </tr>
           ) : (
-            suppliers.map((supplier, index) => (
+            filteredSuppliers.map((supplier, index) => (
               <tr
                 key={supplier.id}
                 style={{
@@ -67,6 +113,7 @@ export default function SupplierTable({
                 <td style={tdStyle}>{supplier.mobile}</td>
                 <td style={tdStyle}>{supplier.city}</td>
                 <td style={tdStyle}>{supplier.gst}</td>
+
                 <td style={tdStyle}>
                   <span
                     style={{
@@ -86,6 +133,36 @@ export default function SupplierTable({
                   >
                     {supplier.status}
                   </span>
+                </td>
+
+                <td style={tdStyle}>                  <button
+                    onClick={() => onEdit(supplier)}
+                    style={{
+                      marginRight: "8px",
+                      padding: "6px 10px",
+                      border: "none",
+                      borderRadius: "4px",
+                      background: "#2563eb",
+                      color: "#ffffff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ✏️ Edit
+                  </button>
+
+                  <button
+                    onClick={() => onDelete(supplier.id)}
+                    style={{
+                      padding: "6px 10px",
+                      border: "none",
+                      borderRadius: "4px",
+                      background: "#dc2626",
+                      color: "#ffffff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    🗑️ Delete
+                  </button>
                 </td>
               </tr>
             ))

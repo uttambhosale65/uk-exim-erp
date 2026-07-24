@@ -6,7 +6,12 @@ export function loadCustomers(): Customer[] {
   if (typeof window === "undefined") return [];
 
   const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
+
+  try {
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
 }
 
 export function saveCustomers(customers: Customer[]) {
@@ -14,6 +19,11 @@ export function saveCustomers(customers: Customer[]) {
 }
 
 export function getNextCustomerCode(customers: Customer[]): string {
-  const next = customers.length + 1;
-  return `C${next.toString().padStart(4, "0")}`;
+  if (customers.length === 0) return "C0001";
+
+  const maxNumber = Math.max(
+    ...customers.map((c) => Number(c.code.replace("C", "")) || 0)
+  );
+
+  return `C${String(maxNumber + 1).padStart(4, "0")}`;
 }

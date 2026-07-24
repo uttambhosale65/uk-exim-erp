@@ -44,3 +44,8 @@ export function getNextSupplierCode(
 
   return `SUP${String(max + 1).padStart(4, "0")}`;
 }
+export function clearSuppliers() {
+  if (typeof window === "undefined") return;
+
+  localStorage.removeItem(STORAGE_KEY);
+}
