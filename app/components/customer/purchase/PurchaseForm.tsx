@@ -33,18 +33,29 @@ export default function PurchaseForm({
     purchaseNo,
     purchaseDate: "",
     invoiceNo: "",
+
     supplierCode: "",
     supplierName: "",
+
     productCode: "",
     productName: "",
+
     hsn: "",
     unit: "",
+
     qty: 0,
     rate: 0,
     amount: 0,
+
+    gst: 0,
+    gstAmount: 0,
+    netAmount: 0,
+
+    remarks: "",
   };
 
-  const [purchase, setPurchase] = useState<Purchase>(emptyPurchase);
+  const [purchase, setPurchase] =
+    useState<Purchase>(emptyPurchase);
 
   useEffect(() => {
     setSuppliers(loadSuppliers());
@@ -63,14 +74,18 @@ export default function PurchaseForm({
   }, [editingPurchase, purchaseNo]);
 
   function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement
+    >
   ) {
     const { name, value } = e.target;
 
     let updated: Purchase = {
       ...purchase,
       [name]:
-        name === "qty" || name === "rate"
+        name === "qty" ||
+        name === "rate" ||
+        name === "gst"
           ? Number(value)
           : value,
     };
@@ -97,16 +112,33 @@ export default function PurchaseForm({
         updated.hsn = product.hsn;
         updated.unit = product.unit;
         updated.rate = product.purchase;
+       updated.gst = Number(product.gst.replace("%", ""));
       }
     }
 
     updated.amount = updated.qty * updated.rate;
+    updated.gstAmount =
+      (updated.amount * updated.gst) / 100;
+    updated.netAmount =
+      updated.amount + updated.gstAmount;
 
     setPurchase(updated);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(
+    e: React.FormEvent
+  ) {
     e.preventDefault();
+
+    if (
+      !purchase.purchaseDate ||
+      !purchase.supplierCode ||
+      !purchase.productCode ||
+      purchase.qty <= 0
+    ) {
+      alert("Please fill all required fields.");
+      return;
+    }
 
     onSave({
       ...purchase,
@@ -118,13 +150,15 @@ export default function PurchaseForm({
         : purchaseNo,
     });
 
-    updateStock(
-      purchase.productCode,
-      purchase.productName,
-      purchase.hsn,
-      purchase.unit,
-      purchase.qty
-    );
+    if (!editingPurchase) {
+      updateStock(
+        purchase.productCode,
+        purchase.productName,
+        purchase.hsn,
+        purchase.unit,
+        purchase.qty
+      );
+    }
 
     setPurchase({
       ...emptyPurchase,
@@ -160,7 +194,6 @@ export default function PurchaseForm({
         name="invoiceNo"
         value={purchase.invoiceNo}
         onChange={handleChange}
-        placeholder="Invoice Number"
       />
 
       <Select
@@ -228,16 +261,44 @@ export default function PurchaseForm({
       />
 
       <Input
+        label="GST %"
+        type="number"
+        name="gst"
+        value={purchase.gst}
+        onChange={handleChange}
+      />
+
+      <Input
         label="Amount"
         value={purchase.amount}
         readOnly
       />
 
+      <Input
+        label="GST Amount"
+        value={purchase.gstAmount}
+        readOnly
+      />
+
+      <Input
+        label="Net Amount"
+        value={purchase.netAmount}
+        readOnly
+      />
+
+      <Input
+        label="Remarks"
+        name="remarks"
+        value={purchase.remarks}
+        onChange={handleChange}
+        placeholder="Optional"
+      />
+
       <div
         style={{
+          gridColumn: "span 6",
           display: "flex",
-          alignItems: "end",
-          justifyContent: "stretch",
+          justifyContent: "flex-end",
         }}
       >
         <Button
@@ -247,10 +308,6 @@ export default function PurchaseForm({
               ? "✏️ Update Purchase"
               : "💾 Save Purchase"
           }
-          style={{
-            width: "100%",
-            height: "40px",
-          }}
         />
       </div>
     </form>

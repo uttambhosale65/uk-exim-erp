@@ -33,16 +33,6 @@ export function addPurchase(
   savePurchases(purchases);
 }
 
-export function deletePurchase(
-  id: string
-): void {
-  const purchases = loadPurchases().filter(
-    (purchase) => purchase.id !== id
-  );
-
-  savePurchases(purchases);
-}
-
 export function updatePurchase(
   updatedPurchase: Purchase
 ): void {
@@ -55,9 +45,25 @@ export function updatePurchase(
   savePurchases(purchases);
 }
 
-export function getNextPurchaseNo(): string {
-  const purchases = loadPurchases();
+export function deletePurchase(
+  id: string
+): void {
+  const purchases = loadPurchases().filter(
+    (purchase) => purchase.id !== id
+  );
 
+  savePurchases(purchases);
+}
+
+export function clearPurchases(): void {
+  if (typeof window === "undefined") return;
+
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+export function getNextPurchaseNo(
+  purchases: Purchase[]
+): string {
   const next = purchases.length + 1;
 
   return `PUR-${next

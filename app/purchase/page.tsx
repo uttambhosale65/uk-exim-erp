@@ -35,13 +35,13 @@ export default function PurchasePage() {
 
     setPurchases(data);
 
-    setPurchaseNo(getNextPurchaseNo());
+   setPurchaseNo(getNextPurchaseNo(data));
   }, []);
 
   useEffect(() => {
     savePurchases(purchases);
 
-    setPurchaseNo(getNextPurchaseNo());
+   setPurchaseNo(getNextPurchaseNo(purchases));
   }, [purchases]);
 
   function addPurchase(

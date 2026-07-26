@@ -17,4 +17,10 @@ export type Purchase = {
   qty: number;
   rate: number;
   amount: number;
+
+  gst: number;
+  gstAmount: number;
+  netAmount: number;
+
+  remarks: string;
 };

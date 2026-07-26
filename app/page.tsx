@@ -1,10 +1,15 @@
 "use client";
-import SupplierMaster from "./components/supplier/SupplierMaster";
+
 import { useState } from "react";
+
 import ProductMaster from "./product/components/ProductMaster";
 import CustomerMaster from "./components/customer/CustomerMaster";
+import SupplierMaster from "./components/supplier/SupplierMaster";
+import PurchaseMaster from "./components/customer/purchase/PurchaseMaster";
+import SalesPage from "./sales/page";
 export default function Home() {
-  const [activePage, setActivePage] = useState("dashboard");
+  const [activePage, setActivePage] =
+    useState("dashboard");
 
   const menuItem = {
     padding: "7px 10px",
@@ -26,34 +31,26 @@ export default function Home() {
     background: "#fff",
     borderRadius: "10px",
     padding: "16px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+    boxShadow:
+      "0 2px 8px rgba(0,0,0,0.08)",
     minHeight: "90px",
   };
-
   const renderPage = () => {
     switch (activePage) {
       case "products":
         return <ProductMaster />;
-case "customers":
-  return <CustomerMaster />;
 
-    case "suppliers":
-  return <SupplierMaster />;
+      case "customers":
+        return <CustomerMaster />;
+
+      case "suppliers":
+        return <SupplierMaster />;
+
       case "grn":
-        return (
-          <>
-            <h2>📥 Goods Receipt Note (GRN)</h2>
-            <p>Coming Soon...</p>
-          </>
-        );
+        return <PurchaseMaster />;
 
       case "issue":
-        return (
-          <>
-            <h2>📤 Issue (Sales)</h2>
-            <p>Coming Soon...</p>
-          </>
-        );
+  return <SalesPage />;
 
       case "stock":
         return (
@@ -90,12 +87,15 @@ case "customers":
       default:
         return (
           <>
-            <h2 style={{ marginTop: 0 }}>Dashboard</h2>
+            <h2 style={{ marginTop: 0 }}>
+              Dashboard
+            </h2>
 
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
+                gridTemplateColumns:
+                  "repeat(3, 1fr)",
                 gap: "15px",
               }}
             >
@@ -133,26 +133,26 @@ case "customers":
         );
     }
   };
-
   return (
     <div
       style={{
         display: "flex",
-        height: "100vh",
+        minHeight: "100vh",
+        fontFamily: "Arial",
         background: "#f3f4f6",
-        fontFamily: "Arial, sans-serif",
       }}
     >
-      <aside
+      {/* Sidebar */}
+      <div
         style={{
-          width: "200px",
-          background: "#14532d",
+          width: "240px",
+          background: "#111827",
           color: "#fff",
-          padding: "10px",
+          padding: "20px",
         }}
       >
         <h2 style={{ marginTop: 0 }}>
-          🌿 UK EXIM ERP
+          UK EXIM ERP
         </h2>
 
         <div
@@ -161,12 +161,12 @@ case "customers":
               ? activeMenu
               : menuItem
           }
-          onClick={() => setActivePage("dashboard")}
+          onClick={() =>
+            setActivePage("dashboard")
+          }
         >
           🏠 Dashboard
         </div>
-
-        <h4>MASTERS</h4>
 
         <div
           style={
@@ -174,9 +174,11 @@ case "customers":
               ? activeMenu
               : menuItem
           }
-          onClick={() => setActivePage("products")}
+          onClick={() =>
+            setActivePage("products")
+          }
         >
-          📦 Products
+          📦 Product Master
         </div>
 
         <div
@@ -185,9 +187,11 @@ case "customers":
               ? activeMenu
               : menuItem
           }
-          onClick={() => setActivePage("customers")}
+          onClick={() =>
+            setActivePage("customers")
+          }
         >
-          👥 Customers
+          👥 Customer Master
         </div>
 
         <div
@@ -196,12 +200,12 @@ case "customers":
               ? activeMenu
               : menuItem
           }
-          onClick={() => setActivePage("suppliers")}
+          onClick={() =>
+            setActivePage("suppliers")
+          }
         >
-          🚚 Suppliers
+          🚚 Supplier Master
         </div>
-
-        <h4>TRANSACTIONS</h4>
 
         <div
           style={
@@ -209,9 +213,11 @@ case "customers":
               ? activeMenu
               : menuItem
           }
-          onClick={() => setActivePage("grn")}
+          onClick={() =>
+            setActivePage("grn")
+          }
         >
-          📥 GRN
+          📥 Purchase (GRN)
         </div>
 
         <div
@@ -220,12 +226,12 @@ case "customers":
               ? activeMenu
               : menuItem
           }
-          onClick={() => setActivePage("issue")}
+          onClick={() =>
+            setActivePage("issue")
+          }
         >
           📤 Issue (Sales)
         </div>
-
-        <h4>REPORTS</h4>
 
         <div
           style={
@@ -233,20 +239,11 @@ case "customers":
               ? activeMenu
               : menuItem
           }
-          onClick={() => setActivePage("stock")}
-        >
-          📦 Stock
-        </div>
-
-        <div
-          style={
-            activePage === "sales"
-              ? activeMenu
-              : menuItem
+          onClick={() =>
+            setActivePage("stock")
           }
-          onClick={() => setActivePage("sales")}
         >
-          💰 Sales
+          📦 Stock Report
         </div>
 
         <div
@@ -255,9 +252,24 @@ case "customers":
               ? activeMenu
               : menuItem
           }
-          onClick={() => setActivePage("purchase")}
+          onClick={() =>
+            setActivePage("purchase")
+          }
         >
-          🛒 Purchase
+          🛒 Purchase Report
+        </div>
+
+        <div
+          style={
+            activePage === "sales"
+              ? activeMenu
+              : menuItem
+          }
+          onClick={() =>
+            setActivePage("sales")
+          }
+        >
+          💰 Sales Report
         </div>
 
         <div
@@ -266,47 +278,23 @@ case "customers":
               ? activeMenu
               : menuItem
           }
-          onClick={() => setActivePage("settings")}
+          onClick={() =>
+            setActivePage("settings")
+          }
         >
           ⚙️ Settings
         </div>
-      </aside>
+      </div>
 
-      <main
+      {/* Main Content */}
+      <div
         style={{
           flex: 1,
-          display: "flex",
-          flexDirection: "column",
+          padding: "25px",
         }}
       >
-        <header
-          style={{
-            height: "65px",
-            background: "#fff",
-            borderBottom: "1px solid #ddd",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "0 20px",
-          }}
-        >
-          <h2>UK EXIM ENTERPRISES ERP</h2>
-
-          <strong>
-            👋 Welcome Uttam
-          </strong>
-        </header>
-
-        <div
-          style={{
-            flex: 1,
-            padding: "20px",
-            overflow: "auto",
-          }}
-        >
-          {renderPage()}
-        </div>
-      </main>
+        {renderPage()}
+      </div>
     </div>
   );
 }

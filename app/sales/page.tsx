@@ -83,10 +83,8 @@ export default function SalesPage() {
 
       <Card title="Sales Entry">
         <SalesForm
-          salesNo={salesNo}
           onSave={addSales}
-          editingSale={editingSale}
-        />
+          />
       </Card>
 
       <Card title="Sales Register">

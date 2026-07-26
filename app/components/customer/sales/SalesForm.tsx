@@ -1,528 +1,395 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
+import React, { useMemo, useState } from "react";
 import { Sales } from "./SalesTypes";
-import { Customer } from "../CustomerTypes";
-import { Product } from "../../../product/components/ProductTypes";
-
-import { loadCustomers } from "../CustomerStorage";
-import { loadProducts } from "../../../product/components/ProductStorage";
-
-import {
-  reduceStock,
-  getCurrentStock,
-} from "../../stock/StockStorage";
 
 type SalesFormProps = {
-  salesNo: string;
-  onSave: (sales: Sales) => void;
-  editingSale: Sales | null;
+  onSave: (sale: Sales) => void;
 };
 
-export default function SalesForm({
-  salesNo,
-  onSave,
-  editingSale,
-}: SalesFormProps) {
-  const [customers, setCustomers] =
-    useState<Customer[]>([]);
+const SalesForm: React.FC<SalesFormProps> = ({ onSave }) => {
+  const today = new Date().toISOString().split("T")[0];
 
-  const [products, setProducts] =
-    useState<Product[]>([]);
-
-  const [availableStock, setAvailableStock] =
-    useState(0);
-
-  const emptySales = (): Sales => ({
+  const initialForm: Sales = {
     id: "",
-    salesNo,
-    salesDate: new Date()
-      .toISOString()
-      .split("T")[0],
 
+    // Sales Details
+    salesNo: "",
+    salesDate: today,
     invoiceNo: "",
 
+    // Customer
     customerCode: "",
     customerName: "",
 
+    // Product
     productCode: "",
     productName: "",
 
+    // Product Details
     hsn: "",
     unit: "",
 
-    qty: 1,
+    // Quantity & Rate
+    qty: 0,
     rate: 0,
-    amount: 0,
 
+    // Amount Details
+    amount: 0,
     gst: 0,
+    gstAmount: 0,
+    netAmount: 0,
+
+    // GST Breakup
     taxableAmount: 0,
     cgst: 0,
     sgst: 0,
     igst: 0,
     grandTotal: 0,
-  });
 
-  const [sales, setSales] =
-    useState<Sales>(emptySales());
+    // Payment Details
+    paymentMode: "Cash",
 
-  useEffect(() => {
-    setCustomers(loadCustomers());
-    setProducts(loadProducts());
-  }, []);
+    // Status
+    status: "Completed",
 
-  useEffect(() => {
-    if (editingSale) {
-      setSales(editingSale);
+    // Other Details
+    remarks: "",
 
-      setAvailableStock(
-        getCurrentStock(
-          editingSale.productCode
-        )
-      );
-    }
-  }, [editingSale]);
+    // Audit
+    createdAt: "",
+    updatedAt: "",
+  };
 
-  useEffect(() => {
-    if (!editingSale) {
-      setSales((prev) => ({
-        ...prev,
-        salesNo,
-      }));
-    }
-  }, [salesNo, editingSale]);
+  const [form, setForm] = useState<Sales>(initialForm);
 
-  function handleChange(
+  const amount = useMemo(() => {
+    return form.qty * form.rate;
+  }, [form.qty, form.rate]);
+
+  const gstAmount = useMemo(() => {
+    return (amount * form.gst) / 100;
+  }, [amount, form.gst]);
+
+  const grandTotal = useMemo(() => {
+    return amount + gstAmount;
+  }, [amount, gstAmount]);
+
+  const handleChange = (
     e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
-  ) {
+  ) => {
     const { name, value } = e.target;
 
-    let updated: Sales = {
-      ...sales,
+    setForm((prev) => ({
+      ...prev,
       [name]:
         name === "qty" ||
-        name === "rate"
+        name === "rate" ||
+        name === "gst"
           ? Number(value)
           : value,
-    };
+    }));
+  };
 
-    if (name === "customerCode") {
-      const customer = customers.find(
-        (c) => c.code === value
-      );
-
-      if (customer) {
-        updated.customerCode =
-          customer.code;
-        updated.customerName =
-          customer.name;
-      }
-    }
-
-    if (name === "productCode") {
-      const product = products.find(
-        (p) => p.code === value
-      );
-
-      if (product) {
-        updated.productCode =
-          product.code;
-
-        updated.productName =
-          product.name;
-
-        updated.hsn = product.hsn;
-        updated.unit = product.unit;
-
-        updated.rate =
-          product.sale;
-
-        updated.gst =
-          Number(product.gst);
-
-        setAvailableStock(
-          getCurrentStock(
-            product.code
-          )
-        );
-      }
-    }
-
-    updated.amount =
-      updated.qty *
-      updated.rate;
-
-    updated.taxableAmount =
-      updated.amount;
-
-    updated.cgst =
-      (updated.taxableAmount *
-        updated.gst) /
-      200;
-
-    updated.sgst =
-      (updated.taxableAmount *
-        updated.gst) /
-      200;
-
-    updated.igst = 0;
-
-    updated.grandTotal =
-      updated.taxableAmount +
-      updated.cgst +
-      updated.sgst;
-
-    setSales(updated);
-  }
-
-  function handleSubmit(
-    e: React.FormEvent
-  ) {
-    e.preventDefault();
-
-    if (
-      sales.qty >
-      availableStock
-    ) {
-      alert(
-        "Insufficient Stock!"
-      );
-      return;
-    }
-
-    onSave({
-      ...sales,
-      id: editingSale
-        ? editingSale.id
-        : Date.now().toString(),
-
-      salesNo: editingSale
-        ? editingSale.salesNo
-        : salesNo,
-    });
-
-    if (!editingSale) {
-      reduceStock(
-        sales.productCode,
-        sales.qty
-      );
-    }
-
-    setSales(emptySales());
-
-    setAvailableStock(0);
-  }
-
+  const handleReset = () => {
+    setForm(initialForm);
+  };
   return (
-    <form onSubmit={handleSubmit}>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(6, minmax(160px, 1fr))",
-          gap: "10px",
-        }}
-      >
+    <div className="bg-white rounded-xl shadow-md p-6">
+      <h2 className="text-2xl font-bold mb-6 text-blue-700">
+        Sales Entry
+      </h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        {/* Sales Details */}
+
         <div>
-          <label style={labelStyle}>
+          <label className="block text-sm font-medium mb-1">
             Sales No
           </label>
           <input
             type="text"
-            value={sales.salesNo || salesNo}
-            readOnly
-            style={{
-              ...inputStyle,
-              background: "#f3f4f6",
-            }}
+            name="salesNo"
+            value={form.salesNo}
+            onChange={handleChange}
+            className="w-full border rounded-lg p-2"
+            placeholder="Auto / Manual"
           />
         </div>
 
         <div>
-          <label style={labelStyle}>
+          <label className="block text-sm font-medium mb-1">
             Sales Date
           </label>
           <input
             type="date"
             name="salesDate"
-            value={sales.salesDate}
+            value={form.salesDate}
             onChange={handleChange}
-            style={inputStyle}
+            className="w-full border rounded-lg p-2"
           />
         </div>
 
         <div>
-          <label style={labelStyle}>
+          <label className="block text-sm font-medium mb-1">
             Invoice No
           </label>
           <input
             type="text"
-            value={
-              sales.invoiceNo ||
-              sales.salesNo
-            }
-            readOnly
-            style={{
-              ...inputStyle,
-              background: "#f3f4f6",
-            }}
+            name="invoiceNo"
+            value={form.invoiceNo}
+            onChange={handleChange}
+            className="w-full border rounded-lg p-2"
+            placeholder="Invoice Number"
+          />
+        </div>
+
+        {/* Customer Details */}
+
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Customer Code
+          </label>
+          <input
+            type="text"
+            name="customerCode"
+            value={form.customerCode}
+            onChange={handleChange}
+            className="w-full border rounded-lg p-2"
+            placeholder="Customer Code"
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium mb-1">
+            Customer Name
+          </label>
+          <input
+            type="text"
+            name="customerName"
+            value={form.customerName}
+            onChange={handleChange}
+            className="w-full border rounded-lg p-2"
+            placeholder="Customer Name"
+          />
+        </div>
+
+        {/* Product Details */}
+
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Product Code
+          </label>
+          <input
+            type="text"
+            name="productCode"
+            value={form.productCode}
+            onChange={handleChange}
+            className="w-full border rounded-lg p-2"
+            placeholder="Product Code"
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium mb-1">
+            Product Name
+          </label>
+          <input
+            type="text"
+            name="productName"
+            value={form.productName}
+            onChange={handleChange}
+            className="w-full border rounded-lg p-2"
+            placeholder="Product Name"
           />
         </div>
 
         <div>
-          <label style={labelStyle}>
-            Customer
-          </label>
-          <select
-            name="customerCode"
-            value={sales.customerCode}
-            onChange={handleChange}
-            style={inputStyle}
-          >
-            <option value="">
-              Select Customer
-            </option>
-
-            {customers.map(
-              (customer) => (
-                <option
-                  key={customer.id}
-                  value={customer.code}
-                >
-                  {customer.name}
-                </option>
-              )
-            )}
-          </select>
-        </div>
-
-        <div>
-          <label style={labelStyle}>
-            Product
-          </label>
-          <select
-            name="productCode"
-            value={sales.productCode}
-            onChange={handleChange}
-            style={inputStyle}
-          >
-            <option value="">
-              Select Product
-            </option>
-
-            {products.map(
-              (product) => (
-                <option
-                  key={product.id}
-                  value={product.code}
-                >
-                  {product.name}
-                </option>
-              )
-            )}
-          </select>
-        </div>
-
-        <div>
-          <label style={labelStyle}>
+          <label className="block text-sm font-medium mb-1">
             HSN
           </label>
           <input
             type="text"
-            value={sales.hsn}
-            readOnly
-            style={{
-              ...inputStyle,
-              background: "#f3f4f6",
-            }}
+            name="hsn"
+            value={form.hsn}
+            onChange={handleChange}
+            className="w-full border rounded-lg p-2"
+            placeholder="HSN Code"
           />
         </div>
 
         <div>
-          <label style={labelStyle}>
+          <label className="block text-sm font-medium mb-1">
             Unit
           </label>
           <input
             type="text"
-            value={sales.unit}
-            readOnly
-            style={{
-              ...inputStyle,
-              background: "#f3f4f6",
-            }}
+            name="unit"
+            value={form.unit}
+            onChange={handleChange}
+           className="w-full border rounded-lg p-2"
+            placeholder="Kg / Pcs / Box"
           />
         </div>
+        {/* Quantity & Rate */}
 
         <div>
-          <label style={labelStyle}>
+          <label className="block text-sm font-medium mb-1">
             Quantity
           </label>
           <input
             type="number"
             name="qty"
-            value={sales.qty}
+            value={form.qty}
             onChange={handleChange}
-            style={inputStyle}
+            className="w-full border rounded-lg p-2"
+            min={0}
           />
         </div>
 
         <div>
-          <label style={labelStyle}>
-            Sales Rate
+          <label className="block text-sm font-medium mb-1">
+            Rate
           </label>
           <input
             type="number"
-            value={sales.rate}
-            readOnly
-            style={{
-              ...inputStyle,
-              background: "#f3f4f6",
-            }}
+            name="rate"
+            value={form.rate}
+            onChange={handleChange}
+            className="w-full border rounded-lg p-2"
+            min={0}
           />
         </div>
+
         <div>
-          <label style={labelStyle}>
+          <label className="block text-sm font-medium mb-1">
             Amount
           </label>
           <input
             type="number"
-            value={sales.amount}
+            value={amount}
             readOnly
-            style={{
-              ...inputStyle,
-              background: "#f3f4f6",
-            }}
+            className="w-full border rounded-lg p-2 bg-gray-100"
           />
         </div>
 
+        {/* GST */}
+
         <div>
-          <label style={labelStyle}>
+          <label className="block text-sm font-medium mb-1">
             GST %
           </label>
           <input
             type="number"
-            value={sales.gst}
-            readOnly
-            style={{
-              ...inputStyle,
-              background: "#f3f4f6",
-            }}
+            name="gst"
+            value={form.gst}
+            onChange={handleChange}
+            className="w-full border rounded-lg p-2"
+            min={0}
           />
         </div>
 
         <div>
-          <label style={labelStyle}>
-            CGST
+          <label className="block text-sm font-medium mb-1">
+            GST Amount
           </label>
           <input
             type="number"
-            value={sales.cgst}
+            value={gstAmount}
             readOnly
-            style={{
-              ...inputStyle,
-              background: "#f3f4f6",
-            }}
+            className="w-full border rounded-lg p-2 bg-gray-100"
           />
         </div>
 
         <div>
-          <label style={labelStyle}>
-            SGST
-          </label>
-          <input
-            type="number"
-            value={sales.sgst}
-            readOnly
-            style={{
-              ...inputStyle,
-              background: "#f3f4f6",
-            }}
-          />
-        </div>
-
-        <div>
-          <label style={labelStyle}>
+          <label className="block text-sm font-medium mb-1">
             Grand Total
           </label>
           <input
             type="number"
-            value={sales.grandTotal}
+            value={grandTotal}
             readOnly
-            style={{
-              ...inputStyle,
-              background: "#f3f4f6",
-              fontWeight: 700,
-            }}
+            className="w-full border rounded-lg p-2 bg-green-100 font-semibold"
           />
         </div>
+
+        {/* Payment Mode */}
 
         <div>
-          <label style={labelStyle}>
-            Available Stock
+          <label className="block text-sm font-medium mb-1">
+            Payment Mode
           </label>
-          <input
-            type="number"
-            value={availableStock}
-            readOnly
-            style={{
-              ...inputStyle,
-              background:
-                availableStock > 0
-                  ? "#dcfce7"
-                  : "#fee2e2",
-              fontWeight: 700,
-            }}
+          <select
+            name="paymentMode"
+            value={form.paymentMode}
+            onChange={handleChange}
+            className="w-full border rounded-lg p-2"
+          >
+            <option value="Cash">Cash</option>
+            <option value="UPI">UPI</option>
+            <option value="Card">Card</option>
+            <option value="Bank">Bank</option>
+            <option value="Credit">Credit</option>
+          </select>
+        </div>
+
+        {/* Remarks */}
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium mb-1">
+            Remarks
+          </label>
+          <textarea
+            name="remarks"
+            value={form.remarks}
+            onChange={handleChange}
+            rows={3}
+            className="w-full border rounded-lg p-2"
+            placeholder="Enter Remarks..."
           />
         </div>
 
-        <div
-          style={{
-            gridColumn: "span 6",
-            display: "flex",
-            justifyContent: "flex-end",
-            marginTop: "8px",
-          }}
-        >
-          <button
-            type="submit"
-            style={{
-              minWidth: "180px",
-              height: "40px",
-              border: "none",
-              borderRadius: "6px",
-              background: "#2563eb",
-              color: "#ffffff",
-              fontSize: "14px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Save Sales
-          </button>
-        </div>
       </div>
-    </form>
+      <div className="flex justify-end gap-3 mt-6">
+        <button
+          type="button"
+          onClick={handleReset}
+          className="px-5 py-2 rounded-lg bg-gray-500 text-white hover:bg-gray-600"
+        >
+          Reset
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            const now = new Date().toISOString();
+
+            const sale: Sales = {
+              ...form,
+              amount,
+              gstAmount,
+              netAmount: grandTotal,
+              taxableAmount: amount,
+              cgst: form.gst / 2,
+              sgst: form.gst / 2,
+              igst: 0,
+              grandTotal,
+              createdAt: form.createdAt || now,
+              updatedAt: now,
+            };
+
+            onSave(sale);
+            handleReset();
+          }}
+          className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+        >
+          Save
+        </button>
+      </div>
+    </div>
   );
-}
-
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  marginBottom: "4px",
-  fontSize: "12px",
-  fontWeight: 600,
-  color: "#374151",
 };
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  height: "40px",
-  padding: "0 10px",
-  border: "1px solid #d1d5db",
-  borderRadius: "6px",
-  fontSize: "14px",
-  boxSizing: "border-box",
-  outline: "none",
-};
+export default SalesForm;
