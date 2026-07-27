@@ -10,7 +10,7 @@ export function loadSales(): Sales[] {
 
     if (!data) return [];
 
-    return JSON.parse(data);
+    return JSON.parse(data) as Sales[];
   } catch (error) {
     console.error("Error loading sales:", error);
     return [];
@@ -26,6 +26,10 @@ export function saveSales(sales: Sales[]): void {
   );
 }
 
+// ==============================
+// Auto Sales Number
+// ==============================
+
 export function getNextSalesNo(
   sales: Sales[]
 ): string {
@@ -33,20 +37,46 @@ export function getNextSalesNo(
     return "SAL-0001";
   }
 
-  const lastSales = sales[sales.length - 1];
+  const lastNumber = Math.max(
+    ...sales.map((sale) => {
+      const no = parseInt(
+        sale.salesNo.replace("SAL-", "")
+      );
 
-  const lastNumber = parseInt(
-    lastSales.salesNo.replace("SAL-", "")
+      return isNaN(no) ? 0 : no;
+    })
   );
 
-  const nextNumber = isNaN(lastNumber)
-    ? sales.length + 1
-    : lastNumber + 1;
-
-  return `SAL-${nextNumber
-    .toString()
-    .padStart(4, "0")}`;
+  return `SAL-${String(lastNumber + 1).padStart(4, "0")}`;
 }
+
+// ==============================
+// Auto Invoice Number
+// ==============================
+
+export function getNextInvoiceNo(
+  sales: Sales[]
+): string {
+  if (sales.length === 0) {
+    return "INV-0001";
+  }
+
+  const lastNumber = Math.max(
+    ...sales.map((sale) => {
+      const no = parseInt(
+        sale.invoiceNo.replace("INV-", "")
+      );
+
+      return isNaN(no) ? 0 : no;
+    })
+  );
+
+  return `INV-${String(lastNumber + 1).padStart(4, "0")}`;
+}
+
+// ==============================
+// Find Sales
+// ==============================
 
 export function getSalesById(
   id: string
@@ -55,6 +85,10 @@ export function getSalesById(
     (sale) => sale.id === id
   );
 }
+
+// ==============================
+// Delete Sales
+// ==============================
 
 export function deleteSales(
   id: string
@@ -66,4 +100,14 @@ export function deleteSales(
   saveSales(sales);
 
   return sales;
+}
+
+// ==============================
+// Clear All Sales
+// ==============================
+
+export function clearSales(): void {
+  if (typeof window === "undefined") return;
+
+  localStorage.removeItem(STORAGE_KEY);
 }

@@ -1,13 +1,17 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Sales } from "./SalesTypes";
 
 type SalesFormProps = {
+  salesNo: string;
   onSave: (sale: Sales) => void;
 };
 
-const SalesForm: React.FC<SalesFormProps> = ({ onSave }) => {
+const SalesForm: React.FC<SalesFormProps> = ({
+  salesNo,
+  onSave,
+}) => {
   const today = new Date().toISOString().split("T")[0];
 
   const initialForm: Sales = {
@@ -62,7 +66,12 @@ const SalesForm: React.FC<SalesFormProps> = ({ onSave }) => {
   };
 
   const [form, setForm] = useState<Sales>(initialForm);
-
+useEffect(() => {
+  setForm((prev) => ({
+    ...prev,
+    salesNo,
+  }));
+}, [salesNo]);
   const amount = useMemo(() => {
     return form.qty * form.rate;
   }, [form.qty, form.rate]);
