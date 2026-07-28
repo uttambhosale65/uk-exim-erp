@@ -7,6 +7,7 @@ import { Product } from "./components/ProductTypes";
 import {
   loadProducts,
   saveProducts,
+  getNextProductCode,
 } from "./components/ProductStorage";
 
 export default function ProductPage() {
@@ -67,9 +68,10 @@ export default function ProductPage() {
       </h1>
 
       <ProductForm
-        products={products}
-        onSave={handleSave}
+        productCode={getNextProductCode(products)}
         editingProduct={editingProduct}
+        onSave={handleSave}
+        onCancelEdit={() => setEditingProduct(null)}
       />
 
       <ProductTable

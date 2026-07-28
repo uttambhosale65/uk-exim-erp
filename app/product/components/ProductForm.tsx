@@ -93,27 +93,42 @@ export default function ProductForm({
     }));
   };
 
-  const handleSubmit = (
-    e: React.FormEvent
-  ) => {
-    e.preventDefault();
+const handleSubmit = (
+  e: React.FormEvent
+) => {
+  e.preventDefault();
 
-    if (!product.name.trim()) {
-      alert("Please enter Product Name");
-      return;
-    }
+  if (!product.name.trim()) {
+    alert("Please enter Product Name");
+    return;
+  }
 
-    onSave(product);
+  if (!product.hsn.trim()) {
+    alert("Please enter HSN Code");
+    return;
+  }
 
-    setProduct({
-      ...emptyProduct(),
-      code: productCode,
-    });
+  if (product.sale <= 0) {
+    alert("Sale Price should be greater than zero");
+    return;
+  }
 
-    onCancelEdit?.();
-  };
+  if (product.mrp < product.sale) {
+    alert("MRP should not be less than Sale Price");
+    return;
+  }
 
-  const handleReset = () => {
+  onSave(product);
+
+  setProduct({
+    ...emptyProduct(),
+    code: productCode,
+  });
+
+  onCancelEdit?.();
+};
+
+const handleReset = () => {
     setProduct({
       ...emptyProduct(),
       code: productCode,

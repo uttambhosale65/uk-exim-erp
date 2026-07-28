@@ -120,13 +120,14 @@ export default function SalesPage() {
 
       <Card title="Sales Entry">
 
-        <SalesForm
-          salesNo={salesNo}
-          invoiceNo={invoiceNo}
-          onSave={addSales}
-        />
+      <SalesForm
+  salesNo={salesNo}
+  invoiceNo={invoiceNo}
+  editData={editingSale}
+  onSave={addSales}
+/>
 
-      </Card>
+</Card>
 
       <Card title="Sales Register">
 

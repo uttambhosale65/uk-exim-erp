@@ -7,15 +7,16 @@ export function loadProducts(): Product[] {
     return [];
   }
 
-  const data = localStorage.getItem(STORAGE_KEY);
-
-  if (!data) {
-    return [];
-  }
-
   try {
+    const data = localStorage.getItem(STORAGE_KEY);
+
+    if (!data) {
+      return [];
+    }
+
     return JSON.parse(data) as Product[];
-  } catch {
+  } catch (error) {
+    console.error("Failed to load products:", error);
     return [];
   }
 }
@@ -25,10 +26,14 @@ export function saveProducts(products: Product[]) {
     return;
   }
 
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(products)
-  );
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(products)
+    );
+  } catch (error) {
+    console.error("Failed to save products:", error);
+  }
 }
 
 export function clearProducts() {
@@ -48,14 +53,13 @@ export function getNextProductCode(
 
   const maxNumber = products.reduce((max, product) => {
     const number = parseInt(
-      product.code.replace("P", "")
+      product.code.replace("P", ""),
+      10
     );
 
-    if (isNaN(number)) {
-      return max;
-    }
-
-    return Math.max(max, number);
+    return Number.isNaN(number)
+      ? max
+      : Math.max(max, number);
   }, 0);
 
   return `P${String(maxNumber + 1).padStart(4, "0")}`;

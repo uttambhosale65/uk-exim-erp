@@ -18,11 +18,40 @@ export default function ProductTable({
 
   const filteredProducts = products.filter(
     (item) =>
-      item.name.toLowerCase().includes(search.toLowerCase()) ||
-      item.code.toLowerCase().includes(search.toLowerCase()) ||
-      item.category.toLowerCase().includes(search.toLowerCase()) ||
-      item.hsn.toLowerCase().includes(search.toLowerCase())
+      item.name
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      item.code
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      item.category
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      item.hsn
+        .toLowerCase()
+        .includes(search.toLowerCase())
   );
+
+  const getStockStatus = (item: Product) => {
+    if (item.stock <= 0) {
+      return {
+        text: "Out of Stock",
+        color: "#dc2626",
+      };
+    }
+
+    if (item.stock <= item.minimumStock) {
+      return {
+        text: "Low Stock",
+        color: "#f59e0b",
+      };
+    }
+
+    return {
+      text: "In Stock",
+      color: "#16a34a",
+    };
+  };
 
   const thStyle = {
     border: "1px solid #ddd",
@@ -39,7 +68,7 @@ export default function ProductTable({
     whiteSpace: "nowrap" as const,
   };
 
-  return (
+ return (
     <div
       style={{
         marginTop: "30px",
@@ -93,8 +122,9 @@ export default function ProductTable({
             <th style={thStyle}>Sale</th>
             <th style={thStyle}>MRP</th>
             <th style={thStyle}>Opening</th>
-            <th style={thStyle}>Min Stock</th>
-            <th style={thStyle}>Status</th>
+           <th style={thStyle}>Min Stock</th>
+<th style={thStyle}>Stock Status</th>
+<th style={thStyle}>Status</th>
             <th style={thStyle}>Action</th>
           </tr>
         </thead>
@@ -129,30 +159,26 @@ export default function ProductTable({
                 {item.stock}
               </td>
 
-              <td style={tdStyle}>
-                {item.minimumStock}
-              </td>
+             <td style={tdStyle}>
+  {item.minimumStock}
+</td>
 
-              <td style={tdStyle}>
-                <span
-                  style={{
-                    background: item.active
-                      ? "#16a34a"
-                      : "#dc2626",
-                    color: "#fff",
-                    padding: "4px 10px",
-                    borderRadius: "20px",
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {item.active
-                    ? "Active"
-                    : "Inactive"}
-                </span>
-              </td>
+<td style={tdStyle}>
+  <span
+    style={{
+      background: getStockStatus(item).color,
+      color: "#fff",
+      padding: "4px 10px",
+      borderRadius: "20px",
+      fontSize: "12px",
+      fontWeight: "bold",
+    }}
+  >
+    {getStockStatus(item).text}
+  </span>
+</td>
 
-              <td style={tdStyle}>
+<td style={tdStyle}>
                 <button
                   onClick={() => onEdit(item)}
                   style={{

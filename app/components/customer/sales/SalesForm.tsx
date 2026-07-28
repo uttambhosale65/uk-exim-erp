@@ -2,14 +2,26 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Sales } from "./SalesTypes";
+import { Customer } from "../CustomerTypes";
+import { loadCustomers } from "../CustomerStorage";
+
+import { Product } from "../../../product/components/ProductTypes";
+import { loadProducts } from "../../../product/components/ProductStorage";
+
+
+
 
 type SalesFormProps = {
   salesNo: string;
+  invoiceNo: string;
+  editData?: Sales | null;
   onSave: (sale: Sales) => void;
 };
 
 const SalesForm: React.FC<SalesFormProps> = ({
   salesNo,
+  invoiceNo,
+  editData,
   onSave,
 }) => {
   const today = new Date().toISOString().split("T")[0];
@@ -66,13 +78,21 @@ const SalesForm: React.FC<SalesFormProps> = ({
   };
 
   const [form, setForm] = useState<Sales>(initialForm);
+const [customers] = useState<Customer[]>(loadCustomers());
+const [products] = useState<Product[]>(loadProducts());
 useEffect(() => {
-  setForm((prev) => ({
-    ...prev,
-    salesNo,
-  }));
-}, [salesNo]);
-  const amount = useMemo(() => {
+  if (editData) {
+    setForm(editData);
+  } else {
+    setForm((prev) => ({
+      ...initialForm,
+      salesNo,
+      invoiceNo,
+    }));
+  }
+}, [editData, salesNo, invoiceNo]);
+
+const amount = useMemo(() => {
     return form.qty * form.rate;
   }, [form.qty, form.rate]);
 
@@ -103,7 +123,12 @@ useEffect(() => {
   };
 
   const handleReset = () => {
-    setForm(initialForm);
+    setForm({
+      ...initialForm,
+      salesNo,
+      invoiceNo,
+      salesDate: today,
+    });
   };
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
@@ -123,9 +148,21 @@ useEffect(() => {
             type="text"
             name="salesNo"
             value={form.salesNo}
-            onChange={handleChange}
-            className="w-full border rounded-lg p-2"
-            placeholder="Auto / Manual"
+            readOnly
+            className="w-full border rounded-lg p-2 bg-gray-100"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Invoice No
+          </label>
+          <input
+            type="text"
+            name="invoiceNo"
+            value={form.invoiceNo}
+            readOnly
+            className="w-full border rounded-lg p-2 bg-gray-100"
           />
         </div>
 
@@ -142,79 +179,104 @@ useEffect(() => {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Invoice No
-          </label>
-          <input
-            type="text"
-            name="invoiceNo"
-            value={form.invoiceNo}
-            onChange={handleChange}
-            className="w-full border rounded-lg p-2"
-            placeholder="Invoice Number"
-          />
-        </div>
-
-        {/* Customer Details */}
+        {/* Customer */}
 
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Customer Code
-          </label>
-          <input
-            type="text"
-            name="customerCode"
-            value={form.customerCode}
-            onChange={handleChange}
-            className="w-full border rounded-lg p-2"
-            placeholder="Customer Code"
-          />
-        </div>
+  <label className="block text-sm font-medium mb-1">
+    Customer Code
+  </label>
+
+  <select
+    value={form.customerCode}
+    className="w-full border rounded-lg p-2"
+    onChange={(e) => {
+      const customer = customers.find(
+        (c) => c.code === e.target.value
+      );
+
+      if (!customer) return;
+
+      setForm((prev) => ({
+        ...prev,
+        customerCode: customer.code,
+        customerName: customer.name,
+      }));
+    }}
+  >
+    <option value="">Select Customer</option>
+
+    {customers.map((customer) => (
+      <option key={customer.code} value={customer.code}>
+        {customer.code}
+      </option>
+    ))}
+  </select>
+</div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium mb-1">
-            Customer Name
-          </label>
-          <input
-            type="text"
-            name="customerName"
-            value={form.customerName}
-            onChange={handleChange}
-            className="w-full border rounded-lg p-2"
-            placeholder="Customer Name"
-          />
-        </div>
+  <label className="block text-sm font-medium mb-1">
+    Customer Name
+  </label>
 
-        {/* Product Details */}
+  <input
+    type="text"
+    value={form.customerName}
+    readOnly
+    className="w-full border rounded-lg p-2 bg-gray-100"
+    placeholder="Customer Name"
+  />
+</div>
+        {/* Product */}
 
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Product Code
-          </label>
-          <input
-            type="text"
-            name="productCode"
-            value={form.productCode}
-            onChange={handleChange}
-            className="w-full border rounded-lg p-2"
-            placeholder="Product Code"
-          />
-        </div>
+       <div>
+  <label className="block text-sm font-medium mb-1">
+    Product Code
+  </label>
+
+  <select
+    value={form.productCode}
+    className="w-full border rounded-lg p-2"
+    onChange={(e) => {
+      const product = products.find(
+        (p) => p.code === e.target.value
+      );
+
+      if (!product) return;
+
+      setForm((prev) => ({
+        ...prev,
+        productCode: product.code,
+        productName: product.name,
+        hsn: product.hsn,
+        unit: product.unit,
+        rate: product.sale,
+        gst: Number(String(product.gst).replace("%", "")),
+      }));
+    }}
+  >
+    <option value="">Select Product</option>
+
+    {products.map((product) => (
+      <option key={product.code} value={product.code}>
+        {product.code}
+      </option>
+    ))}
+  </select>
+</div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium mb-1">
-            Product Name
-          </label>
-          <input
-            type="text"
-            name="productName"
-            value={form.productName}
-            onChange={handleChange}
-            className="w-full border rounded-lg p-2"
-            placeholder="Product Name"
-          />
-        </div>
+  <label className="block text-sm font-medium mb-1">
+    Product Name
+  </label>
+
+  <input
+    type="text"
+    value={form.productName}
+    readOnly
+    className="w-full border rounded-lg p-2 bg-gray-100"
+    placeholder="Product Name"
+  />
+</div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
@@ -234,16 +296,19 @@ useEffect(() => {
           <label className="block text-sm font-medium mb-1">
             Unit
           </label>
-          <input
-            type="text"
+          <select
             name="unit"
             value={form.unit}
             onChange={handleChange}
-           className="w-full border rounded-lg p-2"
-            placeholder="Kg / Pcs / Box"
-          />
+            className="w-full border rounded-lg p-2"
+          >
+            <option value="">Select Unit</option>
+            <option value="Kg">Kg</option>
+            <option value="Pkt">Pkt</option>
+            <option value="Box">Box</option>
+          </select>
         </div>
-        {/* Quantity & Rate */}
+       {/* Quantity & Rate */}
 
         <div>
           <label className="block text-sm font-medium mb-1">
@@ -285,120 +350,153 @@ useEffect(() => {
           />
         </div>
 
-        {/* GST */}
+    {/* GST */}
 
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            GST %
-          </label>
-          <input
-            type="number"
-            name="gst"
-            value={form.gst}
-            onChange={handleChange}
-            className="w-full border rounded-lg p-2"
-            min={0}
-          />
-        </div>
+<div>
+  <label className="block text-sm font-medium mb-1">
+    GST %
+  </label>
+  <input
+    type="number"
+    value={form.gst}
+    readOnly
+    className="w-full border rounded-lg p-2 bg-gray-100"
+  />
+</div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            GST Amount
-          </label>
-          <input
-            type="number"
-            value={gstAmount}
-            readOnly
-            className="w-full border rounded-lg p-2 bg-gray-100"
-          />
-        </div>
+<div>
+  <label className="block text-sm font-medium mb-1">
+    GST Amount
+  </label>
+  <input
+    type="number"
+    value={gstAmount}
+    readOnly
+    className="w-full border rounded-lg p-2 bg-gray-100"
+  />
+</div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Grand Total
-          </label>
-          <input
-            type="number"
-            value={grandTotal}
-            readOnly
-            className="w-full border rounded-lg p-2 bg-green-100 font-semibold"
-          />
-        </div>
+<div>
+  <label className="block text-sm font-medium mb-1">
+    Grand Total
+  </label>
+  <input
+    type="number"
+    value={grandTotal}
+    readOnly
+    className="w-full border rounded-lg p-2 bg-green-100 font-semibold"
+  />
+</div>
 
-        {/* Payment Mode */}
+{/* Payment Mode */}
 
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Payment Mode
-          </label>
-          <select
-            name="paymentMode"
-            value={form.paymentMode}
-            onChange={handleChange}
-            className="w-full border rounded-lg p-2"
-          >
-            <option value="Cash">Cash</option>
-            <option value="UPI">UPI</option>
-            <option value="Card">Card</option>
-            <option value="Bank">Bank</option>
-            <option value="Credit">Credit</option>
-          </select>
-        </div>
+<div>
+  <label className="block text-sm font-medium mb-1">
+    Payment Mode
+  </label>
+  <select
+    name="paymentMode"
+    value={form.paymentMode}
+    onChange={handleChange}
+    className="w-full border rounded-lg p-2"
+  >
+    <option value="Cash">Cash</option>
+    <option value="UPI">UPI</option>
+    <option value="Card">Card</option>
+    <option value="Bank">Bank</option>
+    <option value="Credit">Credit</option>
+  </select>
+</div>
 
-        {/* Remarks */}
+{/* Remarks */}
 
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium mb-1">
-            Remarks
-          </label>
-          <textarea
-            name="remarks"
-            value={form.remarks}
-            onChange={handleChange}
-            rows={3}
-            className="w-full border rounded-lg p-2"
-            placeholder="Enter Remarks..."
-          />
-        </div>
+<div className="md:col-span-2">
+  <label className="block text-sm font-medium mb-1">
+    Remarks
+  </label>
+  <textarea
+    name="remarks"
+    value={form.remarks}
+    onChange={handleChange}
+    rows={3}
+    className="w-full border rounded-lg p-2"
+    placeholder="Enter Remarks..."
+  />
+</div>
 
-      </div>
-      <div className="flex justify-end gap-3 mt-6">
-        <button
-          type="button"
-          onClick={handleReset}
-          className="px-5 py-2 rounded-lg bg-gray-500 text-white hover:bg-gray-600"
-        >
-          Reset
-        </button>
+</div>
 
-        <button
-          type="button"
-          onClick={() => {
-            const now = new Date().toISOString();
+<div className="flex justify-end gap-3 mt-6">
 
-            const sale: Sales = {
-              ...form,
-              amount,
-              gstAmount,
-              netAmount: grandTotal,
-              taxableAmount: amount,
-              cgst: form.gst / 2,
-              sgst: form.gst / 2,
-              igst: 0,
-              grandTotal,
-              createdAt: form.createdAt || now,
-              updatedAt: now,
-            };
+  <button
+    type="button"
+    onClick={handleReset}
+    className="px-5 py-2 rounded-lg bg-gray-500 text-white hover:bg-gray-600"
+  >
+    Reset
+  </button>
 
-            onSave(sale);
-            handleReset();
+  <button
+    type="button"
+    onClick={() => {
+
+      // Validation
+      if (!form.customerCode.trim()) {
+        alert("Please select Customer.");
+        return;
+      }
+
+      if (!form.productCode.trim()) {
+        alert("Please select Product.");
+        return;
+      }
+
+      if (form.qty <= 0) {
+        alert("Quantity should be greater than zero.");
+        return;
+      }
+
+      if (form.rate <= 0) {
+        alert("Rate should be greater than zero.");
+        return;
+      }
+
+      const now = new Date().toISOString();
+
+          const sale: Sales = {
+  ...form,
+
+  amount,
+  gstAmount,
+
+  taxableAmount: amount,
+
+  cgst: form.gst / 2,
+  sgst: form.gst / 2,
+  igst: 0,
+
+  grandTotal,
+  netAmount: grandTotal,
+
+  createdAt: form.createdAt || now,
+  updatedAt: now,
+};
+
+onSave(sale);
+
+handleReset();
+
+            alert("Sales Entry Saved Successfully.");
           }}
           className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
         >
           Save
         </button>
+
       </div>
+
     </div>
   );
 };
+
 export default SalesForm;
