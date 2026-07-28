@@ -206,10 +206,10 @@ const amount = useMemo(() => {
     <option value="">Select Customer</option>
 
     {customers.map((customer) => (
-      <option key={customer.code} value={customer.code}>
-        {customer.code}
-      </option>
-    ))}
+  <option key={customer.code} value={customer.code}>
+    {customer.code} - {customer.name}
+  </option>
+))}
   </select>
 </div>
 
@@ -256,11 +256,11 @@ const amount = useMemo(() => {
   >
     <option value="">Select Product</option>
 
-    {products.map((product) => (
-      <option key={product.code} value={product.code}>
-        {product.code}
-      </option>
-    ))}
+   {products.map((product) => (
+  <option key={product.code} value={product.code}>
+    {product.code} - {product.name}
+  </option>
+))}
   </select>
 </div>
 
@@ -283,30 +283,27 @@ const amount = useMemo(() => {
             HSN
           </label>
           <input
-            type="text"
-            name="hsn"
-            value={form.hsn}
-            onChange={handleChange}
-            className="w-full border rounded-lg p-2"
-            placeholder="HSN Code"
-          />
+  type="text"
+  name="hsn"
+  value={form.hsn}
+  readOnly
+  className="w-full border rounded-lg p-2 bg-gray-100"
+  placeholder="HSN Code"
+/>
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
             Unit
           </label>
-          <select
-            name="unit"
-            value={form.unit}
-            onChange={handleChange}
-            className="w-full border rounded-lg p-2"
-          >
-            <option value="">Select Unit</option>
-            <option value="Kg">Kg</option>
-            <option value="Pkt">Pkt</option>
-            <option value="Box">Box</option>
-          </select>
+          <input
+  type="text"
+  name="unit"
+  value={form.unit}
+  readOnly
+  className="w-full border rounded-lg p-2 bg-gray-100"
+  placeholder="Unit"
+/>
         </div>
        {/* Quantity & Rate */}
 
