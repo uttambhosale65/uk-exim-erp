@@ -29,31 +29,37 @@ export default function SalesPage() {
 
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    const data = loadSales();
+ const [isLoaded, setIsLoaded] = useState(false);
 
-    setSales(data);
+useEffect(() => {
+  const data = loadSales();
 
-    setSalesNo(
-      getNextSalesNo(data)
-    );
+  setSales(data);
 
-    setInvoiceNo(
-      getNextInvoiceNo(data)
-    );
-  }, []);
+  setSalesNo(
+    getNextSalesNo(data)
+  );
 
-  useEffect(() => {
-    saveSales(sales);
+  setInvoiceNo(
+    getNextInvoiceNo(data)
+  );
 
-    setSalesNo(
-      getNextSalesNo(sales)
-    );
+  setIsLoaded(true);
+}, []);
 
-    setInvoiceNo(
-      getNextInvoiceNo(sales)
-    );
-  }, [sales]);
+useEffect(() => {
+  if (!isLoaded) return;
+
+  saveSales(sales);
+
+  setSalesNo(
+    getNextSalesNo(sales)
+  );
+
+  setInvoiceNo(
+    getNextInvoiceNo(sales)
+  );
+}, [sales, isLoaded]);
 
   const filteredSales = useMemo(() => {
     return sales.filter((sale) =>

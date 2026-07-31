@@ -13,18 +13,21 @@ export default function Layout({
 }: LayoutProps) {
   return (
     <div
-      style={{
-        background: "#f1f5f9",
-        minHeight: "100vh",
-        padding: "16px",
-      }}
-    >
+  style={{
+    background: "#f1f5f9",
+    minHeight: "100vh",
+    padding: "16px",
+    overflowX: "hidden",
+  }}
+>
       <div
-        style={{
-          maxWidth: "1600px",
-          margin: "0 auto",
-        }}
-      >
+  style={{
+    width: "100%",
+    maxWidth: "1600px",
+    margin: "0 auto",
+    boxSizing: "border-box",
+  }}
+>
         <div
           style={{
             background: "#ffffff",

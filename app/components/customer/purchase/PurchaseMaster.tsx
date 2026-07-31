@@ -22,7 +22,7 @@ export default function PurchaseMaster() {
 
   useEffect(() => {
     const data = loadPurchases();
-
+    console.log(data);
     setPurchases(data);
     setPurchaseNo(getNextPurchaseNo(data));
   }, []);

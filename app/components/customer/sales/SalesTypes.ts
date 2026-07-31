@@ -28,13 +28,23 @@ export type Sales = {
   gstAmount: number;
   netAmount: number;
 
-  // GST Breakup (Future Use)
+  // GST Breakup
   taxableAmount: number;
   cgst: number;
   sgst: number;
   igst: number;
   grandTotal: number;
 
+  // Payment Details
+  paymentMode: "Cash" | "UPI" | "Card" | "Bank" | "Credit";
+
+  // Status
+  status: "Completed" | "Pending" | "Cancelled";
+
   // Other Details
   remarks: string;
+
+  // Audit
+  createdAt: string;
+  updatedAt: string;
 };

@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import ProductMaster from "./product/components/ProductMaster";
 import CustomerMaster from "./components/customer/CustomerMaster";
 import SupplierMaster from "./components/supplier/SupplierMaster";
 import PurchaseMaster from "./components/customer/purchase/PurchaseMaster";
 import SalesPage from "./sales/page";
+import { loadProducts } from "./product/components/ProductStorage";
+import { loadCustomers } from "./components/customer/CustomerStorage";
+import { loadSuppliers } from "./components/supplier/SupplierStorage";
+import { loadPurchases } from "./components/customer/purchase/PurchaseStorage";
+import { loadSales } from "./components/customer/sales/SalesStorage";
 export default function Home() {
   const [activePage, setActivePage] =
     useState("dashboard");
@@ -35,6 +40,42 @@ export default function Home() {
       "0 2px 8px rgba(0,0,0,0.08)",
     minHeight: "90px",
   };
+  const [dashboard, setDashboard] = useState({
+  products: 0,
+  customers: 0,
+  suppliers: 0,
+  stock: 0,
+  sales: 0,
+  purchase: 0,
+});
+useEffect(() => {
+  const products = loadProducts();
+  const customers = loadCustomers();
+  const suppliers = loadSuppliers();
+  const purchases = loadPurchases();
+  const sales = loadSales();
+console.log("Purchases:", purchases);
+console.log("Sales:", sales);
+  setDashboard({
+    products: products.length,
+    customers: customers.length,
+    suppliers: suppliers.length,
+    stock: products.reduce(
+      (total, product) => total + Number(product.stock || 0),
+      0
+    ),
+    sales: sales.reduce(
+      (total, sale) =>
+        total + Number(sale.grandTotal ?? sale.netAmount ?? 0),
+      0
+    ),
+    purchase: purchases.reduce(
+  (total, purchase) =>
+    total + purchase.netAmount,
+  0
+),
+  });
+}, [activePage]);
   const renderPage = () => {
     switch (activePage) {
       case "products":
@@ -101,22 +142,22 @@ export default function Home() {
             >
               <div style={card}>
                 <h3>📦 Products</h3>
-                <h1>0</h1>
+                <h1>{dashboard.products}</h1>
               </div>
 
               <div style={card}>
                 <h3>👥 Customers</h3>
-                <h1>0</h1>
+                <h1>{dashboard.products}</h1>
               </div>
 
               <div style={card}>
                 <h3>🚚 Suppliers</h3>
-                <h1>0</h1>
+                <h1>{dashboard.products}</h1><h1>0</h1>
               </div>
 
               <div style={card}>
                 <h3>📦 Stock</h3>
-                <h1>0</h1>
+                <h1>{dashboard.products}</h1>
               </div>
 
               <div style={card}>

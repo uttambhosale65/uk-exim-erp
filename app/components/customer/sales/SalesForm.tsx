@@ -131,12 +131,12 @@ const amount = useMemo(() => {
     });
   };
   return (
-    <div className="bg-white rounded-xl shadow-md p-6">
-      <h2 className="text-2xl font-bold mb-6 text-blue-700">
+    <div className="bg-white rounded-xl shadow-md p-3">
+      <h2 className="text-xl font-bold mb-2 text-blue-700">
         Sales Entry
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
 
         {/* Sales Details */}
 
@@ -149,7 +149,7 @@ const amount = useMemo(() => {
             name="salesNo"
             value={form.salesNo}
             readOnly
-            className="w-full border rounded-lg p-2 bg-gray-100"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-100"
           />
         </div>
 
@@ -162,7 +162,7 @@ const amount = useMemo(() => {
             name="invoiceNo"
             value={form.invoiceNo}
             readOnly
-            className="w-full border rounded-lg p-2 bg-gray-100"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-100"
           />
         </div>
 
@@ -175,136 +175,69 @@ const amount = useMemo(() => {
             name="salesDate"
             value={form.salesDate}
             onChange={handleChange}
-            className="w-full border rounded-lg p-2"
+            className="w-full border rounded-lg px-3 py-2 text-sm"
           />
         </div>
 
         {/* Customer */}
-
-        <div>
-  <label className="block text-sm font-medium mb-1">
-    Customer Code
-  </label>
-
-  <select
-    value={form.customerCode}
-    className="w-full border rounded-lg p-2"
-    onChange={(e) => {
-      const customer = customers.find(
-        (c) => c.code === e.target.value
-      );
-
-      if (!customer) return;
-
-      setForm((prev) => ({
-        ...prev,
-        customerCode: customer.code,
-        customerName: customer.name,
-      }));
-    }}
-  >
-    <option value="">Select Customer</option>
-
-    {customers.map((customer) => (
-  <option key={customer.code} value={customer.code}>
-    {customer.code} - {customer.name}
-  </option>
-))}
-  </select>
-</div>
-
-        <div className="md:col-span-2">
+<div>
   <label className="block text-sm font-medium mb-1">
     Customer Name
   </label>
-
-  <input
-    type="text"
-    value={form.customerName}
-    readOnly
-    className="w-full border rounded-lg p-2 bg-gray-100"
-    placeholder="Customer Name"
-  />
-</div>
-        {/* Product */}
-
-       <div>
-  <label className="block text-sm font-medium mb-1">
-    Product Code
-  </label>
-
   <select
-    value={form.productCode}
-    className="w-full border rounded-lg p-2"
+    name="customerCode"
+    value={form.customerCode}
     onChange={(e) => {
-      const product = products.find(
-        (p) => p.code === e.target.value
-      );
-
-      if (!product) return;
-
-      setForm((prev) => ({
+      const customer = customers.find(c => c.code === e.target.value);
+      setForm(prev => ({
         ...prev,
-        productCode: product.code,
-        productName: product.name,
-        hsn: product.hsn,
-        unit: product.unit,
-        rate: product.sale,
-        gst: Number(String(product.gst).replace("%", "")),
+        customerCode: customer?.code || "",
+        customerName: customer?.name || "",
       }));
     }}
+    className="w-full border rounded-lg p-2"
   >
-    <option value="">Select Product</option>
-
-   {products.map((product) => (
-  <option key={product.code} value={product.code}>
-    {product.code} - {product.name}
-  </option>
-))}
+    <option value="">Select Customer</option>
+    {customers.map(c => (
+      <option key={c.code} value={c.code}>
+        {c.name}
+      </option>
+    ))}
   </select>
 </div>
 
-        <div className="md:col-span-2">
+        {/* Product */}
+<div>
   <label className="block text-sm font-medium mb-1">
     Product Name
   </label>
-
-  <input
-    type="text"
-    value={form.productName}
-    readOnly
-    className="w-full border rounded-lg p-2 bg-gray-100"
-    placeholder="Product Name"
-  />
+  <select
+    name="productCode"
+    value={form.productCode}
+    onChange={(e) => {
+      const product = products.find(p => p.code === e.target.value);
+console.log(product);
+      setForm(prev => ({
+        ...prev,
+        productCode: product?.code || "",
+        productName: product?.name || "",
+        hsn: product?.hsn || "",
+        unit: product?.unit || "",
+        rate: Number(product?.sale ?? 0),
+        gst: Number((product?.gst ?? "0").replace("%", "")),
+      }));
+    }}
+    className="w-full border rounded-lg p-2"
+  >
+    <option value="">Select Product</option>
+    {products.map(p => (
+      <option key={p.code} value={p.code}>
+        {p.name}
+      </option>
+    ))}
+  </select>
 </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            HSN
-          </label>
-          <input
-  type="text"
-  name="hsn"
-  value={form.hsn}
-  readOnly
-  className="w-full border rounded-lg p-2 bg-gray-100"
-  placeholder="HSN Code"
-/>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Unit
-          </label>
-          <input
-  type="text"
-  name="unit"
-  value={form.unit}
-  readOnly
-  className="w-full border rounded-lg p-2 bg-gray-100"
-  placeholder="Unit"
-/>
-        </div>
+    
        {/* Quantity & Rate */}
 
         <div>
@@ -343,7 +276,7 @@ const amount = useMemo(() => {
             type="number"
             value={amount}
             readOnly
-            className="w-full border rounded-lg p-2 bg-gray-100"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-100"
           />
         </div>
 
@@ -423,7 +356,7 @@ const amount = useMemo(() => {
 
 </div>
 
-<div className="flex justify-end gap-3 mt-6">
+<div className="flex justify-end gap-2 mt-4">
 
   <button
     type="button"
@@ -462,7 +395,7 @@ const amount = useMemo(() => {
 
           const sale: Sales = {
   ...form,
-
+id: form.id || crypto.randomUUID(),
   amount,
   gstAmount,
 
