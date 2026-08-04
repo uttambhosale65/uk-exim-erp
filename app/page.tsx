@@ -1,17 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
+import PurchaseReport from "./components/customer/purchase/PurchaseReport";
+import StockMaster from "./components/stock/StockMaster";
 import ProductMaster from "./product/components/ProductMaster";
 import CustomerMaster from "./components/customer/CustomerMaster";
 import SupplierMaster from "./components/supplier/SupplierMaster";
 import PurchaseMaster from "./components/customer/purchase/PurchaseMaster";
 import SalesPage from "./sales/page";
+import SalesReport from "./components/customer/sales/SalesReport";
 import { loadProducts } from "./product/components/ProductStorage";
 import { loadCustomers } from "./components/customer/CustomerStorage";
 import { loadSuppliers } from "./components/supplier/SupplierStorage";
 import { loadPurchases } from "./components/customer/purchase/PurchaseStorage";
 import { loadSales } from "./components/customer/sales/SalesStorage";
+import { loadStock } from "./components/stock/StockStorage";
 export default function Home() {
   const [activePage, setActivePage] =
     useState("dashboard");
@@ -54,16 +57,18 @@ useEffect(() => {
   const suppliers = loadSuppliers();
   const purchases = loadPurchases();
   const sales = loadSales();
+  const stock = loadStock();
 console.log("Purchases:", purchases);
 console.log("Sales:", sales);
   setDashboard({
     products: products.length,
     customers: customers.length,
     suppliers: suppliers.length,
-    stock: products.reduce(
-      (total, product) => total + Number(product.stock || 0),
-      0
-    ),
+  stock: stock.reduce(
+  (total: number, item: any) =>
+    total + Number(item.currentStock),
+  0
+),
     sales: sales.reduce(
       (total, sale) =>
         total + Number(sale.grandTotal ?? sale.netAmount ?? 0),
@@ -80,9 +85,12 @@ console.log("Sales:", sales);
     switch (activePage) {
       case "products":
         return <ProductMaster />;
-
+        case "stock":
+  return <StockMaster />;
       case "customers":
         return <CustomerMaster />;
+        case "purchase":
+  return <PurchaseReport />; 
 
       case "suppliers":
         return <SupplierMaster />;
@@ -102,12 +110,7 @@ console.log("Sales:", sales);
         );
 
       case "sales":
-        return (
-          <>
-            <h2>💰 Sales Report</h2>
-            <p>Coming Soon...</p>
-          </>
-        );
+  return <SalesReport />;
 
       case "purchase":
         return (
@@ -147,27 +150,27 @@ console.log("Sales:", sales);
 
               <div style={card}>
                 <h3>👥 Customers</h3>
-                <h1>{dashboard.products}</h1>
+                <h1>{dashboard.customers}</h1>
               </div>
 
               <div style={card}>
                 <h3>🚚 Suppliers</h3>
-                <h1>{dashboard.products}</h1><h1>0</h1>
+                <h1>{dashboard.suppliers}</h1>
               </div>
 
               <div style={card}>
                 <h3>📦 Stock</h3>
-                <h1>{dashboard.products}</h1>
+                <h1>{dashboard.stock}</h1>
               </div>
 
               <div style={card}>
                 <h3>💰 Sales</h3>
-                <h1>₹0</h1>
+                <h1>₹{dashboard.sales.toFixed(2)}</h1>
               </div>
 
               <div style={card}>
                 <h3>🛒 Purchase</h3>
-                <h1>₹0</h1>
+                <h1>₹{dashboard.purchase.toFixed(2)}</h1>
               </div>
             </div>
           </>

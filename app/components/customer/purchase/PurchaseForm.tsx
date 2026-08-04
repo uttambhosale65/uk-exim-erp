@@ -151,6 +151,7 @@ export default function PurchaseForm({
     });
 
     if (!editingPurchase) {
+      console.log("updateStock called");
       updateStock(
         purchase.productCode,
         purchase.productName,
