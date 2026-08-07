@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-
+import InvoicePrint from "../components/customer/sales/InvoicePrint";
 import Layout from "../components/ui/Layout";
 import Card from "../components/ui/Card";
 import PageTitle from "../components/ui/PageTitle";
@@ -28,7 +28,8 @@ export default function SalesPage() {
     useState<Sales | null>(null);
 
   const [search, setSearch] = useState("");
-
+const [selectedInvoice, setSelectedInvoice] =
+  useState<Sales | null>(null);
  const [isLoaded, setIsLoaded] = useState(false);
 
 useEffect(() => {
@@ -89,6 +90,8 @@ useEffect(() => {
     );
 
     setEditingSale(null);
+
+    
   }
 
   function addSales(sale: Sales) {
@@ -115,6 +118,12 @@ useEffect(() => {
     });
 
     setEditingSale(null);
+    setSelectedInvoice({
+  ...sale,
+  id: sale.id || crypto.randomUUID(),
+  salesNo,
+  invoiceNo,
+});
   }
   return (
     <Layout title="UK EXIM ERP">
@@ -162,7 +171,39 @@ useEffect(() => {
           onEdit={handleEditSale}
           onDelete={handleDeleteSale}
         />
-
+{selectedInvoice && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.55)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 9999,
+      overflowY: "auto",
+      padding: "20px",
+    }}
+  >
+    <div
+      style={{
+       width: "98%",
+height: "98vh",
+background: "#fff",
+borderRadius: "12px",
+overflow: "hidden",
+boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+      }}
+    >
+      <InvoicePrint
+        sale={selectedInvoice}
+        onClose={() =>
+          setSelectedInvoice(null)
+        }
+      />
+    </div>
+  </div>
+)}
       </Card>
       <div className="mt-4 text-sm text-gray-600">
         Total Sales Records :{" "}
