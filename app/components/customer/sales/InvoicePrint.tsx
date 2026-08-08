@@ -494,7 +494,100 @@ padding: "30px",
 </div>
 
       </div>
+{/* ===========================
+    BANK DETAILS & UPI QR
+=========================== */}
 
+<div
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "20px",
+    marginTop: "20px",
+    border: "1px solid #000",
+    padding: "12px",
+  }}
+>
+  {/* BANK DETAILS */}
+
+  <div style={{ flex: 1 }}>
+    <h3
+      style={{
+        margin: "0 0 8px 0",
+        color: "#0F4C81",
+        fontSize: "16px",
+      }}
+    >
+      Bank Details
+    </h3>
+
+    <div style={{ fontSize: "13px", lineHeight: "22px" }}>
+      <div>
+        <b>Account Name:</b> UK EXIM ENTERPRISES
+      </div>
+
+      <div>
+        <b>Bank:</b> Kotak Mahindra Bank
+      </div>
+
+      <div>
+        <b>Branch:</b> Kotak Mahindra Bank, Nigdi
+      </div>
+
+      <div>
+        <b>Account No:</b> 4650887738
+      </div>
+
+      <div>
+        <b>IFSC:</b> KKBK0001757
+      </div>
+
+      <div>
+        <b>UPI ID:</b> uttam.bhosale26@kotak
+      </div>
+    </div>
+  </div>
+
+  {/* UPI QR */}
+
+  <div
+    style={{
+      width: "160px",
+      textAlign: "center",
+      borderLeft: "1px solid #ddd",
+      paddingLeft: "15px",
+    }}
+  >
+    <div
+      style={{
+        fontWeight: "bold",
+        color: "#0F4C81",
+        marginBottom: "6px",
+      }}
+    >
+      SCAN & PAY
+    </div>
+
+    <img
+      src="/uk-exim-upi-qr.png"
+      alt="UPI QR Code"
+      style={{
+        width: "120px",
+        height: "120px",
+        objectFit: "contain",
+      }}
+    />
+
+    <div
+      style={{
+        fontSize: "11px",
+        marginTop: "5px",
+      }}
+    >
+      UPI: uttam.bhosale26@kotak
+    </div>
+  </div>
+</div>
       {/* ===========================
           REMARKS
       =========================== */}
