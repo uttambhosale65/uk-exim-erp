@@ -326,53 +326,57 @@ padding: "30px",
           </tr>
         </thead>
 
-        <tbody>
+      <tbody>
 
-          <tr>
+          {sale.items.map((item, index) => (
+            <tr key={item.productCode}>
 
-            <td style={td}>1</td>
+              <td style={td}>
+                {index + 1}
+              </td>
 
-            <td style={td}>
-              {sale.productName}
-            </td>
+              <td style={td}>
+                {item.productName}
+              </td>
 
-            <td style={td}>
-              {sale.hsn}
-            </td>
+              <td style={td}>
+                {item.hsn}
+              </td>
 
-            <td style={td}>
-              {sale.unit}
-            </td>
+              <td style={td}>
+                {item.unit}
+              </td>
 
-            <td
-              style={{
-                ...td,
-                textAlign: "center",
-              }}
-            >
-              {sale.qty}
-            </td>
+              <td
+                style={{
+                  ...td,
+                  textAlign: "center",
+                }}
+              >
+                {item.qty}
+              </td>
 
-            <td
-              style={{
-                ...td,
-                textAlign: "right",
-              }}
-            >
-              ₹{sale.rate.toFixed(2)}
-            </td>
+              <td
+                style={{
+                  ...td,
+                  textAlign: "right",
+                }}
+              >
+                ₹{item.rate.toFixed(2)}
+              </td>
 
-            <td
-              style={{
-                ...td,
-                textAlign: "right",
-                fontWeight: "bold",
-              }}
-            >
-              ₹{sale.amount.toFixed(2)}
-            </td>
+              <td
+                style={{
+                  ...td,
+                  textAlign: "right",
+                  fontWeight: "bold",
+                }}
+              >
+                ₹{item.amount.toFixed(2)}
+              </td>
 
-          </tr>
+            </tr>
+          ))}
 
         </tbody>
 
@@ -419,7 +423,7 @@ padding: "30px",
             <tr>
 
               <td style={td}>
-                GST ({sale.gst}%)
+                GST Amount
               </td>
 
               <td

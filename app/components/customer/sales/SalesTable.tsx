@@ -1,9 +1,11 @@
 "use client";
 
+import React from "react";
 import { Sales } from "./SalesTypes";
+
 const thStyle: React.CSSProperties = {
   border: "1px solid #d1d5db",
-  padding: "10px",
+  padding: "7px 8px",
   textAlign: "center",
   fontWeight: 600,
   whiteSpace: "nowrap",
@@ -11,16 +13,17 @@ const thStyle: React.CSSProperties = {
 
 const tdStyle: React.CSSProperties = {
   border: "1px solid #e5e7eb",
-  padding: "10px",
+  padding: "7px 8px",
   whiteSpace: "nowrap",
 };
 
 const tdCenter: React.CSSProperties = {
   border: "1px solid #e5e7eb",
-  padding: "10px",
+  padding: "7px 8px",
   textAlign: "center",
   whiteSpace: "nowrap",
 };
+
 type SalesTableProps = {
   sales: Sales[];
   onEdit: (sale: Sales) => void;
@@ -35,6 +38,7 @@ export default function SalesTable({
   return (
     <div
       style={{
+        width: "100%",
         overflowX: "auto",
       }}
     >
@@ -42,8 +46,8 @@ export default function SalesTable({
         style={{
           width: "100%",
           borderCollapse: "collapse",
-          minWidth: "1400px",
-          fontSize: "14px",
+          minWidth: "1050px",
+          fontSize: "13px",
         }}
       >
         <thead>
@@ -62,7 +66,7 @@ export default function SalesTable({
             <th style={thStyle}>Qty</th>
             <th style={thStyle}>Rate</th>
             <th style={thStyle}>Amount</th>
-            <th style={thStyle}>GST %</th>
+            <th style={thStyle}>GST</th>
             <th style={thStyle}>Grand Total</th>
             <th style={thStyle}>Action</th>
           </tr>
@@ -77,117 +81,278 @@ export default function SalesTable({
                   padding: "20px",
                   textAlign: "center",
                   border: "1px solid #e5e7eb",
+                  color: "#6b7280",
                 }}
               >
                 No Sales Records Found
               </td>
             </tr>
           ) : (
-            sales.map((sale, index) => (
-              <tr
-                key={sale.id}
-                style={{
-                  background:
-                    index % 2 === 0
-                      ? "#ffffff"
-                      : "#f9fafb",
-                }}
-              >
-                <td style={tdStyle}>
-                  {sale.salesNo}
-                </td>
+            sales.map((sale, saleIndex) => {
+              const items = Array.isArray(sale.items)
+                ? sale.items
+                : [];
 
-                <td style={tdCenter}>
-                  {sale.salesDate}
-                </td>
+              // -----------------------------------------
+              // OLD / INVALID SALES RECORD
+              // -----------------------------------------
 
-                <td style={tdStyle}>
-                  {sale.customerName}
-                </td>
-
-                <td style={tdStyle}>
-                  {sale.productName}
-                </td>
-
-                <td style={tdCenter}>
-                  {sale.hsn}
-                </td>
-
-                <td style={tdCenter}>
-                  {sale.unit}
-                </td>
-
-                <td style={tdCenter}>
-                  {sale.qty}
-                </td>
-
-                <td style={tdCenter}>
-                  ₹ {sale.rate.toFixed(2)}
-                </td>
-
-                <td style={tdCenter}>
-                  ₹ {sale.amount.toFixed(2)}
-                </td>
-
-                <td style={tdCenter}>
-                  {sale.gst}%
-                </td>
-
-                <td style={tdCenter}>
-                  <span
+              if (items.length === 0) {
+                return (
+                  <tr
+                    key={sale.id}
                     style={{
-                      background: "#dcfce7",
-                      color: "#166534",
-                      padding: "4px 10px",
-                      borderRadius: "20px",
-                      fontWeight: 700,
+                      background:
+                        saleIndex % 2 === 0
+                          ? "#ffffff"
+                          : "#f9fafb",
                     }}
                   >
-                    ₹ {sale.grandTotal.toFixed(2)}
-                  </span>
-                </td>
+                    <td style={tdStyle}>
+                      {sale.salesNo}
+                    </td>
 
-                <td style={tdCenter}>
-                  <button
-                    onClick={() =>
-                      onEdit(sale)
-                    }
+                    <td style={tdCenter}>
+                      {sale.salesDate}
+                    </td>
+
+                    <td style={tdStyle}>
+                      {sale.customerName}
+                    </td>
+
+                    <td
+                      colSpan={9}
+                      style={{
+                        padding: "10px",
+                        textAlign: "center",
+                        color: "#dc2626",
+                        border:
+                          "1px solid #e5e7eb",
+                      }}
+                    >
+                      No Product Data
+                    </td>
+                  </tr>
+                );
+              }
+
+              // -----------------------------------------
+              // MULTI PRODUCT SALES
+              // -----------------------------------------
+
+              return items.map((item, itemIndex) => {
+                const isFirstItem =
+                  itemIndex === 0;
+
+                return (
+                  <tr
+                    key={`${sale.id}-${item.productCode}-${itemIndex}`}
                     style={{
-                      padding: "6px 12px",
-                      marginRight: "8px",
-                      border: "none",
-                      borderRadius: "6px",
-                      background: "#2563eb",
-                      color: "#ffffff",
-                      cursor: "pointer",
-                      fontWeight: 600,
+                      background:
+                        saleIndex % 2 === 0
+                          ? "#ffffff"
+                          : "#f9fafb",
                     }}
                   >
-                    Edit
-                  </button>
+                    {/* SALES NO */}
+                    {isFirstItem && (
+                      <td
+                        rowSpan={items.length}
+                        style={{
+                          ...tdCenter,
+                          fontWeight: 600,
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        {sale.salesNo}
+                      </td>
+                    )}
 
-                  <button
-                    onClick={() =>
-                      onDelete(sale.id)
-                    }
-                    style={{
-                      padding: "6px 12px",
-                      border: "none",
-                      borderRadius: "6px",
-                      background: "#dc2626",
-                      color: "#ffffff",
-                      cursor: "pointer",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))
+                    {/* DATE */}
+                    {isFirstItem && (
+                      <td
+                        rowSpan={items.length}
+                        style={{
+                          ...tdCenter,
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        {sale.salesDate}
+                      </td>
+                    )}
+
+                    {/* CUSTOMER */}
+                    {isFirstItem && (
+                      <td
+                        rowSpan={items.length}
+                        style={{
+                          ...tdStyle,
+                          verticalAlign: "middle",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {sale.customerName}
+                      </td>
+                    )}
+
+                    {/* PRODUCT */}
+                    <td style={tdStyle}>
+                      {item.productName}
+                    </td>
+
+                    {/* HSN */}
+                    <td style={tdCenter}>
+                      {item.hsn}
+                    </td>
+
+                    {/* UNIT */}
+                    <td style={tdCenter}>
+                      {item.unit}
+                    </td>
+
+                    {/* QTY */}
+                    <td style={tdCenter}>
+                      {item.qty}
+                    </td>
+
+                    {/* RATE */}
+                    <td
+                      style={{
+                        ...tdCenter,
+                        textAlign: "right",
+                      }}
+                    >
+                      ₹ {item.rate.toFixed(2)}
+                    </td>
+
+                    {/* AMOUNT */}
+                    <td
+                      style={{
+                        ...tdCenter,
+                        textAlign: "right",
+                      }}
+                    >
+                      ₹ {item.amount.toFixed(2)}
+                    </td>
+
+                    {/* GST */}
+                    <td style={tdCenter}>
+                      {item.gst}%
+                    </td>
+
+                    {/* GRAND TOTAL */}
+                    {isFirstItem && (
+                      <td
+                        rowSpan={items.length}
+                        style={{
+                          ...tdCenter,
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: "inline-block",
+                            background: "#dcfce7",
+                            color: "#166534",
+                            padding: "5px 9px",
+                            borderRadius: "20px",
+                            fontWeight: 700,
+                          }}
+                        >
+                          ₹{" "}
+                          {sale.grandTotal.toFixed(
+                            2
+                          )}
+                        </span>
+                      </td>
+                    )}
+
+                    {/* ACTION */}
+                    {isFirstItem && (
+                      <td
+                        rowSpan={items.length}
+                        style={{
+                          ...tdCenter,
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "6px",
+                            alignItems: "center",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onEdit(sale)
+                            }
+                            style={{
+                              padding:
+                                "5px 12px",
+                              border: "none",
+                              borderRadius:
+                                "6px",
+                              background:
+                                "#2563eb",
+                              color:
+                                "#ffffff",
+                              cursor:
+                                "pointer",
+                              fontWeight: 600,
+                            }}
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onDelete(
+                                sale.id
+                              )
+                            }
+                            style={{
+                              padding:
+                                "5px 12px",
+                              border: "none",
+                              borderRadius:
+                                "6px",
+                              background:
+                                "#dc2626",
+                              color:
+                                "#ffffff",
+                              cursor:
+                                "pointer",
+                              fontWeight: 600,
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              });
+            })
           )}
         </tbody>
       </table>
+
+      {/* TOTAL RECORDS */}
+
+      <div
+        style={{
+          marginTop: "12px",
+          fontWeight: 600,
+          color: "#374151",
+        }}
+      >
+        Total Sales Records: {sales.length}
+      </div>
     </div>
-);
+  );
 }

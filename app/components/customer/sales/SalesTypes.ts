@@ -1,3 +1,27 @@
+export type SalesItem = {
+  productCode: string;
+  productName: string;
+
+  hsn: string;
+  unit: string;
+
+  qty: number;
+  rate: number;
+
+  amount: number;
+
+  gst: number;
+  gstAmount: number;
+
+  taxableAmount: number;
+
+  cgst: number;
+  sgst: number;
+  igst: number;
+
+  grandTotal: number;
+};
+
 export type Sales = {
   id: string;
 
@@ -10,29 +34,17 @@ export type Sales = {
   customerCode: string;
   customerName: string;
 
-  // Product
-  productCode: string;
-  productName: string;
+  // Multiple Products
+  items: SalesItem[];
 
-  // Product Details
-  hsn: string;
-  unit: string;
-
-  // Quantity & Rate
-  qty: number;
-  rate: number;
-
-  // Amount Details
-  amount: number;
-  gst: number;
-  gstAmount: number;
-  netAmount: number;
-
-  // GST Breakup
+  // Invoice Totals
   taxableAmount: number;
+  gstAmount: number;
+
   cgst: number;
   sgst: number;
   igst: number;
+
   grandTotal: number;
 
   // Payment Details
