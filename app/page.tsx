@@ -15,6 +15,7 @@ import { loadSuppliers } from "./components/supplier/SupplierStorage";
 import { loadPurchases } from "./components/customer/purchase/PurchaseStorage";
 import { loadSales } from "./components/customer/sales/SalesStorage";
 import { loadStock } from "./components/stock/StockStorage";
+import Settings from "./components/settings/Settings";
 export default function Home() {
   const [activePage, setActivePage] =
     useState("dashboard");
@@ -71,7 +72,7 @@ console.log("Sales:", sales);
 ),
     sales: sales.reduce(
       (total, sale) =>
-        total + Number(sale.grandTotal ?? sale.netAmount ?? 0),
+       total + Number(sale.grandTotal ?? 0),
       0
     ),
     purchase: purchases.reduce(
@@ -121,12 +122,7 @@ console.log("Sales:", sales);
         );
 
       case "settings":
-        return (
-          <>
-            <h2>⚙️ Settings</h2>
-            <p>Coming Soon...</p>
-          </>
-        );
+  return <Settings />;
 
       default:
         return (

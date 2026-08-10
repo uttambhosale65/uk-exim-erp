@@ -1,18 +1,126 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Sales } from "./SalesTypes";
+type CompanySettings = {
+  companyName: string;
+  address: string;
+  gstin: string;
+  fssai: string;
+  iec: string;
+  mobile: string;
+  email: string;
+  website: string;
+  logo: string;
+};
 
+type InvoiceSettings = {
+  invoicePrefix: string;
+  nextInvoiceNumber: string;
+  terms1: string;
+  terms2: string;
+  terms3: string;
+  terms4: string;
+  terms5: string;
+};
+
+type BankSettings = {
+  bankName: string;
+  branch: string;
+  accountName: string;
+  accountNumber: string;
+  ifsc: string;
+  upiId: string;
+  qrImage: string;
+};
 type Props = {
   sale: Sales;
   onClose?: () => void;
 };
+const defaultCompany: CompanySettings = {
+  companyName: "UK EXIM ENTERPRISES",
+  address:
+    "A-703, Vishnu Greens, City Pride School Road, Jadhavwadi, Chikhali, Pune - 411062, Maharashtra, India",
+  gstin: "27AJUPB0025D1ZO",
+  fssai: "21525038000816",
+  iec: "AJUPB0025D",
+  mobile: "+91 9970187185",
+  email: "uk37exim@gmail.com",
+  website: "www.ukeximenterprises.com",
+  logo: "/uklogo.png",
+};
 
+const defaultInvoice: InvoiceSettings = {
+  invoicePrefix: "INV",
+  nextInvoiceNumber: "1",
+  terms1: "Goods once sold will not be taken back.",
+  terms2: "Subject to Pune Jurisdiction only.",
+  terms3: "Please check the material before accepting delivery.",
+  terms4: "Interest @18% p.a. will be charged on overdue bills.",
+  terms5: "Thank you for your valuable business.",
+};
+
+const defaultBank: BankSettings = {
+  bankName: "Kotak Mahindra Bank",
+  branch: "Kotak Mahindra Bank, Nigdi",
+  accountName: "UK EXIM ENTERPRISES",
+  accountNumber: "4650887738",
+  ifsc: "KKBK0001757",
+  upiId: "uttam.bhosale26@kotak",
+  qrImage: "/uk-exim-upi-qr.png",
+};
 export default function InvoicePrint({
   sale,
   onClose,
 }: Props) {
+  const [company, setCompany] =
+    useState<CompanySettings>(defaultCompany);
+
+  const [invoiceSettings, setInvoiceSettings] =
+    useState<InvoiceSettings>(defaultInvoice);
+
+  const [bank, setBank] =
+    useState<BankSettings>(defaultBank);
+
+  useEffect(() => {
+    try {
+      const savedCompany =
+        localStorage.getItem("uk-exim-company-settings");
+
+      const savedInvoice =
+        localStorage.getItem("uk-exim-invoice-settings");
+
+      const savedBank =
+        localStorage.getItem("uk-exim-bank-settings");
+
+      if (savedCompany) {
+        setCompany({
+          ...defaultCompany,
+          ...JSON.parse(savedCompany),
+        });
+      }
+
+      if (savedInvoice) {
+        setInvoiceSettings({
+          ...defaultInvoice,
+          ...JSON.parse(savedInvoice),
+        });
+      }
+
+      if (savedBank) {
+        setBank({
+          ...defaultBank,
+          ...JSON.parse(savedBank),
+        });
+      }
+    } catch (error) {
+      console.error(
+        "Invoice settings loading error:",
+        error
+      );
+    }
+  }, []);
 const printInvoice = () => {
   window.print();
 };
@@ -180,7 +288,7 @@ padding: "30px",
     fontWeight: "bold",
   }}
 >
-  UK EXIM ENTERPRISES
+  {company.companyName}
 </h1>
 </div>
 
@@ -189,15 +297,15 @@ padding: "30px",
 </div>
 
 <div style={{ fontSize: "14px" }}>
-  A-703, Vishnu Greens, City Pride School Road, Jadhavwadi, Chikhali, Pune - 411062, Maharashtra, India
+ {company.address}
 </div>
 
 <div style={{ fontSize: "13px", marginTop: "6px" }}>
-  GSTIN : 27AJUPB0025D1ZO | FSSAI : 21525038000816 | IEC : AJUPB0025D
+  GSTIN : {company.gstin} | FSSAI : {company.fssai} | IEC : {company.iec}
 </div>
 
 <div style={{ fontSize: "13px" }}>
-  📞 +91 9970187185 | ✉️ uk37exim@gmail.com | 🌐 www.ukeximenterprises.com
+  📞 {company.mobile} | ✉️ {company.email} | 🌐 {company.website}
 </div>
 
   </div>
@@ -523,27 +631,27 @@ padding: "30px",
 
     <div style={{ fontSize: "13px", lineHeight: "22px" }}>
       <div>
-        <b>Account Name:</b> UK EXIM ENTERPRISES
+        <b>Account Name:</b> {bank.accountName}
       </div>
 
       <div>
-        <b>Bank:</b> Kotak Mahindra Bank
+        <b>Bank:</b> {bank.accountName}
       </div>
 
       <div>
-        <b>Branch:</b> Kotak Mahindra Bank, Nigdi
+        <b>Branch:</b> {bank.branch}
       </div>
 
       <div>
-        <b>Account No:</b> 4650887738
+        <b>Account No:</b> 1{bank.accountNumber}
       </div>
 
       <div>
-        <b>IFSC:</b> KKBK0001757
+        <b>IFSC:</b> {bank.ifsc}
       </div>
 
       <div>
-        <b>UPI ID:</b> uttam.bhosale26@kotak
+        <b>UPI ID:</b> {bank.upiId}
       </div>
     </div>
   </div>
@@ -719,22 +827,22 @@ padding: "30px",
             fontSize: "13px",
           }}
         >
-          <li>Goods once sold will not be taken back.</li>
+          <li>{invoiceSettings.terms1}</li>
 
           <li>
-            Subject to Pune Jurisdiction only.
+            {invoiceSettings.terms2}
           </li>
 
           <li>
-            Please check the material before accepting delivery.
+            {invoiceSettings.terms3}
           </li>
 
           <li>
-            Interest @18% p.a. will be charged on overdue bills.
+            {invoiceSettings.terms4}
           </li>
 
           <li>
-            Thank you for your valuable business.
+            {invoiceSettings.terms5}
           </li>
         </ol>
       </div>
