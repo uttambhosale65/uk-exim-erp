@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Sales } from "./SalesTypes";
-
+import InvoicePrint from "./InvoicePrint";
 type SalesMasterProps = {
   sales: Sales[];
   onEdit: (sale: Sales) => void;
@@ -15,7 +15,8 @@ export default function SalesMaster({
   onDelete,
 }: SalesMasterProps) {
   const [search, setSearch] = useState("");
-
+const [selectedSale, setSelectedSale] =
+  useState<Sales | null>(null);
   const filteredSales = useMemo(() => {
     const keyword = search.trim().toLowerCase();
 
@@ -377,6 +378,23 @@ export default function SalesMaster({
                           cursor: "pointer",
                         }}
                       >
+                        <button
+  type="button"
+  onClick={() => setSelectedSale(sale)}
+  style={{
+    padding: "6px 9px",
+    marginRight: "5px",
+    border: "none",
+    borderRadius: "4px",
+    background: "#14532d",
+    color: "#ffffff",
+    fontSize: "11px",
+    fontWeight: 600,
+    cursor: "pointer",
+  }}
+>
+  🧾 Invoice
+</button>
                         ✏️ Edit
                       </button>
 
@@ -412,6 +430,12 @@ export default function SalesMaster({
           </tbody>
         </table>
       </div>
+      {selectedSale && (
+  <InvoicePrint
+    sale={selectedSale}
+    onClose={() => setSelectedSale(null)}
+  />
+)}
     </div>
   );
 }

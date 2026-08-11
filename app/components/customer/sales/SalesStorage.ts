@@ -65,3 +65,31 @@ export function getNextSalesNo(
     maxNumber + 1
   ).padStart(4, "0")}`;
 }
+
+export function getNextInvoiceNo(
+  sales: Sales[]
+): string {
+  if (!sales || sales.length === 0) {
+    return "INV-0001";
+  }
+
+  let maxNumber = 0;
+
+  sales.forEach((sale) => {
+    const match = sale.invoiceNo?.match(
+      /INV-(\d+)/
+    );
+
+    if (match) {
+      const number = Number(match[1]);
+
+      if (number > maxNumber) {
+        maxNumber = number;
+      }
+    }
+  });
+
+  return `INV-${String(
+    maxNumber + 1
+  ).padStart(4, "0")}`;
+}

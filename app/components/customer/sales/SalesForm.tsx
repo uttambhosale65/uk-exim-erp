@@ -1,7 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+
 import { Sales, SalesItem } from "./SalesTypes";
+
+import { Customer } from "../CustomerTypes";
+import { loadCustomers } from "../CustomerStorage";
+
+import { Product } from "../../../product/components/ProductTypes";
+import { loadProducts } from "../../../product/components/ProductStorage";
+
+import { loadSales } from "./SalesStorage";
 
 type SalesFormProps = {
   salesNo: string;
@@ -16,11 +25,89 @@ export default function SalesForm({
   onSave,
   onCancelEdit,
 }: SalesFormProps) {
-  const getToday = () => {
+
+  /* =========================
+     MASTER DATA
+  ========================= */
+
+  const [customers, setCustomers] =
+    useState<Customer[]>([]);
+
+  const [products, setProducts] =
+    useState<Product[]>([]);
+
+  /* =========================
+     DATE
+  ========================= */
+
+  const getToday = (): string => {
     return new Date()
       .toISOString()
       .split("T")[0];
   };
+
+  /* =========================
+     AUTO INVOICE NUMBER
+  ========================= */
+
+  const getNextInvoiceNo = (): string => {
+    const sales = loadSales();
+
+    if (!sales || sales.length === 0) {
+      return "INV-0001";
+    }
+
+    let maxNumber = 0;
+
+    sales.forEach((sale) => {
+      const match =
+        sale.invoiceNo?.match(/INV-(\d+)/);
+
+      if (match) {
+        const number = Number(match[1]);
+
+        if (number > maxNumber) {
+          maxNumber = number;
+        }
+      }
+    });
+
+    return `INV-${String(
+      maxNumber + 1
+    ).padStart(4, "0")}`;
+  };
+
+  /* =========================
+     EMPTY ITEM
+  ========================= */
+
+  const createEmptyItem = (): SalesItem => ({
+    productCode: "",
+    productName: "",
+
+    hsn: "",
+    unit: "KG",
+
+    qty: 0,
+    rate: 0,
+
+    amount: 0,
+
+    gst: 0,
+    gstAmount: 0,
+
+    taxableAmount: 0,
+
+    cgst: 0,
+    sgst: 0,
+    igst: 0,
+
+    grandTotal: 0,
+  });
+
+  /* =========================
+     EMPTY SALE
+  ========================= */
 
   const createEmptySale = (): Sales => ({
     id: crypto.randomUUID(),
@@ -29,34 +116,13 @@ export default function SalesForm({
 
     salesDate: getToday(),
 
-    invoiceNo: "",
+    invoiceNo: getNextInvoiceNo(),
 
     customerCode: "",
     customerName: "",
 
     items: [
-      {
-        productCode: "",
-        productName: "",
-        hsn: "",
-        unit: "KG",
-
-        qty: 0,
-        rate: 0,
-
-        amount: 0,
-
-        gst: 5,
-        gstAmount: 0,
-
-        taxableAmount: 0,
-
-        cgst: 0,
-        sgst: 0,
-        igst: 0,
-
-        grandTotal: 0,
-      },
+      createEmptyItem(),
     ],
 
     taxableAmount: 0,
@@ -74,64 +140,123 @@ export default function SalesForm({
 
     remarks: "",
 
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt:
+      new Date().toISOString(),
+
+    updatedAt:
+      new Date().toISOString(),
   });
 
+  /* =========================
+     SALE STATE
+  ========================= */
+
   const [sale, setSale] =
-    useState<Sales>(createEmptySale());
+    useState<Sales>(
+      createEmptySale()
+    );
+
+  /* =========================
+     LOAD CUSTOMER + PRODUCT
+     MASTER
+  ========================= */
+
+  useEffect(() => {
+    setCustomers(
+      loadCustomers()
+    );
+
+    setProducts(
+      loadProducts()
+    );
+  }, []);
+
+  /* =========================
+     EDIT / NEW SALE
+  ========================= */
 
   useEffect(() => {
     if (editingSale) {
       setSale(editingSale);
     } else {
-      setSale((prev) => ({
-        ...prev,
-        salesNo,
-      }));
+      setSale(
+        createEmptySale()
+      );
     }
-  }, [salesNo, editingSale]);
+  }, [
+    salesNo,
+    editingSale,
+  ]);
+
+  /* =========================
+     ITEM CALCULATION
+  ========================= */
 
   const calculateItem = (
     item: SalesItem
   ): SalesItem => {
-    const qty = Number(item.qty) || 0;
-    const rate = Number(item.rate) || 0;
-    const gst = Number(item.gst) || 0;
 
-    const amount = qty * rate;
+    const qty =
+      Number(item.qty) || 0;
+
+    const rate =
+      Number(item.rate) || 0;
+
+    const gst =
+      Number(item.gst) || 0;
+
+    const amount =
+      qty * rate;
 
     const gstAmount =
       (amount * gst) / 100;
 
-    const cgst = gstAmount / 2;
-    const sgst = gstAmount / 2;
+    const cgst =
+      gstAmount / 2;
+
+    const sgst =
+      gstAmount / 2;
 
     const grandTotal =
       amount + gstAmount;
 
     return {
       ...item,
+
       qty,
       rate,
       gst,
+
       amount,
-      taxableAmount: amount,
+
+      taxableAmount:
+        amount,
+
       gstAmount,
+
       cgst,
       sgst,
+
       igst: 0,
+
       grandTotal,
     };
   };
+
+  /* =========================
+     UPDATE ITEM
+  ========================= */
 
   const updateItem = (
     field: keyof SalesItem,
     value: string | number
   ) => {
+
     setSale((prev) => {
+
       const currentItem =
-        prev.items[0];
+        prev.items[0] ||
+        createEmptyItem();
 
       const updatedItem =
         calculateItem({
@@ -141,44 +266,143 @@ export default function SalesForm({
 
       return {
         ...prev,
-        items: [updatedItem],
+
+        items: [
+          updatedItem,
+        ],
+
         taxableAmount:
           updatedItem.taxableAmount,
+
         gstAmount:
           updatedItem.gstAmount,
-        cgst: updatedItem.cgst,
-        sgst: updatedItem.sgst,
-        igst: updatedItem.igst,
+
+        cgst:
+          updatedItem.cgst,
+
+        sgst:
+          updatedItem.sgst,
+
+        igst:
+          updatedItem.igst,
+
         grandTotal:
           updatedItem.grandTotal,
       };
     });
   };
+  /* =========================
+     CUSTOMER MASTER SELECT
+  ========================= */
+
+  const handleCustomerChange = (
+    customerCode: string
+  ) => {
+    const customer =
+      customers.find(
+        (c) => c.code === customerCode
+      );
+
+    if (!customer) {
+      setSale((prev) => ({
+        ...prev,
+        customerCode: "",
+        customerName: "",
+      }));
+
+      return;
+    }
+
+    setSale((prev) => ({
+      ...prev,
+      customerCode:
+        customer.code,
+      customerName:
+        customer.name,
+    }));
+  };
+
+  /* =========================
+     PRODUCT MASTER SELECT
+  ========================= */
+
+ const handleProductChange = (
+  productCode: string
+) => {
+  const product = products.find(
+    (p) => p.code === productCode
+  );
+
+  if (!product) {
+    return;
+  }
+
+  const gstValue = Number(
+    String(product.gst)
+      .replace("%", "")
+      .trim()
+  ) || 0;
+
+  setSale((prev) => {
+    const currentItem =
+      prev.items[0] || createEmptyItem();
+
+    const updatedItem =
+      calculateItem({
+        ...currentItem,
+
+        productCode: product.code,
+        productName: product.name,
+        hsn: product.hsn,
+        unit: product.unit,
+
+        rate: Number(product.sale) || 0,
+
+        gst: gstValue,
+      });
+
+    return {
+      ...prev,
+
+      items: [updatedItem],
+
+      taxableAmount:
+        updatedItem.taxableAmount,
+
+      gstAmount:
+        updatedItem.gstAmount,
+
+      cgst:
+        updatedItem.cgst,
+
+      sgst:
+        updatedItem.sgst,
+
+      igst:
+        updatedItem.igst,
+
+      grandTotal:
+        updatedItem.grandTotal,
+    };
+  });
+};
+
+  /* =========================
+     GENERAL FIELD CHANGE
+  ========================= */
 
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement |
-        HTMLSelectElement |
-        HTMLTextAreaElement
+      HTMLSelectElement |
+      HTMLTextAreaElement
     >
   ) => {
+
     const {
       name,
       value,
     } = e.target;
-
-    if (
-      name === "qty" ||
-      name === "rate" ||
-      name === "gst"
-    ) {
-      updateItem(
-        name as keyof SalesItem,
-        Number(value)
-      );
-
-      return;
-    }
 
     setSale((prev) => ({
       ...prev,
@@ -186,32 +410,59 @@ export default function SalesForm({
     }));
   };
 
+  /* =========================
+     SUBMIT
+  ========================= */
+
   const handleSubmit = (
     e: React.FormEvent
   ) => {
+
     e.preventDefault();
 
-    const item = sale.items[0];
+    const item =
+      sale.items[0];
 
-    if (!sale.customerName.trim()) {
-      alert("Please enter Customer Name");
+    if (
+      !sale.customerCode ||
+      !sale.customerName.trim()
+    ) {
+      alert(
+        "Please select Customer from Customer Master"
+      );
+
       return;
     }
 
-    if (!item.productName.trim()) {
-      alert("Please enter Product Name");
+    if (
+      !item.productCode ||
+      !item.productName.trim()
+    ) {
+      alert(
+        "Please select Product from Product Master"
+      );
+
       return;
     }
 
     if (item.qty <= 0) {
-      alert("Quantity should be greater than zero");
+      alert(
+        "Quantity should be greater than zero"
+      );
+
       return;
     }
 
     if (item.rate <= 0) {
-      alert("Rate should be greater than zero");
+      alert(
+        "Rate should be greater than zero"
+      );
+
       return;
     }
+
+    const finalItem =
+      calculateItem(item);
 
     const now =
       new Date().toISOString();
@@ -221,309 +472,498 @@ export default function SalesForm({
 
       salesNo,
 
+      invoiceNo:
+        sale.invoiceNo ||
+        getNextInvoiceNo(),
+
       updatedAt: now,
 
       items: [
-        calculateItem(item),
+        finalItem,
       ],
+
+      taxableAmount:
+        finalItem.taxableAmount,
+
+      gstAmount:
+        finalItem.gstAmount,
+
+      cgst:
+        finalItem.cgst,
+
+      sgst:
+        finalItem.sgst,
+
+      igst:
+        finalItem.igst,
+
+      grandTotal:
+        finalItem.grandTotal,
     };
 
     onSave(finalSale);
 
-    setSale(createEmptySale());
+    setSale(
+      createEmptySale()
+    );
 
     onCancelEdit?.();
   };
+
+  /* =========================
+     RESET
+  ========================= */
 
   const handleReset = () => {
-    setSale(createEmptySale());
+
+    setSale(
+      createEmptySale()
+    );
 
     onCancelEdit?.();
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    height: "40px",
-    padding: "0 10px",
-    border: "1px solid #d1d5db",
-    borderRadius: "6px",
-    fontSize: "13px",
-    boxSizing: "border-box",
-    outline: "none",
-    background: "#ffffff",
-  };
+  /* =========================
+     STYLES
+  ========================= */
 
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontSize: "11px",
-    fontWeight: 700,
-    color: "#374151",
-    marginBottom: "5px",
-    whiteSpace: "nowrap",
-  };
+  const inputStyle:
+    React.CSSProperties = {
+      width: "100%",
+      height: "40px",
+      padding: "0 10px",
+      border:
+        "1px solid #d1d5db",
+      borderRadius: "6px",
+      fontSize: "13px",
+      boxSizing:
+        "border-box",
+      outline: "none",
+      background:
+        "#ffffff",
+    };
 
-  const fieldStyle: React.CSSProperties = {
-    minWidth: 0,
-  };
+  const labelStyle:
+    React.CSSProperties = {
+      display: "block",
+      fontSize: "11px",
+      fontWeight: 700,
+      color: "#374151",
+      marginBottom: "5px",
+      whiteSpace:
+        "nowrap",
+    };
 
-  const item = sale.items[0];
+  const fieldStyle:
+    React.CSSProperties = {
+      minWidth: 0,
+    };
+
+  const item =
+    sale.items[0] ||
+    createEmptyItem();
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form
+      onSubmit={handleSubmit}
+    >
       <div
         style={{
-          background: "#ffffff",
-          border: "1px solid #d1d5db",
-          borderRadius: "10px",
+          background:
+            "#ffffff",
+          border:
+            "1px solid #d1d5db",
+          borderRadius:
+            "10px",
           padding: "18px",
+          width: "100%",
+    boxSizing: "border-box",
           boxShadow:
             "0 2px 8px rgba(0,0,0,0.08)",
         }}
       >
         <h2
           style={{
-            margin: "0 0 18px",
-            color: "#14532d",
-            fontSize: "19px",
+            margin:
+              "0 0 18px",
+            color:
+              "#14532d",
+            fontSize:
+              "19px",
             fontWeight: 700,
           }}
         >
           📤 Sales Entry
         </h2>
 
-        {/* ROW 1 */}
+        {/* =====================
+            ROW 1
+        ====================== */}
 
         <div
           style={{
             display: "grid",
             gridTemplateColumns:
-              "100px 120px 120px 1.5fr 1.5fr",
-            gap: "10px",
-            alignItems: "end",
+  "90px 110px 110px 1.3fr 1.3fr",
+            gap: "6px",
+            alignItems:
+              "end",
           }}
         >
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+
+          {/* SALES NO */}
+
+          <div
+            style={fieldStyle}
+          >
+            <label
+              style={labelStyle}
+            >
               Sales No.
             </label>
 
             <input
-              value={sale.salesNo}
+              value={
+                sale.salesNo
+              }
               readOnly
               style={{
                 ...inputStyle,
-                background: "#f3f4f6",
+                background:
+                  "#f3f4f6",
                 fontWeight: 700,
               }}
             />
           </div>
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          {/* SALES DATE */}
+
+          <div
+            style={fieldStyle}
+          >
+            <label
+              style={labelStyle}
+            >
               Sales Date *
             </label>
 
             <input
               type="date"
               name="salesDate"
-              value={sale.salesDate}
-              onChange={handleChange}
-              style={inputStyle}
+              value={
+                sale.salesDate
+              }
+              onChange={
+                handleChange
+              }
+              style={
+                inputStyle
+              }
             />
           </div>
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          {/* INVOICE */}
+
+          <div
+            style={fieldStyle}
+          >
+            <label
+              style={labelStyle}
+            >
               Invoice No.
             </label>
 
             <input
-              type="text"
-              name="invoiceNo"
-              value={sale.invoiceNo}
-              onChange={handleChange}
-              placeholder="Invoice No."
-              style={inputStyle}
+              value={
+                sale.invoiceNo
+              }
+              readOnly
+              style={{
+                ...inputStyle,
+                background:
+                  "#f3f4f6",
+                fontWeight: 700,
+              }}
             />
           </div>
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
-              Customer Code
+          {/* CUSTOMER CODE */}
+
+          <div
+            style={fieldStyle}
+          >
+            <label
+              style={labelStyle}
+            >
+              Customer
             </label>
 
-            <input
-              type="text"
-              name="customerCode"
-              value={sale.customerCode}
-              onChange={handleChange}
-              placeholder="Customer Code"
-              style={inputStyle}
-            />
+            <select
+              value={
+                sale.customerCode
+              }
+              onChange={(e) =>
+                handleCustomerChange(
+                  e.target.value
+                )
+              }
+              style={
+                inputStyle
+              }
+            >
+              <option value="">
+                Select Customer
+              </option>
+
+              {customers.map(
+                (customer) => (
+                  <option
+                    key={
+                      customer.id
+                    }
+                    value={
+                      customer.code
+                    }
+                  >
+                    {customer.code} -{" "}
+                    {customer.name}
+                  </option>
+                )
+              )}
+            </select>
           </div>
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
-              Customer Name *
+          {/* CUSTOMER NAME */}
+
+          <div
+            style={fieldStyle}
+          >
+            <label
+              style={labelStyle}
+            >
+              Customer Name
             </label>
 
             <input
-              type="text"
-              name="customerName"
-              value={sale.customerName}
-              onChange={handleChange}
-              placeholder="Enter Customer Name"
-              style={inputStyle}
+              value={
+                sale.customerName
+              }
+              readOnly
+              placeholder=
+                "Select Customer"
+              style={{
+                ...inputStyle,
+                background:
+                  "#f3f4f6",
+              }}
             />
           </div>
         </div>
 
-        {/* ROW 2 */}
+        {/* =====================
+            ROW 2
+        ====================== */}
 
         <div
           style={{
             display: "grid",
             gridTemplateColumns:
-              "110px 2fr 110px 100px 100px 110px",
-            gap: "10px",
-            alignItems: "end",
-            marginTop: "14px",
+  "100px 1.7fr 100px 90px 90px 100px",
+            gap: "6px",
+            alignItems:
+              "end",
+            marginTop:
+              "14px",
           }}
         >
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
-              Product Code
-            </label>
 
-            <input
-              type="text"
-              value={item.productCode}
-              onChange={(e) =>
-                updateItem(
-                  "productCode",
-                  e.target.value
-                )
-              }
-              placeholder="Product Code"
-              style={inputStyle}
-            />
-          </div>
+       {/* PRODUCT CODE - AUTO */}
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+<div style={fieldStyle}>
+  <label style={labelStyle}>
+    Product Code
+  </label>
+
+  <input
+    value={item.productCode}
+    readOnly
+    placeholder="AUTO"
+    style={{
+      ...inputStyle,
+      background: "#f3f4f6",
+      fontWeight: 700,
+    }}
+  />
+</div>
+
+          {/* PRODUCT NAME */}
+
+          <div
+            style={fieldStyle}
+          >
+            <label
+              style={labelStyle}
+            >
               Product Name *
             </label>
 
-            <input
-              type="text"
-              value={item.productName}
-              onChange={(e) =>
-                updateItem(
-                  "productName",
-                  e.target.value
-                )
-              }
-              placeholder="Enter Product Name"
-              style={inputStyle}
-            />
+           <select
+  value={item.productCode}
+  onChange={(e) =>
+    handleProductChange(
+      e.target.value
+    )
+  }
+  style={inputStyle}
+>
+  <option value="">
+    Select Product
+  </option>
+
+  {products
+    .filter(
+      (product) =>
+        product.active !== false
+    )
+    .map((product) => (
+      <option
+        key={product.id}
+        value={product.code}
+      >
+        {product.name}
+      </option>
+    ))}
+</select>
           </div>
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          {/* HSN */}
+
+          <div
+            style={fieldStyle}
+          >
+            <label
+              style={labelStyle}
+            >
               HSN Code
             </label>
 
             <input
-              type="text"
-              value={item.hsn}
-              onChange={(e) =>
-                updateItem(
-                  "hsn",
-                  e.target.value
-                )
+              value={
+                item.hsn
               }
-              placeholder="HSN"
-              style={inputStyle}
+              readOnly
+              style={{
+                ...inputStyle,
+                background:
+                  "#f3f4f6",
+              }}
             />
           </div>
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          {/* UNIT */}
+
+          <div
+            style={fieldStyle}
+          >
+            <label
+              style={labelStyle}
+            >
               Unit
             </label>
 
-            <select
-              value={item.unit}
-              onChange={(e) =>
-                updateItem(
-                  "unit",
-                  e.target.value
-                )
+            <input
+              value={
+                item.unit
               }
-              style={inputStyle}
-            >
-              <option value="KG">KG</option>
-              <option value="Gram">
-                Gram
-              </option>
-              <option value="Nos">Nos</option>
-              <option value="Box">Box</option>
-            </select>
+              readOnly
+              style={{
+                ...inputStyle,
+                background:
+                  "#f3f4f6",
+              }}
+            />
           </div>
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          {/* QUANTITY */}
+
+          <div
+            style={fieldStyle}
+          >
+            <label
+              style={labelStyle}
+            >
               Quantity *
             </label>
 
             <input
               type="number"
-              value={item.qty}
+              value={
+                item.qty
+              }
               min="0"
               step="0.01"
               onChange={(e) =>
                 updateItem(
                   "qty",
-                  Number(e.target.value)
+                  Number(
+                    e.target.value
+                  )
                 )
               }
-              style={inputStyle}
+              style={
+                inputStyle
+              }
             />
           </div>
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          {/* RATE */}
+
+          <div
+            style={fieldStyle}
+          >
+            <label
+              style={labelStyle}
+            >
               Rate *
             </label>
 
             <input
               type="number"
-              value={item.rate}
+              value={
+                item.rate
+              }
               min="0"
               step="0.01"
               onChange={(e) =>
                 updateItem(
                   "rate",
-                  Number(e.target.value)
+                  Number(
+                    e.target.value
+                  )
                 )
               }
-              style={inputStyle}
+              style={
+                inputStyle
+              }
             />
           </div>
         </div>
-
-        {/* ROW 3 */}
+        {/* =====================
+            ROW 3
+        ====================== */}
 
         <div
           style={{
             display: "grid",
-            gridTemplateColumns:
-              "1fr 1fr 100px 1fr 1fr 1fr 1fr auto auto",
-            gap: "10px",
+   gridTemplateColumns:
+  "0.8fr 0.8fr 80px 0.8fr 0.8fr 0.8fr 0.9fr auto auto",
+            gap: "6px",
             alignItems: "end",
             marginTop: "14px",
           }}
         >
+          {/* AMOUNT */}
+
           <div style={fieldStyle}>
             <label style={labelStyle}>
               Amount
@@ -539,28 +979,24 @@ export default function SalesForm({
             />
           </div>
 
+          {/* GST */}
+
           <div style={fieldStyle}>
             <label style={labelStyle}>
               GST
             </label>
 
-            <select
-              value={item.gst}
-              onChange={(e) =>
-                updateItem(
-                  "gst",
-                  Number(e.target.value)
-                )
-              }
-              style={inputStyle}
-            >
-              <option value={0}>0%</option>
-              <option value={5}>5%</option>
-              <option value={12}>12%</option>
-              <option value={18}>18%</option>
-              <option value={28}>28%</option>
-            </select>
+            <input
+              value={`${item.gst}%`}
+              readOnly
+              style={{
+                ...inputStyle,
+                background: "#f3f4f6",
+              }}
+            />
           </div>
+
+          {/* GST AMOUNT */}
 
           <div style={fieldStyle}>
             <label style={labelStyle}>
@@ -577,6 +1013,8 @@ export default function SalesForm({
             />
           </div>
 
+          {/* PAYMENT */}
+
           <div style={fieldStyle}>
             <label style={labelStyle}>
               Payment
@@ -588,13 +1026,29 @@ export default function SalesForm({
               onChange={handleChange}
               style={inputStyle}
             >
-              <option value="Cash">Cash</option>
-              <option value="UPI">UPI</option>
-              <option value="Card">Card</option>
-              <option value="Bank">Bank</option>
-              <option value="Credit">Credit</option>
+              <option value="Cash">
+                Cash
+              </option>
+
+              <option value="UPI">
+                UPI
+              </option>
+
+              <option value="Card">
+                Card
+              </option>
+
+              <option value="Bank">
+                Bank
+              </option>
+
+              <option value="Credit">
+                Credit
+              </option>
             </select>
           </div>
+
+          {/* STATUS */}
 
           <div style={fieldStyle}>
             <label style={labelStyle}>
@@ -610,14 +1064,52 @@ export default function SalesForm({
               <option value="Completed">
                 Completed
               </option>
+
               <option value="Pending">
                 Pending
               </option>
+
               <option value="Cancelled">
                 Cancelled
               </option>
             </select>
           </div>
+
+          {/* CGST */}
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              CGST
+            </label>
+
+            <input
+              value={item.cgst.toFixed(2)}
+              readOnly
+              style={{
+                ...inputStyle,
+                background: "#f3f4f6",
+              }}
+            />
+          </div>
+
+          {/* SGST */}
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              SGST
+            </label>
+
+            <input
+              value={item.sgst.toFixed(2)}
+              readOnly
+              style={{
+                ...inputStyle,
+                background: "#f3f4f6",
+              }}
+            />
+          </div>
+
+          {/* NET AMOUNT */}
 
           <div style={fieldStyle}>
             <label style={labelStyle}>
@@ -633,21 +1125,6 @@ export default function SalesForm({
                 fontWeight: 700,
                 color: "#14532d",
               }}
-            />
-          </div>
-
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
-              Remarks
-            </label>
-
-            <input
-              type="text"
-              name="remarks"
-              value={sale.remarks}
-              onChange={handleChange}
-              placeholder="Remarks"
-              style={inputStyle}
             />
           </div>
 
@@ -695,6 +1172,34 @@ export default function SalesForm({
               : "Save Sale"}
           </button>
         </div>
+
+        {/* =====================
+            REMARKS
+        ====================== */}
+
+        <div
+          style={{
+            marginTop: "14px",
+            maxWidth: "500px",
+          }}
+        >
+          <label style={labelStyle}>
+            Remarks
+          </label>
+
+          <input
+            type="text"
+            name="remarks"
+            value={sale.remarks}
+            onChange={handleChange}
+            placeholder="Remarks"
+            style={inputStyle}
+          />
+        </div>
+
+        {/* =====================
+            EDIT MESSAGE
+        ====================== */}
 
         {editingSale && (
           <div
