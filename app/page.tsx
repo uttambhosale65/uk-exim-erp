@@ -8,7 +8,7 @@ import CustomerMaster from "./components/customer/CustomerMaster";
 import SupplierMaster from "./components/supplier/SupplierMaster";
 import PurchaseMaster from "./components/customer/purchase/PurchaseMaster";
 import SalesPage from "./sales/page";
-import SalesReport from "./components/customer/sales/SalesReport";
+import SalesMaster from "./components/customer/sales/SalesMaster";
 import { loadProducts } from "./product/components/ProductStorage";
 import { loadCustomers } from "./components/customer/CustomerStorage";
 import { loadSuppliers } from "./components/supplier/SupplierStorage";
@@ -110,8 +110,8 @@ console.log("Sales:", sales);
           </>
         );
 
-      case "sales":
-  return <SalesReport />;
+   case "sales":
+  return <SalesPage />;
 
       case "purchase":
         return (

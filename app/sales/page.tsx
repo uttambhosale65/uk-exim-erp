@@ -1,10 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import InvoicePrint from "../components/customer/sales/InvoicePrint";
-import Layout from "../components/ui/Layout";
-import Card from "../components/ui/Card";
-import PageTitle from "../components/ui/PageTitle";
+import { useEffect, useState } from "react";
 
 import SalesForm from "../components/customer/sales/SalesForm";
 import SalesTable from "../components/customer/sales/SalesTable";
@@ -15,201 +11,122 @@ import {
   loadSales,
   saveSales,
   getNextSalesNo,
-  getNextInvoiceNo,
 } from "../components/customer/sales/SalesStorage";
 
 export default function SalesPage() {
   const [sales, setSales] = useState<Sales[]>([]);
 
-  const [salesNo, setSalesNo] = useState("");
-  const [invoiceNo, setInvoiceNo] = useState("");
+  const [salesNo, setSalesNo] =
+    useState("SAL-0001");
 
   const [editingSale, setEditingSale] =
     useState<Sales | null>(null);
 
-  const [search, setSearch] = useState("");
-const [selectedInvoice, setSelectedInvoice] =
-  useState<Sales | null>(null);
- const [isLoaded, setIsLoaded] = useState(false);
+  useEffect(() => {
+    const data = loadSales();
 
-useEffect(() => {
-  const data = loadSales();
+    setSales(data);
 
-  setSales(data);
+    setSalesNo(getNextSalesNo(data));
+  }, []);
 
-  setSalesNo(
-    getNextSalesNo(data)
-  );
+  const handleSave = (sale: Sales) => {
+    let updatedSales: Sales[];
 
-  setInvoiceNo(
-    getNextInvoiceNo(data)
-  );
-
-  setIsLoaded(true);
-}, []);
-
-useEffect(() => {
-  if (!isLoaded) return;
-
-  saveSales(sales);
-
-  setSalesNo(
-    getNextSalesNo(sales)
-  );
-
-  setInvoiceNo(
-    getNextInvoiceNo(sales)
-  );
-}, [sales, isLoaded]);
-
-  const filteredSales = useMemo(() => {
-    return sales.filter((sale) =>
-      `
-      ${sale.salesNo}
-      ${sale.invoiceNo}
-      ${sale.customerName}
-      ${sale.productName}
-      `
-        .toLowerCase()
-        .includes(search.toLowerCase())
-    );
-  }, [sales, search]);
-  function handleEditSale(sale: Sales) {
-    setEditingSale(sale);
-  }
-
-  function handleDeleteSale(id: string) {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this Sales Entry?"
-    );
-
-    if (!confirmDelete) return;
-
-    setSales((prev) =>
-      prev.filter((sale) => sale.id !== id)
-    );
-
-    setEditingSale(null);
-
-    
-  }
-
-  function addSales(sale: Sales) {
-    setSales((prev) => {
-      const exists = prev.some(
-        (item) => item.id === sale.id
+    if (editingSale) {
+      updatedSales = sales.map((item) =>
+        item.id === sale.id ? sale : item
       );
-
-      if (exists) {
-        return prev.map((item) =>
-          item.id === sale.id ? sale : item
-        );
-      }
-
-      return [
-        ...prev,
-        {
-          ...sale,
-          id: crypto.randomUUID(),
-          salesNo,
-          invoiceNo,
-        },
+    } else {
+      updatedSales = [
+        ...sales,
+        sale,
       ];
-    });
+    }
+
+    setSales(updatedSales);
+
+    saveSales(updatedSales);
+
+    setSalesNo(
+      getNextSalesNo(updatedSales)
+    );
 
     setEditingSale(null);
-    setSelectedInvoice({
-  ...sale,
-  id: sale.id || crypto.randomUUID(),
-  salesNo,
-  invoiceNo,
-});
-  }
+  };
+
+  const handleEdit = (sale: Sales) => {
+    setEditingSale(sale);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this sales record?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const updatedSales = sales.filter(
+      (sale) => sale.id !== id
+    );
+
+    setSales(updatedSales);
+
+    saveSales(updatedSales);
+
+    setSalesNo(
+      getNextSalesNo(updatedSales)
+    );
+
+    if (editingSale?.id === id) {
+      setEditingSale(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSale(null);
+
+    setSalesNo(
+      getNextSalesNo(sales)
+    );
+  };
+
   return (
-    <Layout title="UK EXIM ERP">
-
-      <PageTitle
-        title="🛒 Sales Master"
-        subtitle="Sales Entry & Sales Register"
-      />
-
-      <Card title="Sales Entry">
-
-      <SalesForm
-  salesNo={salesNo}
-  invoiceNo={invoiceNo}
-  editData={editingSale}
-  onSave={addSales}
-/>
-
-</Card>
-
-      <Card title="Sales Register">
-
-        <input
-          type="text"
-          placeholder="🔍 Search Sales No / Invoice No / Customer / Product"
-          value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
-          }
-          style={{
-            width: "100%",
-            height: "40px",
-            padding: "0 12px",
-            border: "1px solid #d1d5db",
-            borderRadius: "6px",
-            marginBottom: "12px",
-            fontSize: "14px",
-            outline: "none",
-            boxSizing: "border-box",
-          }}
-        />
-
-        <SalesTable
-          sales={filteredSales}
-          onEdit={handleEditSale}
-          onDelete={handleDeleteSale}
-        />
-{selectedInvoice && (
-  <div
-    style={{
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.55)",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      zIndex: 9999,
-      overflowY: "auto",
-      padding: "20px",
-    }}
-  >
     <div
       style={{
-       width: "98%",
-height: "98vh",
-background: "#fff",
-borderRadius: "12px",
-overflow: "hidden",
-boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+        padding: "10px",
       }}
     >
-      <InvoicePrint
-        sale={selectedInvoice}
-        onClose={() =>
-          setSelectedInvoice(null)
-        }
+      <h2
+        style={{
+          color: "#14532d",
+          marginBottom: "15px",
+          fontSize: "20px",
+          fontWeight: 700,
+        }}
+      >
+        📤 Sales / Issue Master
+      </h2>
+
+      <SalesForm
+        salesNo={salesNo}
+        editingSale={editingSale}
+        onSave={handleSave}
+        onCancelEdit={handleCancelEdit}
+      />
+
+      <SalesTable
+        sales={sales}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
       />
     </div>
-  </div>
-)}
-      </Card>
-      <div className="mt-4 text-sm text-gray-600">
-        Total Sales Records :{" "}
-        <strong>{filteredSales.length}</strong>
-      </div>
-
-    </Layout>
   );
 }

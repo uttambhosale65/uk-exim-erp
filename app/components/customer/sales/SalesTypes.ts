@@ -48,10 +48,18 @@ export type Sales = {
   grandTotal: number;
 
   // Payment Details
-  paymentMode: "Cash" | "UPI" | "Card" | "Bank" | "Credit";
+  paymentMode:
+    | "Cash"
+    | "UPI"
+    | "Card"
+    | "Bank"
+    | "Credit";
 
   // Status
-  status: "Completed" | "Pending" | "Cancelled";
+  status:
+    | "Completed"
+    | "Pending"
+    | "Cancelled";
 
   // Other Details
   remarks: string;

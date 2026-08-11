@@ -11,7 +11,8 @@ import {
 } from "./components/ProductStorage";
 
 export default function ProductPage() {
-  const [products, setProducts] = useState<Product[]>(loadProducts());
+  const [products, setProducts] =
+    useState<Product[]>(loadProducts());
 
   const [editingProduct, setEditingProduct] =
     useState<Product | null>(null);
@@ -24,7 +25,10 @@ export default function ProductPage() {
         item.id === product.id ? product : item
       );
     } else {
-      updatedProducts = [...products, product];
+      updatedProducts = [
+        ...products,
+        product,
+      ];
     }
 
     setProducts(updatedProducts);
@@ -38,9 +42,10 @@ export default function ProductPage() {
   };
 
   const handleDelete = (id: string) => {
-    const updatedProducts = products.filter(
-      (item) => item.id !== id
-    );
+    const updatedProducts =
+      products.filter(
+        (item) => item.id !== id
+      );
 
     setProducts(updatedProducts);
     saveProducts(updatedProducts);
@@ -54,25 +59,106 @@ export default function ProductPage() {
     <div
       style={{
         padding: "20px",
-        maxWidth: "1400px",
+        width: "100%",
+        maxWidth: "1600px",
         margin: "0 auto",
+        boxSizing: "border-box",
       }}
     >
-      <h1
+      {/* ============================
+          PAGE HEADER
+      ============================= */}
+
+      <div
         style={{
-          color: "#14532d",
+          marginBottom: "18px",
+        }}
+      >
+        <h1
+          style={{
+            color: "#14532d",
+            margin: 0,
+            fontSize: "28px",
+            fontWeight: 700,
+          }}
+        >
+          📦 Product Master
+        </h1>
+
+        <div
+          style={{
+            marginTop: "5px",
+            color: "#6b7280",
+            fontSize: "14px",
+          }}
+        >
+          Product Entry & Product Register
+        </div>
+      </div>
+
+      {/* ============================
+          PRODUCT ENTRY
+      ============================= */}
+
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: "10px",
+          padding: "15px",
+          boxShadow:
+            "0 2px 8px rgba(0,0,0,0.12)",
           marginBottom: "20px",
         }}
       >
-        📦 Product Master
-      </h1>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "12px",
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              color: "#14532d",
+              fontSize: "18px",
+            }}
+          >
+            📝 Product Entry
+          </h2>
 
-      <ProductForm
-        productCode={getNextProductCode(products)}
-        editingProduct={editingProduct}
-        onSave={handleSave}
-        onCancelEdit={() => setEditingProduct(null)}
-      />
+          {editingProduct && (
+            <span
+              style={{
+                background: "#fef3c7",
+                color: "#92400e",
+                padding: "5px 10px",
+                borderRadius: "5px",
+                fontSize: "12px",
+                fontWeight: 600,
+              }}
+            >
+              ✏️ Editing Product
+            </span>
+          )}
+        </div>
+
+        <ProductForm
+          productCode={getNextProductCode(
+            products
+          )}
+          editingProduct={editingProduct}
+          onSave={handleSave}
+          onCancelEdit={() =>
+            setEditingProduct(null)
+          }
+        />
+      </div>
+
+      {/* ============================
+          PRODUCT REGISTER
+      ============================= */}
 
       <ProductTable
         products={products}

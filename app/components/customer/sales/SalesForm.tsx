@@ -1,862 +1,718 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-
+import { useEffect, useState } from "react";
 import { Sales, SalesItem } from "./SalesTypes";
-
-import { Customer } from "../CustomerTypes";
-import { loadCustomers } from "../CustomerStorage";
-
-import { Product } from "../../../product/components/ProductTypes";
-import { loadProducts } from "../../../product/components/ProductStorage";
 
 type SalesFormProps = {
   salesNo: string;
-  invoiceNo: string;
-  editData?: Sales | null;
+  editingSale?: Sales | null;
   onSave: (sale: Sales) => void;
+  onCancelEdit?: () => void;
 };
 
-const SalesForm: React.FC<SalesFormProps> = ({
+export default function SalesForm({
   salesNo,
-  invoiceNo,
-  editData,
+  editingSale,
   onSave,
-}) => {
-  const today = new Date().toISOString().split("T")[0];
-
-  const [customers] = useState<Customer[]>(loadCustomers());
-  const [products] = useState<Product[]>(loadProducts());
-
-  const [customerCode, setCustomerCode] = useState("");
-  const [customerName, setCustomerName] = useState("");
-
-  const [salesDate, setSalesDate] = useState(today);
-
-  const [items, setItems] = useState<SalesItem[]>([]);
-
-  const [selectedProductCode, setSelectedProductCode] =
-    useState("");
-
-  const [qty, setQty] = useState(0);
-  const [rate, setRate] = useState(0);
-  const [gst, setGst] = useState(0);
-
-  const [paymentMode, setPaymentMode] =
-    useState<Sales["paymentMode"]>("Cash");
-
-  const [status, setStatus] =
-    useState<Sales["status"]>("Completed");
-
-  const [remarks, setRemarks] = useState("");
-
-  const [createdAt, setCreatedAt] = useState("");
-
-  // --------------------------------------------------
-  // EDIT DATA
-  // --------------------------------------------------
-
-  useEffect(() => {
-    if (editData) {
-      setCustomerCode(editData.customerCode);
-      setCustomerName(editData.customerName);
-      setSalesDate(editData.salesDate);
-      setItems(editData.items || []);
-      setPaymentMode(editData.paymentMode);
-      setStatus(editData.status);
-      setRemarks(editData.remarks);
-      setCreatedAt(editData.createdAt);
-    } else {
-      setCustomerCode("");
-      setCustomerName("");
-      setSalesDate(today);
-      setItems([]);
-      setPaymentMode("Cash");
-      setStatus("Completed");
-      setRemarks("");
-      setCreatedAt("");
-    }
-  }, [editData, salesNo, invoiceNo]);
-
-  // --------------------------------------------------
-  // PRODUCT SELECTION
-  // --------------------------------------------------
-
-  const handleProductChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    const code = e.target.value;
-
-    setSelectedProductCode(code);
-
-    const product = products.find(
-      (p) => p.code === code
-    );
-
-    if (!product) {
-      setQty(0);
-      setRate(0);
-      setGst(0);
-      return;
-    }
-
-    setQty(0);
-
-    setRate(Number(product.sale ?? 0));
-
-    const gstValue =
-      typeof product.gst === "string"
-        ? Number(product.gst.replace("%", ""))
-        : Number(product.gst ?? 0);
-
-    setGst(gstValue);
+  onCancelEdit,
+}: SalesFormProps) {
+  const getToday = () => {
+    return new Date()
+      .toISOString()
+      .split("T")[0];
   };
 
-  // --------------------------------------------------
-  // ADD PRODUCT
-  // --------------------------------------------------
+  const createEmptySale = (): Sales => ({
+    id: crypto.randomUUID(),
 
-  const handleAddProduct = () => {
-    if (!selectedProductCode) {
-      alert("Please select Product.");
-      return;
+    salesNo,
+
+    salesDate: getToday(),
+
+    invoiceNo: "",
+
+    customerCode: "",
+    customerName: "",
+
+    items: [
+      {
+        productCode: "",
+        productName: "",
+        hsn: "",
+        unit: "KG",
+
+        qty: 0,
+        rate: 0,
+
+        amount: 0,
+
+        gst: 5,
+        gstAmount: 0,
+
+        taxableAmount: 0,
+
+        cgst: 0,
+        sgst: 0,
+        igst: 0,
+
+        grandTotal: 0,
+      },
+    ],
+
+    taxableAmount: 0,
+    gstAmount: 0,
+
+    cgst: 0,
+    sgst: 0,
+    igst: 0,
+
+    grandTotal: 0,
+
+    paymentMode: "Cash",
+
+    status: "Completed",
+
+    remarks: "",
+
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+
+  const [sale, setSale] =
+    useState<Sales>(createEmptySale());
+
+  useEffect(() => {
+    if (editingSale) {
+      setSale(editingSale);
+    } else {
+      setSale((prev) => ({
+        ...prev,
+        salesNo,
+      }));
     }
+  }, [salesNo, editingSale]);
 
-    if (qty <= 0) {
-      alert("Quantity should be greater than zero.");
-      return;
-    }
-
-    if (rate <= 0) {
-      alert("Rate should be greater than zero.");
-      return;
-    }
-
-    const product = products.find(
-      (p) => p.code === selectedProductCode
-    );
-
-    if (!product) {
-      alert("Product not found.");
-      return;
-    }
-
-    const existingProduct = items.find(
-      (item) =>
-        item.productCode === selectedProductCode
-    );
-
-    if (existingProduct) {
-      alert(
-        "This product is already added. Please remove it first if you want to change the quantity."
-      );
-      return;
-    }
+  const calculateItem = (
+    item: SalesItem
+  ): SalesItem => {
+    const qty = Number(item.qty) || 0;
+    const rate = Number(item.rate) || 0;
+    const gst = Number(item.gst) || 0;
 
     const amount = qty * rate;
 
-    const gstAmount = (amount * gst) / 100;
+    const gstAmount =
+      (amount * gst) / 100;
 
-    const cgstAmount = gstAmount / 2;
+    const cgst = gstAmount / 2;
+    const sgst = gstAmount / 2;
 
-    const sgstAmount = gstAmount / 2;
+    const grandTotal =
+      amount + gstAmount;
 
-    const newItem: SalesItem = {
-      productCode: product.code,
-      productName: product.name,
-
-      hsn: product.hsn,
-      unit: product.unit,
-
+    return {
+      ...item,
       qty,
       rate,
-
-      amount,
-
       gst,
-      gstAmount,
-
+      amount,
       taxableAmount: amount,
-
-      cgst: cgstAmount,
-      sgst: sgstAmount,
+      gstAmount,
+      cgst,
+      sgst,
       igst: 0,
-
-      grandTotal: amount + gstAmount,
+      grandTotal,
     };
-
-    setItems((prev) => [...prev, newItem]);
-
-    setSelectedProductCode("");
-    setQty(0);
-    setRate(0);
-    setGst(0);
   };
 
-  // --------------------------------------------------
-  // REMOVE PRODUCT
-  // --------------------------------------------------
-
-  const handleRemoveProduct = (
-    productCode: string
+  const updateItem = (
+    field: keyof SalesItem,
+    value: string | number
   ) => {
-    setItems((prev) =>
-      prev.filter(
-        (item) =>
-          item.productCode !== productCode
-      )
-    );
+    setSale((prev) => {
+      const currentItem =
+        prev.items[0];
+
+      const updatedItem =
+        calculateItem({
+          ...currentItem,
+          [field]: value,
+        });
+
+      return {
+        ...prev,
+        items: [updatedItem],
+        taxableAmount:
+          updatedItem.taxableAmount,
+        gstAmount:
+          updatedItem.gstAmount,
+        cgst: updatedItem.cgst,
+        sgst: updatedItem.sgst,
+        igst: updatedItem.igst,
+        grandTotal:
+          updatedItem.grandTotal,
+      };
+    });
   };
 
-  // --------------------------------------------------
-  // TOTALS
-  // --------------------------------------------------
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement |
+        HTMLSelectElement |
+        HTMLTextAreaElement
+    >
+  ) => {
+    const {
+      name,
+      value,
+    } = e.target;
 
-  const taxableAmount = items.reduce(
-    (total, item) =>
-      total + item.taxableAmount,
-    0
-  );
+    if (
+      name === "qty" ||
+      name === "rate" ||
+      name === "gst"
+    ) {
+      updateItem(
+        name as keyof SalesItem,
+        Number(value)
+      );
 
-  const gstAmount = items.reduce(
-    (total, item) =>
-      total + item.gstAmount,
-    0
-  );
-
-  const cgst = items.reduce(
-    (total, item) =>
-      total + item.cgst,
-    0
-  );
-
-  const sgst = items.reduce(
-    (total, item) =>
-      total + item.sgst,
-    0
-  );
-
-  const igst = items.reduce(
-    (total, item) =>
-      total + item.igst,
-    0
-  );
-
-  const grandTotal = items.reduce(
-    (total, item) =>
-      total + item.grandTotal,
-    0
-  );
-
-  // --------------------------------------------------
-  // RESET
-  // --------------------------------------------------
-
-  const handleReset = () => {
-    setCustomerCode("");
-    setCustomerName("");
-
-    setSalesDate(today);
-
-    setItems([]);
-
-    setSelectedProductCode("");
-
-    setQty(0);
-    setRate(0);
-    setGst(0);
-
-    setPaymentMode("Cash");
-
-    setStatus("Completed");
-
-    setRemarks("");
-  };
-
-  // --------------------------------------------------
-  // SAVE SALES
-  // --------------------------------------------------
-
-  const handleSave = () => {
-    if (!customerCode.trim()) {
-      alert("Please select Customer.");
       return;
     }
 
-    if (items.length === 0) {
-      alert("Please add at least one Product.");
+    setSale((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = (
+    e: React.FormEvent
+  ) => {
+    e.preventDefault();
+
+    const item = sale.items[0];
+
+    if (!sale.customerName.trim()) {
+      alert("Please enter Customer Name");
       return;
     }
 
-    const now = new Date().toISOString();
+    if (!item.productName.trim()) {
+      alert("Please enter Product Name");
+      return;
+    }
 
-    const sale: Sales = {
-      id:
-        editData?.id ||
-        crypto.randomUUID(),
+    if (item.qty <= 0) {
+      alert("Quantity should be greater than zero");
+      return;
+    }
+
+    if (item.rate <= 0) {
+      alert("Rate should be greater than zero");
+      return;
+    }
+
+    const now =
+      new Date().toISOString();
+
+    const finalSale: Sales = {
+      ...sale,
 
       salesNo,
 
-      salesDate,
-
-      invoiceNo,
-
-      customerCode,
-
-      customerName,
-
-      items,
-
-      taxableAmount,
-
-      gstAmount,
-
-      cgst,
-
-      sgst,
-
-      igst,
-
-      grandTotal,
-
-      paymentMode,
-
-      status,
-
-      remarks,
-
-      createdAt:
-        createdAt || now,
-
       updatedAt: now,
+
+      items: [
+        calculateItem(item),
+      ],
     };
 
-    onSave(sale);
+    onSave(finalSale);
 
-    alert(
-      "Multi Product Sales Entry Saved Successfully."
-    );
+    setSale(createEmptySale());
 
-    handleReset();
+    onCancelEdit?.();
   };
 
-  // --------------------------------------------------
-  // UI
-  // --------------------------------------------------
+  const handleReset = () => {
+    setSale(createEmptySale());
+
+    onCancelEdit?.();
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    height: "40px",
+    padding: "0 10px",
+    border: "1px solid #d1d5db",
+    borderRadius: "6px",
+    fontSize: "13px",
+    boxSizing: "border-box",
+    outline: "none",
+    background: "#ffffff",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: "block",
+    fontSize: "11px",
+    fontWeight: 700,
+    color: "#374151",
+    marginBottom: "5px",
+    whiteSpace: "nowrap",
+  };
+
+  const fieldStyle: React.CSSProperties = {
+    minWidth: 0,
+  };
+
+  const item = sale.items[0];
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden bg-white rounded-xl shadow-md p-3">
-
-      {/* TITLE */}
-
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-blue-700">
-          Multi Product Sales Entry
+    <form onSubmit={handleSubmit}>
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1px solid #d1d5db",
+          borderRadius: "10px",
+          padding: "18px",
+          boxShadow:
+            "0 2px 8px rgba(0,0,0,0.08)",
+        }}
+      >
+        <h2
+          style={{
+            margin: "0 0 18px",
+            color: "#14532d",
+            fontSize: "19px",
+            fontWeight: 700,
+          }}
+        >
+          📤 Sales Entry
         </h2>
 
-        <div className="text-xs text-gray-500">
-          {items.length} Product
-          {items.length !== 1 ? "s" : ""} Added
-        </div>
-      </div>
+        {/* ROW 1 */}
 
-      {/* SALES DETAILS + CUSTOMER */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "100px 120px 120px 1.5fr 1.5fr",
+            gap: "10px",
+            alignItems: "end",
+          }}
+        >
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Sales No.
+            </label>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
+            <input
+              value={sale.salesNo}
+              readOnly
+              style={{
+                ...inputStyle,
+                background: "#f3f4f6",
+                fontWeight: 700,
+              }}
+            />
+          </div>
 
-        <div>
-          <label className="block text-xs font-medium mb-1">
-            Sales No
-          </label>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Sales Date *
+            </label>
 
-          <input
-            type="text"
-            value={salesNo}
-            readOnly
-            className="w-full border rounded-md px-2 py-1.5 text-sm bg-gray-100"
-          />
-        </div>
+            <input
+              type="date"
+              name="salesDate"
+              value={sale.salesDate}
+              onChange={handleChange}
+              style={inputStyle}
+            />
+          </div>
 
-        <div>
-          <label className="block text-xs font-medium mb-1">
-            Invoice No
-          </label>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Invoice No.
+            </label>
 
-          <input
-            type="text"
-            value={invoiceNo}
-            readOnly
-            className="w-full border rounded-md px-2 py-1.5 text-sm bg-gray-100"
-          />
-        </div>
+            <input
+              type="text"
+              name="invoiceNo"
+              value={sale.invoiceNo}
+              onChange={handleChange}
+              placeholder="Invoice No."
+              style={inputStyle}
+            />
+          </div>
 
-        <div>
-          <label className="block text-xs font-medium mb-1">
-            Sales Date
-          </label>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Customer Code
+            </label>
 
-          <input
-            type="date"
-            value={salesDate}
-            onChange={(e) =>
-              setSalesDate(e.target.value)
-            }
-            className="w-full border rounded-md px-2 py-1.5 text-sm"
-          />
-        </div>
+            <input
+              type="text"
+              name="customerCode"
+              value={sale.customerCode}
+              onChange={handleChange}
+              placeholder="Customer Code"
+              style={inputStyle}
+            />
+          </div>
 
-        <div>
-          <label className="block text-xs font-medium mb-1">
-            Customer
-          </label>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Customer Name *
+            </label>
 
-          <select
-            value={customerCode}
-            onChange={(e) => {
-              const customer =
-                customers.find(
-                  (c) =>
-                    c.code === e.target.value
-                );
-
-              setCustomerCode(
-                customer?.code || ""
-              );
-
-              setCustomerName(
-                customer?.name || ""
-              );
-            }}
-            className="w-full border rounded-md px-2 py-1.5 text-sm"
-          >
-            <option value="">
-              Select Customer
-            </option>
-
-            {customers.map((customer) => (
-              <option
-                key={customer.code}
-                value={customer.code}
-              >
-                {customer.code} -{" "}
-                {customer.name}
-              </option>
-            ))}
-          </select>
+            <input
+              type="text"
+              name="customerName"
+              value={sale.customerName}
+              onChange={handleChange}
+              placeholder="Enter Customer Name"
+              style={inputStyle}
+            />
+          </div>
         </div>
 
-      </div>
+        {/* ROW 2 */}
 
-      {/* ADD PRODUCT */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "110px 2fr 110px 100px 100px 110px",
+            gap: "10px",
+            alignItems: "end",
+            marginTop: "14px",
+          }}
+        >
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Product Code
+            </label>
 
-      <div className="border rounded-lg p-2.5 bg-gray-50 mb-3">
+            <input
+              type="text"
+              value={item.productCode}
+              onChange={(e) =>
+                updateItem(
+                  "productCode",
+                  e.target.value
+                )
+              }
+              placeholder="Product Code"
+              style={inputStyle}
+            />
+          </div>
 
-        <div className="flex items-center justify-between mb-2">
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Product Name *
+            </label>
 
-          <h3 className="text-sm font-bold text-gray-700">
-            Add Product
-          </h3>
+            <input
+              type="text"
+              value={item.productName}
+              onChange={(e) =>
+                updateItem(
+                  "productName",
+                  e.target.value
+                )
+              }
+              placeholder="Enter Product Name"
+              style={inputStyle}
+            />
+          </div>
 
-          <span className="text-xs text-gray-500">
-            Select → Qty → Rate → Add
-          </span>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              HSN Code
+            </label>
 
-        </div>
+            <input
+              type="text"
+              value={item.hsn}
+              onChange={(e) =>
+                updateItem(
+                  "hsn",
+                  e.target.value
+                )
+              }
+              placeholder="HSN"
+              style={inputStyle}
+            />
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
-
-          {/* PRODUCT */}
-
-          <div className="md:col-span-3">
-
-            <label className="block text-xs font-medium mb-1">
-              Product
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Unit
             </label>
 
             <select
-              value={selectedProductCode}
-              onChange={handleProductChange}
-              className="w-full border rounded-md px-2 py-1.5 text-sm"
+              value={item.unit}
+              onChange={(e) =>
+                updateItem(
+                  "unit",
+                  e.target.value
+                )
+              }
+              style={inputStyle}
             >
-              <option value="">
-                Select Product
+              <option value="KG">KG</option>
+              <option value="Gram">
+                Gram
               </option>
-
-              {products.map((product) => (
-                <option
-                  key={product.code}
-                  value={product.code}
-                >
-                  {product.code} -{" "}
-                  {product.name}
-                </option>
-              ))}
+              <option value="Nos">Nos</option>
+              <option value="Box">Box</option>
             </select>
-
           </div>
 
-          {/* QTY */}
-
-          <div>
-
-            <label className="block text-xs font-medium mb-1">
-              Qty
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Quantity *
             </label>
 
             <input
               type="number"
-              value={qty}
-              min={0}
+              value={item.qty}
+              min="0"
+              step="0.01"
               onChange={(e) =>
-                setQty(
+                updateItem(
+                  "qty",
                   Number(e.target.value)
                 )
               }
-              className="w-full border rounded-md px-2 py-1.5 text-sm"
+              style={inputStyle}
             />
-
           </div>
 
-          {/* RATE */}
-
-          <div>
-
-            <label className="block text-xs font-medium mb-1">
-              Rate
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Rate *
             </label>
 
             <input
               type="number"
-              value={rate}
-              min={0}
+              value={item.rate}
+              min="0"
+              step="0.01"
               onChange={(e) =>
-                setRate(
+                updateItem(
+                  "rate",
                   Number(e.target.value)
                 )
               }
-              className="w-full border rounded-md px-2 py-1.5 text-sm"
+              style={inputStyle}
             />
-
           </div>
+        </div>
 
-          {/* GST */}
+        {/* ROW 3 */}
 
-          <div>
-
-            <label className="block text-xs font-medium mb-1">
-              GST %
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "1fr 1fr 100px 1fr 1fr 1fr 1fr auto auto",
+            gap: "10px",
+            alignItems: "end",
+            marginTop: "14px",
+          }}
+        >
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Amount
             </label>
 
             <input
-              type="number"
-              value={gst}
+              value={item.amount.toFixed(2)}
               readOnly
-              className="w-full border rounded-md px-2 py-1.5 text-sm bg-gray-100"
+              style={{
+                ...inputStyle,
+                background: "#f3f4f6",
+              }}
             />
-
           </div>
 
-        </div>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              GST
+            </label>
 
-        <div className="flex justify-end mt-2">
-
-          <button
-            type="button"
-            onClick={handleAddProduct}
-            className="px-4 py-1.5 rounded-md bg-green-600 text-white text-sm font-semibold hover:bg-green-700"
-          >
-            + Add Product
-          </button>
-
-        </div>
-
-      </div>
-
-      {/* PRODUCT LIST */}
-
-      <div className="w-full overflow-hidden mb-3">
-
-        <table className="w-full table-fixed border-collapse text-xs">
-
-          <thead>
-
-            <tr className="bg-blue-700 text-white">
-
-              <th className="border p-1.5 w-8">
-                #
-              </th>
-
-              <th className="border p-1.5 text-left">
-                Product
-              </th>
-
-              <th className="border p-1.5 w-16">
-                Qty
-              </th>
-
-              <th className="border p-1.5 w-20">
-                Rate
-              </th>
-
-              <th className="border p-1.5 w-14">
-                GST
-              </th>
-
-              <th className="border p-1.5 w-24">
-                Amount
-              </th>
-
-              <th className="border p-1.5 w-24">
-                Total
-              </th>
-
-              <th className="border p-1.5 w-20">
-                Action
-              </th>
-
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-            {items.length === 0 ? (
-
-              <tr>
-
-                <td
-                  colSpan={8}
-                  className="border p-3 text-center text-gray-500"
-                >
-                  No products added
-                </td>
-
-              </tr>
-
-            ) : (
-
-              items.map((item, index) => (
-
-                <tr key={item.productCode}>
-
-                  <td className="border p-1.5 text-center">
-                    {index + 1}
-                  </td>
-
-                  <td className="border p-1.5 break-words">
-                    {item.productName}
-                  </td>
-
-                  <td className="border p-1.5 text-center">
-                    {item.qty}
-                  </td>
-
-                  <td className="border p-1.5 text-right">
-                    ₹{item.rate.toFixed(2)}
-                  </td>
-
-                  <td className="border p-1.5 text-center">
-                    {item.gst}%
-                  </td>
-
-                  <td className="border p-1.5 text-right">
-                    ₹{item.amount.toFixed(2)}
-                  </td>
-
-                  <td className="border p-1.5 text-right font-semibold">
-                    ₹{item.grandTotal.toFixed(2)}
-                  </td>
-
-                  <td className="border p-1.5 text-center">
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleRemoveProduct(
-                          item.productCode
-                        )
-                      }
-                      className="px-2 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700"
-                    >
-                      Remove
-                    </button>
-
-                  </td>
-
-                </tr>
-
-              ))
-
-            )}
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-      {/* BOTTOM SECTION */}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-
-        {/* PAYMENT / REMARKS */}
-
-        <div className="border rounded-lg p-2.5">
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-
-            <div>
-
-              <label className="block text-xs font-medium mb-1">
-                Payment Mode
-              </label>
-
-              <select
-                value={paymentMode}
-                onChange={(e) =>
-                  setPaymentMode(
-                    e.target.value as Sales["paymentMode"]
-                  )
-                }
-                className="w-full border rounded-md px-2 py-1.5 text-sm"
-              >
-
-                <option value="Cash">Cash</option>
-                <option value="UPI">UPI</option>
-                <option value="Card">Card</option>
-                <option value="Bank">Bank</option>
-                <option value="Credit">Credit</option>
-
-              </select>
-
-            </div>
-
-            <div>
-
-              <label className="block text-xs font-medium mb-1">
-                Status
-              </label>
-
-              <select
-                value={status}
-                onChange={(e) =>
-                  setStatus(
-                    e.target.value as Sales["status"]
-                  )
-                }
-                className="w-full border rounded-md px-2 py-1.5 text-sm"
-              >
-
-                <option value="Completed">
-                  Completed
-                </option>
-
-                <option value="Pending">
-                  Pending
-                </option>
-
-                <option value="Cancelled">
-                  Cancelled
-                </option>
-
-              </select>
-
-            </div>
-
+            <select
+              value={item.gst}
+              onChange={(e) =>
+                updateItem(
+                  "gst",
+                  Number(e.target.value)
+                )
+              }
+              style={inputStyle}
+            >
+              <option value={0}>0%</option>
+              <option value={5}>5%</option>
+              <option value={12}>12%</option>
+              <option value={18}>18%</option>
+              <option value={28}>28%</option>
+            </select>
           </div>
 
-          <div className="mt-2">
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              GST Amt.
+            </label>
 
-            <label className="block text-xs font-medium mb-1">
+            <input
+              value={item.gstAmount.toFixed(2)}
+              readOnly
+              style={{
+                ...inputStyle,
+                background: "#f3f4f6",
+              }}
+            />
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Payment
+            </label>
+
+            <select
+              name="paymentMode"
+              value={sale.paymentMode}
+              onChange={handleChange}
+              style={inputStyle}
+            >
+              <option value="Cash">Cash</option>
+              <option value="UPI">UPI</option>
+              <option value="Card">Card</option>
+              <option value="Bank">Bank</option>
+              <option value="Credit">Credit</option>
+            </select>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Status
+            </label>
+
+            <select
+              name="status"
+              value={sale.status}
+              onChange={handleChange}
+              style={inputStyle}
+            >
+              <option value="Completed">
+                Completed
+              </option>
+              <option value="Pending">
+                Pending
+              </option>
+              <option value="Cancelled">
+                Cancelled
+              </option>
+            </select>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Net Amount
+            </label>
+
+            <input
+              value={sale.grandTotal.toFixed(2)}
+              readOnly
+              style={{
+                ...inputStyle,
+                background: "#f0fdf4",
+                fontWeight: 700,
+                color: "#14532d",
+              }}
+            />
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
               Remarks
             </label>
 
             <input
               type="text"
-              value={remarks}
-              onChange={(e) =>
-                setRemarks(e.target.value)
-              }
-              className="w-full border rounded-md px-2 py-1.5 text-sm"
-              placeholder="Enter Remarks..."
+              name="remarks"
+              value={sale.remarks}
+              onChange={handleChange}
+              placeholder="Remarks"
+              style={inputStyle}
             />
-
           </div>
 
+          {/* RESET */}
+
+          <button
+            type="button"
+            onClick={handleReset}
+            style={{
+              height: "40px",
+              padding: "0 14px",
+              border: "none",
+              borderRadius: "6px",
+              background: "#6b7280",
+              color: "#ffffff",
+              fontWeight: 700,
+              fontSize: "12px",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            🔄 Reset
+          </button>
+
+          {/* SAVE */}
+
+          <button
+            type="submit"
+            style={{
+              height: "40px",
+              padding: "0 16px",
+              border: "none",
+              borderRadius: "6px",
+              background: "#14532d",
+              color: "#ffffff",
+              fontWeight: 700,
+              fontSize: "12px",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            💾{" "}
+            {editingSale
+              ? "Update Sale"
+              : "Save Sale"}
+          </button>
         </div>
 
-        {/* TOTALS */}
-
-        <div className="border rounded-lg overflow-hidden">
-
-          <div className="flex justify-between px-3 py-1.5 border-b text-sm">
-            <span>Taxable Amount</span>
-            <strong>
-              ₹{taxableAmount.toFixed(2)}
-            </strong>
+        {editingSale && (
+          <div
+            style={{
+              marginTop: "12px",
+              padding: "7px 10px",
+              background: "#fef3c7",
+              color: "#92400e",
+              borderRadius: "5px",
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
+            ✏️ Editing Sale:{" "}
+            {editingSale.salesNo}
           </div>
-
-          <div className="flex justify-between px-3 py-1.5 border-b text-sm">
-            <span>GST Amount</span>
-            <strong>
-              ₹{gstAmount.toFixed(2)}
-            </strong>
-          </div>
-
-          <div className="flex justify-between px-3 py-1.5 border-b text-sm">
-            <span>CGST</span>
-            <strong>
-              ₹{cgst.toFixed(2)}
-            </strong>
-          </div>
-
-          <div className="flex justify-between px-3 py-1.5 border-b text-sm">
-            <span>SGST</span>
-            <strong>
-              ₹{sgst.toFixed(2)}
-            </strong>
-          </div>
-
-          <div className="flex justify-between px-3 py-2 bg-green-100">
-
-            <span className="font-bold">
-              Grand Total
-            </span>
-
-            <strong className="text-green-700 text-lg">
-              ₹{grandTotal.toFixed(2)}
-            </strong>
-
-          </div>
-
-        </div>
-
+        )}
       </div>
-
-      {/* BUTTONS */}
-
-      <div className="flex justify-end gap-2 mt-3">
-
-        <button
-          type="button"
-          onClick={handleReset}
-          className="px-4 py-1.5 rounded-md bg-gray-500 text-white text-sm font-semibold hover:bg-gray-600"
-        >
-          Reset
-        </button>
-
-        <button
-          type="button"
-          onClick={handleSave}
-          className="px-5 py-1.5 rounded-md bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"
-        >
-          Save Sales
-        </button>
-
-      </div>
-
-    </div>
+    </form>
   );
-};
-
-export default SalesForm;
+}

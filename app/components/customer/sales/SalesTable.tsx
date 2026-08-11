@@ -1,28 +1,11 @@
 "use client";
 
-import React from "react";
+import React, {
+  useMemo,
+  useState,
+} from "react";
+
 import { Sales } from "./SalesTypes";
-
-const thStyle: React.CSSProperties = {
-  border: "1px solid #d1d5db",
-  padding: "7px 8px",
-  textAlign: "center",
-  fontWeight: 600,
-  whiteSpace: "nowrap",
-};
-
-const tdStyle: React.CSSProperties = {
-  border: "1px solid #e5e7eb",
-  padding: "7px 8px",
-  whiteSpace: "nowrap",
-};
-
-const tdCenter: React.CSSProperties = {
-  border: "1px solid #e5e7eb",
-  padding: "7px 8px",
-  textAlign: "center",
-  whiteSpace: "nowrap",
-};
 
 type SalesTableProps = {
   sales: Sales[];
@@ -31,328 +14,549 @@ type SalesTableProps = {
 };
 
 export default function SalesTable({
-  sales,
+  sales = [],
   onEdit,
   onDelete,
 }: SalesTableProps) {
+  const [search, setSearch] =
+    useState("");
+
+  const filteredSales = useMemo(() => {
+    const keyword =
+      search.trim().toLowerCase();
+
+    if (!keyword) {
+      return sales;
+    }
+
+    return sales.filter((sale) => {
+      const customerMatch =
+        sale.customerCode
+          ?.toLowerCase()
+          .includes(keyword) ||
+        sale.customerName
+          ?.toLowerCase()
+          .includes(keyword);
+
+      const salesMatch =
+        sale.salesNo
+          ?.toLowerCase()
+          .includes(keyword) ||
+        sale.invoiceNo
+          ?.toLowerCase()
+          .includes(keyword) ||
+        sale.salesDate
+          ?.toLowerCase()
+          .includes(keyword);
+
+      const productMatch =
+        sale.items?.some((item) =>
+          (
+            item.productCode +
+            " " +
+            item.productName
+          )
+            .toLowerCase()
+            .includes(keyword)
+        );
+
+      return Boolean(
+        customerMatch ||
+        salesMatch ||
+        productMatch
+      );
+    });
+  }, [sales, search]);
+
   return (
     <div
       style={{
-        width: "100%",
-        overflowX: "auto",
+        background: "#ffffff",
+        border: "1px solid #d1d5db",
+        borderRadius: "10px",
+        padding: "18px",
+        marginTop: "18px",
+        boxShadow:
+          "0 2px 8px rgba(0,0,0,0.08)",
       }}
     >
-      <table
+      <div
         style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          minWidth: "1050px",
-          fontSize: "13px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "15px",
+          marginBottom: "15px",
         }}
       >
-        <thead>
-          <tr
+        <div>
+          <h2
             style={{
-              background: "#2563eb",
-              color: "#ffffff",
+              margin: 0,
+              color: "#14532d",
+              fontSize: "19px",
+              fontWeight: 700,
             }}
           >
-            <th style={thStyle}>Sales No</th>
-            <th style={thStyle}>Date</th>
-            <th style={thStyle}>Customer</th>
-            <th style={thStyle}>Product</th>
-            <th style={thStyle}>HSN</th>
-            <th style={thStyle}>Unit</th>
-            <th style={thStyle}>Qty</th>
-            <th style={thStyle}>Rate</th>
-            <th style={thStyle}>Amount</th>
-            <th style={thStyle}>GST</th>
-            <th style={thStyle}>Grand Total</th>
-            <th style={thStyle}>Action</th>
-          </tr>
-        </thead>
+            📋 Sales Register
+          </h2>
 
-        <tbody>
-          {sales.length === 0 ? (
-            <tr>
-              <td
-                colSpan={12}
-                style={{
-                  padding: "20px",
-                  textAlign: "center",
-                  border: "1px solid #e5e7eb",
-                  color: "#6b7280",
-                }}
-              >
-                No Sales Records Found
-              </td>
-            </tr>
-          ) : (
-            sales.map((sale, saleIndex) => {
-              const items = Array.isArray(sale.items)
-                ? sale.items
-                : [];
+          <div
+            style={{
+              marginTop: "5px",
+              fontSize: "12px",
+              color: "#6b7280",
+            }}
+          >
+            Total Sales:{" "}
+            <span
+              style={{
+                display: "inline-block",
+                padding: "2px 8px",
+                marginLeft: "4px",
+                borderRadius: "12px",
+                background: "#dcfce7",
+                color: "#166534",
+                fontWeight: 700,
+              }}
+            >
+              {sales.length}
+            </span>
+          </div>
+        </div>
 
-              // -----------------------------------------
-              // OLD / INVALID SALES RECORD
-              // -----------------------------------------
-
-              if (items.length === 0) {
-                return (
-                  <tr
-                    key={sale.id}
-                    style={{
-                      background:
-                        saleIndex % 2 === 0
-                          ? "#ffffff"
-                          : "#f9fafb",
-                    }}
-                  >
-                    <td style={tdStyle}>
-                      {sale.salesNo}
-                    </td>
-
-                    <td style={tdCenter}>
-                      {sale.salesDate}
-                    </td>
-
-                    <td style={tdStyle}>
-                      {sale.customerName}
-                    </td>
-
-                    <td
-                      colSpan={9}
-                      style={{
-                        padding: "10px",
-                        textAlign: "center",
-                        color: "#dc2626",
-                        border:
-                          "1px solid #e5e7eb",
-                      }}
-                    >
-                      No Product Data
-                    </td>
-                  </tr>
-                );
-              }
-
-              // -----------------------------------------
-              // MULTI PRODUCT SALES
-              // -----------------------------------------
-
-              return items.map((item, itemIndex) => {
-                const isFirstItem =
-                  itemIndex === 0;
-
-                return (
-                  <tr
-                    key={`${sale.id}-${item.productCode}-${itemIndex}`}
-                    style={{
-                      background:
-                        saleIndex % 2 === 0
-                          ? "#ffffff"
-                          : "#f9fafb",
-                    }}
-                  >
-                    {/* SALES NO */}
-                    {isFirstItem && (
-                      <td
-                        rowSpan={items.length}
-                        style={{
-                          ...tdCenter,
-                          fontWeight: 600,
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        {sale.salesNo}
-                      </td>
-                    )}
-
-                    {/* DATE */}
-                    {isFirstItem && (
-                      <td
-                        rowSpan={items.length}
-                        style={{
-                          ...tdCenter,
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        {sale.salesDate}
-                      </td>
-                    )}
-
-                    {/* CUSTOMER */}
-                    {isFirstItem && (
-                      <td
-                        rowSpan={items.length}
-                        style={{
-                          ...tdStyle,
-                          verticalAlign: "middle",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {sale.customerName}
-                      </td>
-                    )}
-
-                    {/* PRODUCT */}
-                    <td style={tdStyle}>
-                      {item.productName}
-                    </td>
-
-                    {/* HSN */}
-                    <td style={tdCenter}>
-                      {item.hsn}
-                    </td>
-
-                    {/* UNIT */}
-                    <td style={tdCenter}>
-                      {item.unit}
-                    </td>
-
-                    {/* QTY */}
-                    <td style={tdCenter}>
-                      {item.qty}
-                    </td>
-
-                    {/* RATE */}
-                    <td
-                      style={{
-                        ...tdCenter,
-                        textAlign: "right",
-                      }}
-                    >
-                      ₹ {item.rate.toFixed(2)}
-                    </td>
-
-                    {/* AMOUNT */}
-                    <td
-                      style={{
-                        ...tdCenter,
-                        textAlign: "right",
-                      }}
-                    >
-                      ₹ {item.amount.toFixed(2)}
-                    </td>
-
-                    {/* GST */}
-                    <td style={tdCenter}>
-                      {item.gst}%
-                    </td>
-
-                    {/* GRAND TOTAL */}
-                    {isFirstItem && (
-                      <td
-                        rowSpan={items.length}
-                        style={{
-                          ...tdCenter,
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        <span
-                          style={{
-                            display: "inline-block",
-                            background: "#dcfce7",
-                            color: "#166534",
-                            padding: "5px 9px",
-                            borderRadius: "20px",
-                            fontWeight: 700,
-                          }}
-                        >
-                          ₹{" "}
-                          {sale.grandTotal.toFixed(
-                            2
-                          )}
-                        </span>
-                      </td>
-                    )}
-
-                    {/* ACTION */}
-                    {isFirstItem && (
-                      <td
-                        rowSpan={items.length}
-                        style={{
-                          ...tdCenter,
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "6px",
-                            alignItems: "center",
-                          }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onEdit(sale)
-                            }
-                            style={{
-                              padding:
-                                "5px 12px",
-                              border: "none",
-                              borderRadius:
-                                "6px",
-                              background:
-                                "#2563eb",
-                              color:
-                                "#ffffff",
-                              cursor:
-                                "pointer",
-                              fontWeight: 600,
-                            }}
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onDelete(
-                                sale.id
-                              )
-                            }
-                            style={{
-                              padding:
-                                "5px 12px",
-                              border: "none",
-                              borderRadius:
-                                "6px",
-                              background:
-                                "#dc2626",
-                              color:
-                                "#ffffff",
-                              cursor:
-                                "pointer",
-                              fontWeight: 600,
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                );
-              });
-            })
-          )}
-        </tbody>
-      </table>
-
-      {/* TOTAL RECORDS */}
+        <input
+          type="text"
+          placeholder="🔍 Search Sales / Customer / Product"
+          value={search}
+          onChange={(e) =>
+            setSearch(e.target.value)
+          }
+          style={{
+            width: "340px",
+            maxWidth: "100%",
+            height: "40px",
+            padding: "0 12px",
+            border:
+              "1px solid #d1d5db",
+            borderRadius: "6px",
+            fontSize: "13px",
+            outline: "none",
+            boxSizing: "border-box",
+          }}
+        />
+      </div>
 
       <div
         style={{
-          marginTop: "12px",
-          fontWeight: 600,
-          color: "#374151",
+          width: "100%",
+          overflowX: "auto",
+          border:
+            "1px solid #dbe3ea",
+          borderRadius: "7px",
         }}
       >
-        Total Sales Records: {sales.length}
+        <table
+          style={{
+            width: "100%",
+            borderCollapse:
+              "collapse",
+            tableLayout: "fixed",
+            fontSize: "13px",
+          }}
+        >
+          <thead>
+            <tr
+              style={{
+                background: "#14532d",
+                color: "#ffffff",
+              }}
+            >
+              <th
+                style={{
+                  ...thStyle,
+                  width: "75px",
+                }}
+              >
+                Sales No
+              </th>
+
+              <th
+                style={{
+                  ...thStyle,
+                  width: "85px",
+                }}
+              >
+                Date
+              </th>
+
+              <th
+                style={{
+                  ...thStyle,
+                  width: "90px",
+                }}
+              >
+                Invoice
+              </th>
+
+              <th
+                style={{
+                  ...thStyle,
+                  width: "170px",
+                }}
+              >
+                Customer
+              </th>
+
+              <th
+                style={{
+                  ...thStyle,
+                  width: "180px",
+                }}
+              >
+                Product
+              </th>
+
+              <th
+                style={{
+                  ...thStyle,
+                  width: "55px",
+                }}
+              >
+                Qty
+              </th>
+
+              <th
+                style={{
+                  ...thStyle,
+                  width: "80px",
+                }}
+              >
+                Rate
+              </th>
+
+              <th
+                style={{
+                  ...thStyle,
+                  width: "70px",
+                }}
+              >
+                GST
+              </th>
+
+              <th
+                style={{
+                  ...thStyle,
+                  width: "100px",
+                }}
+              >
+                Grand Total
+              </th>
+
+              <th
+                style={{
+                  ...thStyle,
+                  width: "100px",
+                }}
+              >
+                Status
+              </th>
+
+              <th
+                style={{
+                  ...thStyle,
+                  width: "135px",
+                }}
+              >
+                Action
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filteredSales.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={11}
+                  style={{
+                    padding: "30px",
+                    textAlign: "center",
+                    color: "#6b7280",
+                    fontWeight: 600,
+                  }}
+                >
+                  No Sales Records Found
+                </td>
+              </tr>
+            ) : (
+              filteredSales.map(
+                (sale, index) => {
+                  const firstItem =
+                    sale.items?.[0];
+
+                  const productText =
+                    sale.items &&
+                    sale.items.length > 1
+                      ? `${
+                          firstItem?.productName ||
+                          "-"
+                        } + ${
+                          sale.items.length - 1
+                        } more`
+                      : firstItem?.productName ||
+                        "-";
+
+                  const totalQty =
+                    sale.items?.reduce(
+                      (
+                        total: number,
+                        item
+                      ) =>
+                        total +
+                        Number(
+                          item.qty || 0
+                        ),
+                      0
+                    ) || 0;
+
+                  const firstRate =
+                    firstItem?.rate || 0;
+
+                  const firstGST =
+                    firstItem?.gst || 0;
+
+                  return (
+                    <tr
+                      key={sale.id}
+                      style={{
+                        background:
+                          index % 2 === 0
+                            ? "#ffffff"
+                            : "#f8fafc",
+                      }}
+                    >
+                      <td style={tdStyle}>
+                        {sale.salesNo}
+                      </td>
+
+                      <td style={tdStyle}>
+                        {sale.salesDate}
+                      </td>
+
+                      <td style={tdStyle}>
+                        {sale.invoiceNo ||
+                          "-"}
+                      </td>
+
+                      <td
+                        style={{
+                          ...tdStyle,
+                          fontWeight: 600,
+                        }}
+                        title={
+                          sale.customerName
+                        }
+                      >
+                        {sale.customerName ||
+                          "-"}
+                      </td>
+
+                      <td
+                        style={tdStyle}
+                        title={sale.items
+                          ?.map(
+                            (item) =>
+                              item.productName
+                          )
+                          .join(", ")}
+                      >
+                        {productText}
+                      </td>
+
+                      <td
+                        style={{
+                          ...tdStyle,
+                          textAlign: "center",
+                        }}
+                      >
+                        {totalQty}
+                      </td>
+
+                      <td
+                        style={{
+                          ...tdStyle,
+                          textAlign: "right",
+                        }}
+                      >
+                        ₹{" "}
+                        {Number(
+                          firstRate
+                        ).toFixed(2)}
+                      </td>
+
+                      <td
+                        style={{
+                          ...tdStyle,
+                          textAlign: "center",
+                        }}
+                      >
+                        {firstGST}%
+                      </td>
+
+                      <td
+                        style={{
+                          ...tdStyle,
+                          textAlign: "right",
+                          fontWeight: 700,
+                          color: "#14532d",
+                        }}
+                      >
+                        ₹{" "}
+                        {Number(
+                          sale.grandTotal ||
+                            0
+                        ).toFixed(2)}
+                      </td>
+
+                      <td style={tdStyle}>
+                        <span
+                          style={{
+                            display:
+                              "inline-block",
+                            padding:
+                              "4px 9px",
+                            borderRadius:
+                              "12px",
+                            fontSize:
+                              "11px",
+                            fontWeight: 700,
+                            background:
+                              sale.status ===
+                              "Completed"
+                                ? "#dcfce7"
+                                : sale.status ===
+                                  "Pending"
+                                ? "#fef3c7"
+                                : "#fee2e2",
+                            color:
+                              sale.status ===
+                              "Completed"
+                                ? "#166534"
+                                : sale.status ===
+                                  "Pending"
+                                ? "#92400e"
+                                : "#991b1b",
+                          }}
+                        >
+                          {sale.status}
+                        </span>
+                      </td>
+
+                      <td
+                        style={{
+                          ...tdStyle,
+                          textAlign:
+                            "center",
+                          whiteSpace:
+                            "nowrap",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onEdit(sale)
+                          }
+                          style={{
+                            padding:
+                              "6px 9px",
+                            marginRight:
+                              "5px",
+                            border:
+                              "none",
+                            borderRadius:
+                              "4px",
+                            background:
+                              "#2563eb",
+                            color:
+                              "#ffffff",
+                            fontSize:
+                              "11px",
+                            fontWeight: 600,
+                            cursor:
+                              "pointer",
+                          }}
+                        >
+                          ✏️ Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "Are you sure you want to delete this sales record?"
+                              )
+                            ) {
+                              onDelete(
+                                sale.id
+                              );
+                            }
+                          }}
+                          style={{
+                            padding:
+                              "6px 9px",
+                            border:
+                              "none",
+                            borderRadius:
+                              "4px",
+                            background:
+                              "#dc2626",
+                            color:
+                              "#ffffff",
+                            fontSize:
+                              "11px",
+                            fontWeight: 600,
+                            cursor:
+                              "pointer",
+                          }}
+                        >
+                          🗑️ Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                }
+              )
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
+
+const thStyle: React.CSSProperties = {
+  padding: "9px 7px",
+  textAlign: "left",
+  fontSize: "11px",
+  fontWeight: 700,
+  borderRight:
+    "1px solid rgba(255,255,255,0.2)",
+  borderBottom:
+    "2px solid #0f3d24",
+  whiteSpace: "nowrap",
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: "9px 7px",
+  borderRight:
+    "1px solid #e5e7eb",
+  borderBottom:
+    "1px solid #e5e7eb",
+  fontSize: "11px",
+  color: "#374151",
+  verticalAlign: "middle",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
