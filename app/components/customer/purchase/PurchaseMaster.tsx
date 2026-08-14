@@ -12,45 +12,118 @@ import {
   getNextPurchaseNo,
 } from "./PurchaseStorage";
 
+import {
+  updateStock,
+  reversePurchaseStock,
+} from "../../stock/StockStorage";
+
 export default function PurchaseMaster() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+
   const [purchaseNo, setPurchaseNo] =
     useState("PUR-0001");
 
   const [editingPurchase, setEditingPurchase] =
     useState<Purchase | null>(null);
 
+  /* ==========================================
+     LOAD PURCHASES
+  ========================================== */
+
   useEffect(() => {
     const data = loadPurchases();
-    console.log(data);
+
     setPurchases(data);
-    setPurchaseNo(getNextPurchaseNo(data));
+
+    setPurchaseNo(
+      getNextPurchaseNo(data)
+    );
   }, []);
 
+  /* ==========================================
+     SAVE / UPDATE PURCHASE
+  ========================================== */
+
   const handleSave = (purchase: Purchase) => {
-    let updatedPurchases: Purchase[];
+    /* ========================================
+       EDIT EXISTING PURCHASE
+    ======================================== */
 
     if (editingPurchase) {
-      updatedPurchases = purchases.map((p) =>
-        p.id === purchase.id ? purchase : p
+      // First remove old purchase quantity
+      reversePurchaseStock(
+        editingPurchase.productCode,
+        editingPurchase.qty
       );
-    } else {
-      updatedPurchases = [
-        ...purchases,
-        purchase,
-      ];
+
+      // Then add new purchase quantity
+      updateStock(
+        purchase.productCode,
+        purchase.productName,
+        purchase.hsn,
+        purchase.unit,
+        purchase.qty
+      );
+
+      const updatedPurchases =
+        purchases.map((p) =>
+          p.id === purchase.id
+            ? purchase
+            : p
+        );
+
+      setPurchases(updatedPurchases);
+
+      savePurchases(updatedPurchases);
+
+      setPurchaseNo(
+        getNextPurchaseNo(
+          updatedPurchases
+        )
+      );
+
+      setEditingPurchase(null);
+
+      return;
     }
+
+    /* ========================================
+       NEW PURCHASE
+    ======================================== */
+
+    const updatedPurchases = [
+      ...purchases,
+      purchase,
+    ];
 
     setPurchases(updatedPurchases);
 
     savePurchases(updatedPurchases);
 
+    /* ========================================
+       PURCHASE → STOCK
+    ======================================== */
+
+    updateStock(
+      purchase.productCode,
+      purchase.productName,
+      purchase.hsn,
+      purchase.unit,
+      purchase.qty
+    );
+
     setPurchaseNo(
-      getNextPurchaseNo(updatedPurchases)
+      getNextPurchaseNo(
+        updatedPurchases
+      )
     );
 
     setEditingPurchase(null);
   };
+
+  /* ==========================================
+     EDIT
+  ========================================== */
 
   const handleEdit = (
     purchase: Purchase
@@ -58,9 +131,37 @@ export default function PurchaseMaster() {
     setEditingPurchase(purchase);
   };
 
+  /* ==========================================
+     DELETE PURCHASE
+  ========================================== */
+
   const handleDelete = (id: string) => {
-    if (!confirm("Delete this purchase?"))
-      return;
+    const purchaseToDelete =
+      purchases.find(
+        (purchase) =>
+          purchase.id === id
+      );
+
+    if (!purchaseToDelete) return;
+
+    const confirmed = confirm(
+      `Delete Purchase ${purchaseToDelete.purchaseNo}?\n\nStock will also be reduced by ${purchaseToDelete.qty} ${purchaseToDelete.unit}.`
+    );
+
+    if (!confirmed) return;
+
+    /* ========================================
+       PURCHASE → REVERSE STOCK
+    ======================================== */
+
+    reversePurchaseStock(
+      purchaseToDelete.productCode,
+      purchaseToDelete.qty
+    );
+
+    /* ========================================
+       DELETE PURCHASE
+    ======================================== */
 
     const updatedPurchases =
       purchases.filter(
@@ -73,9 +174,15 @@ export default function PurchaseMaster() {
     savePurchases(updatedPurchases);
 
     setPurchaseNo(
-      getNextPurchaseNo(updatedPurchases)
+      getNextPurchaseNo(
+        updatedPurchases
+      )
     );
   };
+
+  /* ==========================================
+     UI
+  ========================================== */
 
   return (
     <div

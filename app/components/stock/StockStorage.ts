@@ -7,6 +7,7 @@ export function loadStock(): Stock[] {
 
   try {
     const data = localStorage.getItem(STORAGE_KEY);
+
     return data ? JSON.parse(data) : [];
   } catch (error) {
     console.error("Error loading stock:", error);
@@ -18,24 +19,40 @@ export function saveStock(stock: Stock[]): void {
   if (typeof window === "undefined") return;
 
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stock));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(stock)
+    );
   } catch (error) {
     console.error("Error saving stock:", error);
   }
 }
 
-export function getNextStockId(stock: Stock[]): string {
-  if (stock.length === 0) return "STK0001";
+export function getNextStockId(
+  stock: Stock[]
+): string {
+  if (stock.length === 0) {
+    return "STK0001";
+  }
 
   const maxId = Math.max(
     ...stock.map((item) => {
-      const number = Number(item.id.replace("STK", ""));
+      const number = Number(
+        item.id.replace("STK", "")
+      );
+
       return isNaN(number) ? 0 : number;
     })
   );
 
-  return `STK${String(maxId + 1).padStart(4, "0")}`;
+  return `STK${String(
+    maxId + 1
+  ).padStart(4, "0")}`;
 }
+
+/* =========================
+   PURCHASE → STOCK
+========================= */
 
 export function updateStock(
   productCode: string,
@@ -47,11 +64,13 @@ export function updateStock(
   const stock = loadStock();
 
   const index = stock.findIndex(
-    (item) => item.productCode === productCode
+    (item) =>
+      item.productCode === productCode
   );
 
   if (index >= 0) {
     stock[index].purchaseQty += qty;
+
     stock[index].currentStock =
       stock[index].openingStock +
       stock[index].purchaseQty -
@@ -73,6 +92,45 @@ export function updateStock(
   saveStock(stock);
 }
 
+/* =========================
+   DELETE PURCHASE
+   → REVERSE STOCK
+========================= */
+
+export function reversePurchaseStock(
+  productCode: string,
+  qty: number
+): void {
+  const stock = loadStock();
+
+  const index = stock.findIndex(
+    (item) =>
+      item.productCode === productCode
+  );
+
+  if (index === -1) return;
+
+  stock[index].purchaseQty =
+    Math.max(
+      0,
+      stock[index].purchaseQty - qty
+    );
+
+  stock[index].currentStock =
+    Math.max(
+      0,
+      stock[index].openingStock +
+        stock[index].purchaseQty -
+        stock[index].salesQty
+    );
+
+  saveStock(stock);
+}
+
+/* =========================
+   SALES → STOCK
+========================= */
+
 export function reduceStock(
   productCode: string,
   qty: number
@@ -80,7 +138,8 @@ export function reduceStock(
   const stock = loadStock();
 
   const index = stock.findIndex(
-    (item) => item.productCode === productCode
+    (item) =>
+      item.productCode === productCode
   );
 
   if (index === -1) return;
@@ -99,15 +158,26 @@ export function reduceStock(
   saveStock(stock);
 }
 
-export function deleteStock(id: string): Stock[] {
-  const updatedStock = loadStock().filter(
-    (item) => item.id !== id
-  );
+/* =========================
+   DELETE STOCK
+========================= */
+
+export function deleteStock(
+  id: string
+): Stock[] {
+  const updatedStock =
+    loadStock().filter(
+      (item) => item.id !== id
+    );
 
   saveStock(updatedStock);
 
   return updatedStock;
 }
+
+/* =========================
+   FIND STOCK
+========================= */
 
 export function findStockById(
   id: string
@@ -116,14 +186,39 @@ export function findStockById(
     (item) => item.id === id
   );
 }
+
+/* =========================
+   CURRENT STOCK
+========================= */
+
 export function getCurrentStock(
   productCode: string
 ): number {
   const stock = loadStock();
 
   const item = stock.find(
-    (s) => s.productCode === productCode
+    (s) =>
+      s.productCode === productCode
   );
 
-  return item ? item.currentStock : 0;
+  return item
+    ? item.currentStock
+    : 0;
+}
+
+/* =========================
+   RESET STOCK
+========================= */
+
+export function resetStock(): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.error(
+      "Error resetting stock:",
+      error
+    );
+  }
 }

@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { Purchase } from "./PurchaseTypes";
+import {
+  loadProducts,
+} from "../../../product/components/ProductStorage";
+
+import { Product } from "../../../product/components/ProductTypes";
+
+import {
+  loadSuppliers,
+} from "../../supplier/SupplierStorage";
+import { Supplier } from "../../supplier/SupplierTypes";
 
 type PurchaseFormProps = {
   purchaseNo: string;
@@ -14,11 +24,17 @@ export default function PurchaseForm({
   editingPurchase,
   onSave,
 }: PurchaseFormProps) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+
   const emptyPurchase = (): Purchase => ({
     id: crypto.randomUUID(),
 
-    purchaseNo: purchaseNo,
-    purchaseDate: new Date().toISOString().split("T")[0],
+    purchaseNo,
+    purchaseDate: new Date()
+      .toISOString()
+      .split("T")[0],
+
     invoiceNo: "",
 
     supplierCode: "",
@@ -44,9 +60,18 @@ export default function PurchaseForm({
   const [purchase, setPurchase] =
     useState<Purchase>(emptyPurchase());
 
-  /* ==========================================
-     LOAD EDITING PURCHASE
-  ========================================== */
+  /* =========================
+     LOAD MASTER DATA
+  ========================= */
+
+  useEffect(() => {
+    setProducts(loadProducts());
+    setSuppliers(loadSuppliers());
+  }, []);
+
+  /* =========================
+     EDIT / NEW PURCHASE
+  ========================= */
 
   useEffect(() => {
     if (editingPurchase) {
@@ -54,25 +79,128 @@ export default function PurchaseForm({
     } else {
       setPurchase((prev) => ({
         ...prev,
-        purchaseNo: purchaseNo,
+        purchaseNo,
       }));
     }
   }, [purchaseNo, editingPurchase]);
 
-  /* ==========================================
-     HANDLE CHANGE
-  ========================================== */
+  /* =========================
+     SUPPLIER CHANGE
+  ========================= */
+
+  const handleSupplierChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const code = e.target.value;
+
+    const supplier = suppliers.find(
+      (item) => item.code === code
+    );
+
+    if (!supplier) {
+      setPurchase((prev) => ({
+        ...prev,
+        supplierCode: "",
+        supplierName: "",
+      }));
+
+      return;
+    }
+
+    setPurchase((prev) => ({
+      ...prev,
+      supplierCode: supplier.code,
+      supplierName: supplier.name,
+    }));
+  };
+
+  /* =========================
+     PRODUCT CHANGE
+  ========================= */
+
+  const handleProductChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const code = e.target.value;
+
+    const product = products.find(
+      (item) => item.code === code
+    );
+
+    if (!product) {
+      setPurchase((prev) => ({
+        ...prev,
+        productCode: "",
+        productName: "",
+        hsn: "",
+        unit: "KG",
+        rate: 0,
+        gst: 5,
+        amount: 0,
+        gstAmount: 0,
+        netAmount: 0,
+      }));
+
+      return;
+    }
+
+    const gstRate =
+  parseFloat(String(product.gst).replace("%", "")) || 0;
+
+    setPurchase((prev) => {
+      const amount =
+        Number(prev.qty) *
+        Number(product.purchase);
+
+      const gstAmount =
+        (amount * gstRate) / 100;
+
+      return {
+        ...prev,
+
+        productCode: product.code,
+        productName: product.name,
+        hsn: product.hsn,
+        unit: product.unit,
+
+        rate: Number(product.purchase),
+        gst: gstRate,
+
+        amount: Number(
+          amount.toFixed(2)
+        ),
+
+        gstAmount: Number(
+          gstAmount.toFixed(2)
+        ),
+
+        netAmount: Number(
+          (amount + gstAmount).toFixed(2)
+        ),
+      };
+    });
+  };
+
+  /* =========================
+     NORMAL INPUT CHANGE
+  ========================= */
 
   const handleChange = (
     e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      HTMLInputElement |
+      HTMLSelectElement |
+      HTMLTextAreaElement
     >
   ) => {
-    const { name, value } = e.target;
+    const {
+      name,
+      value,
+    } = e.target;
 
     setPurchase((prev) => {
       const updated = {
         ...prev,
+
         [name]:
           name === "qty" ||
           name === "rate" ||
@@ -81,55 +209,66 @@ export default function PurchaseForm({
             : value,
       };
 
-      /* ==============================
-         AUTOMATIC CALCULATION
-      ============================== */
-
       const amount =
         Number(updated.qty) *
         Number(updated.rate);
 
       const gstAmount =
-        (amount * Number(updated.gst)) / 100;
+        (amount *
+          Number(updated.gst)) /
+        100;
 
       const netAmount =
         amount + gstAmount;
 
       return {
         ...updated,
-        amount: Number(amount.toFixed(2)),
-        gstAmount: Number(gstAmount.toFixed(2)),
-        netAmount: Number(netAmount.toFixed(2)),
+
+        amount: Number(
+          amount.toFixed(2)
+        ),
+
+        gstAmount: Number(
+          gstAmount.toFixed(2)
+        ),
+
+        netAmount: Number(
+          netAmount.toFixed(2)
+        ),
       };
     });
   };
 
-  /* ==========================================
+  /* =========================
      SAVE
-  ========================================== */
+  ========================= */
 
   const handleSubmit = (
     e: React.FormEvent
   ) => {
     e.preventDefault();
 
-    if (!purchase.supplierName.trim()) {
-      alert("Please enter Supplier Name");
+    if (!purchase.supplierCode) {
+      alert("Please select Supplier");
       return;
     }
 
-    if (!purchase.productName.trim()) {
-      alert("Please enter Product Name");
+    if (!purchase.productCode) {
+      alert("Please select Product");
       return;
     }
 
     if (purchase.qty <= 0) {
-      alert("Quantity should be greater than zero");
+      alert(
+        "Quantity should be greater than zero"
+      );
       return;
     }
 
     if (purchase.rate <= 0) {
-      alert("Purchase Rate should be greater than zero");
+      alert(
+        "Purchase Rate should be greater than zero"
+      );
       return;
     }
 
@@ -137,24 +276,24 @@ export default function PurchaseForm({
 
     setPurchase({
       ...emptyPurchase(),
-      purchaseNo: purchaseNo,
+      purchaseNo,
     });
   };
 
-  /* ==========================================
+  /* =========================
      RESET
-  ========================================== */
+  ========================= */
 
   const handleReset = () => {
     setPurchase({
       ...emptyPurchase(),
-      purchaseNo: purchaseNo,
+      purchaseNo,
     });
   };
 
-  /* ==========================================
-     COMMON STYLES
-  ========================================== */
+  /* =========================
+     STYLES
+  ========================= */
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
@@ -164,8 +303,8 @@ export default function PurchaseForm({
     borderRadius: "6px",
     fontSize: "13px",
     boxSizing: "border-box",
-    outline: "none",
     background: "#ffffff",
+    outline: "none",
   };
 
   const labelStyle: React.CSSProperties = {
@@ -174,7 +313,6 @@ export default function PurchaseForm({
     fontWeight: 700,
     color: "#374151",
     marginBottom: "5px",
-    whiteSpace: "nowrap",
   };
 
   const fieldStyle: React.CSSProperties = {
@@ -183,11 +321,6 @@ export default function PurchaseForm({
 
   return (
     <form onSubmit={handleSubmit}>
-
-      {/* ==========================================
-          PURCHASE ENTRY BOX
-      =========================================== */}
-
       <div
         style={{
           background: "#ffffff",
@@ -199,11 +332,13 @@ export default function PurchaseForm({
         }}
       >
 
-        {/* TITLE */}
+        {/* =========================
+            TITLE
+        ========================= */}
 
         <h2
           style={{
-            margin: "0 0 18px 0",
+            margin: "0 0 18px",
             color: "#14532d",
             fontSize: "19px",
             fontWeight: 700,
@@ -212,15 +347,15 @@ export default function PurchaseForm({
           📋 Purchase Entry
         </h2>
 
-        {/* ======================================
-            ROW 1 — PURCHASE DETAILS
-        ======================================= */}
+        {/* =========================
+            ROW 1
+        ========================= */}
 
         <div
           style={{
             display: "grid",
             gridTemplateColumns:
-              "120px 150px 150px 1.5fr 2fr",
+              "120px 150px 150px 1.2fr 2fr",
             gap: "10px",
             alignItems: "end",
           }}
@@ -235,7 +370,9 @@ export default function PurchaseForm({
 
             <input
               type="text"
-              value={purchase.purchaseNo}
+              value={
+                purchase.purchaseNo
+              }
               readOnly
               style={{
                 ...inputStyle,
@@ -255,14 +392,16 @@ export default function PurchaseForm({
             <input
               type="date"
               name="purchaseDate"
-              value={purchase.purchaseDate}
+              value={
+                purchase.purchaseDate
+              }
               onChange={handleChange}
               required
               style={inputStyle}
             />
           </div>
 
-          {/* INVOICE NO */}
+          {/* INVOICE */}
 
           <div style={fieldStyle}>
             <label style={labelStyle}>
@@ -272,7 +411,9 @@ export default function PurchaseForm({
             <input
               type="text"
               name="invoiceNo"
-              value={purchase.invoiceNo}
+              value={
+                purchase.invoiceNo
+              }
               onChange={handleChange}
               placeholder="Invoice No."
               style={inputStyle}
@@ -283,44 +424,66 @@ export default function PurchaseForm({
 
           <div style={fieldStyle}>
             <label style={labelStyle}>
-              Supplier Code
+              Supplier
             </label>
 
-            <input
-              type="text"
-              name="supplierCode"
-              value={purchase.supplierCode}
-              onChange={handleChange}
-              placeholder="Supplier Code"
+            <select
+              value={
+                purchase.supplierCode
+              }
+              onChange={
+                handleSupplierChange
+              }
               style={inputStyle}
-            />
+            >
+              <option value="">
+                Select Supplier
+              </option>
+
+              {suppliers
+                .filter(
+                  (supplier) =>
+                    supplier.status ===
+                    "Active"
+                )
+                .map((supplier) => (
+                  <option
+                    key={supplier.id}
+                    value={supplier.code}
+                  >
+                    {supplier.code} -{" "}
+                    {supplier.name}
+                  </option>
+                ))}
+            </select>
           </div>
 
           {/* SUPPLIER NAME */}
 
           <div style={fieldStyle}>
             <label style={labelStyle}>
-              Supplier Name *
+              Supplier Name
             </label>
 
             <input
               type="text"
-              name="supplierName"
-              value={purchase.supplierName}
-              onChange={handleChange}
-              required
-              placeholder="Enter Supplier Name"
+              value={
+                purchase.supplierName
+              }
+              readOnly
+              placeholder="Select Supplier"
               style={{
                 ...inputStyle,
-                fontSize: "14px",
+                background: "#f3f4f6",
+                fontWeight: 600,
               }}
             />
           </div>
         </div>
 
-        {/* ======================================
-            ROW 2 — PRODUCT DETAILS
-        ======================================= */}
+        {/* =========================
+            ROW 2
+        ========================= */}
 
         <div
           style={{
@@ -333,40 +496,61 @@ export default function PurchaseForm({
           }}
         >
 
-          {/* PRODUCT CODE */}
+          {/* PRODUCT */}
 
           <div style={fieldStyle}>
             <label style={labelStyle}>
-              Product Code
+              Product
             </label>
 
-            <input
-              type="text"
-              name="productCode"
-              value={purchase.productCode}
-              onChange={handleChange}
-              placeholder="Product Code"
+            <select
+              value={
+                purchase.productCode
+              }
+              onChange={
+                handleProductChange
+              }
               style={inputStyle}
-            />
+            >
+              <option value="">
+                Select Product
+              </option>
+
+              {products
+                .filter(
+                  (product) =>
+                    product.active
+                )
+                .map((product) => (
+                  <option
+                    key={product.id}
+                    value={product.code}
+                  >
+                    {product.code} -{" "}
+                    {product.name}
+                  </option>
+                ))}
+            </select>
           </div>
 
           {/* PRODUCT NAME */}
 
           <div style={fieldStyle}>
             <label style={labelStyle}>
-              Product Name *
+              Product Name
             </label>
 
             <input
               type="text"
-              name="productName"
-              value={purchase.productName}
-              onChange={handleChange}
-              required
-              placeholder="Enter Product Name"
+              value={
+                purchase.productName
+              }
+              readOnly
+              placeholder="Select Product"
               style={{
                 ...inputStyle,
-                fontSize: "14px",
+                background: "#f3f4f6",
+                fontWeight: 600,
               }}
             />
           </div>
@@ -380,11 +564,12 @@ export default function PurchaseForm({
 
             <input
               type="text"
-              name="hsn"
               value={purchase.hsn}
-              onChange={handleChange}
-              placeholder="HSN"
-              style={inputStyle}
+              readOnly
+              style={{
+                ...inputStyle,
+                background: "#f3f4f6",
+              }}
             />
           </div>
 
@@ -395,19 +580,15 @@ export default function PurchaseForm({
               Unit
             </label>
 
-            <select
-              name="unit"
+            <input
+              type="text"
               value={purchase.unit}
-              onChange={handleChange}
-              style={inputStyle}
-            >
-              <option value="KG">KG</option>
-              <option value="Gram">Gram</option>
-              <option value="Nos">Nos</option>
-              <option value="Litre">Litre</option>
-              <option value="Box">Box</option>
-              <option value="Bag">Bag</option>
-            </select>
+              readOnly
+              style={{
+                ...inputStyle,
+                background: "#f3f4f6",
+              }}
+            />
           </div>
 
           {/* QTY */}
@@ -430,15 +611,15 @@ export default function PurchaseForm({
           </div>
         </div>
 
-        {/* ======================================
-            ROW 3 — PRICE & TAX
-        ======================================= */}
+        {/* =========================
+            ROW 3
+        ========================= */}
 
         <div
           style={{
             display: "grid",
             gridTemplateColumns:
-              "1fr 1fr 1.1fr 1fr 1fr 1fr auto auto",
+              "1fr 1fr 1fr 1fr 1fr 1.2fr auto auto",
             gap: "10px",
             alignItems: "end",
             marginTop: "14px",
@@ -490,18 +671,17 @@ export default function PurchaseForm({
               GST
             </label>
 
-            <select
-              name="gst"
-              value={purchase.gst}
-              onChange={handleChange}
-              style={inputStyle}
-            >
-              <option value={0}>0%</option>
-              <option value={5}>5%</option>
-              <option value={12}>12%</option>
-              <option value={18}>18%</option>
-              <option value={28}>28%</option>
-            </select>
+            <input
+  type="text"
+  value={`${purchase.gst}%`}
+  readOnly
+  style={{
+    ...inputStyle,
+    background: "#f3f4f6",
+    fontWeight: 700,
+    color: "#14532d",
+  }}
+/>
           </div>
 
           {/* GST AMOUNT */}
@@ -513,7 +693,9 @@ export default function PurchaseForm({
 
             <input
               type="number"
-              value={purchase.gstAmount}
+              value={
+                purchase.gstAmount
+              }
               readOnly
               style={{
                 ...inputStyle,
@@ -532,7 +714,9 @@ export default function PurchaseForm({
 
             <input
               type="number"
-              value={purchase.netAmount}
+              value={
+                purchase.netAmount
+              }
               readOnly
               style={{
                 ...inputStyle,
@@ -545,12 +729,7 @@ export default function PurchaseForm({
 
           {/* REMARKS */}
 
-          <div
-            style={{
-              ...fieldStyle,
-              gridColumn: "span 1",
-            }}
-          >
+          <div style={fieldStyle}>
             <label style={labelStyle}>
               Remarks
             </label>
@@ -558,7 +737,9 @@ export default function PurchaseForm({
             <input
               type="text"
               name="remarks"
-              value={purchase.remarks}
+              value={
+                purchase.remarks
+              }
               onChange={handleChange}
               placeholder="Remarks"
               style={inputStyle}
@@ -567,74 +748,52 @@ export default function PurchaseForm({
 
           {/* RESET */}
 
-          <div>
-            <label
-              style={{
-                ...labelStyle,
-                visibility: "hidden",
-              }}
-            >
-              Action
-            </label>
-
-            <button
-              type="button"
-              onClick={handleReset}
-              style={{
-                height: "40px",
-                padding: "0 16px",
-                border: "none",
-                borderRadius: "6px",
-                background: "#6b7280",
-                color: "#ffffff",
-                fontWeight: 700,
-                fontSize: "12px",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
-              🔄 Reset
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleReset}
+            style={{
+              height: "40px",
+              padding: "0 14px",
+              border: "none",
+              borderRadius: "6px",
+              background: "#6b7280",
+              color: "#ffffff",
+              fontWeight: 700,
+              fontSize: "12px",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            🔄 Reset
+          </button>
 
           {/* SAVE */}
 
-          <div>
-            <label
-              style={{
-                ...labelStyle,
-                visibility: "hidden",
-              }}
-            >
-              Action
-            </label>
-
-            <button
-              type="submit"
-              style={{
-                height: "40px",
-                padding: "0 18px",
-                border: "none",
-                borderRadius: "6px",
-                background: "#14532d",
-                color: "#ffffff",
-                fontWeight: 700,
-                fontSize: "12px",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
-              💾{" "}
-              {editingPurchase
-                ? "Update Purchase"
-                : "Save Purchase"}
-            </button>
-          </div>
+          <button
+            type="submit"
+            style={{
+              height: "40px",
+              padding: "0 16px",
+              border: "none",
+              borderRadius: "6px",
+              background: "#14532d",
+              color: "#ffffff",
+              fontWeight: 700,
+              fontSize: "12px",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            💾{" "}
+            {editingPurchase
+              ? "Update"
+              : "Save Purchase"}
+          </button>
         </div>
 
-        {/* ======================================
+        {/* =========================
             EDIT MESSAGE
-        ======================================= */}
+        ========================= */}
 
         {editingPurchase && (
           <div

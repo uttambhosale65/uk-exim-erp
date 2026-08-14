@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 
 import StockTable from "./StockTable";
 import { Stock } from "./StockTypes";
-import { loadStock } from "./StockStorage";
+import {
+  loadStock,
+  resetStock,
+} from "./StockStorage";
 
 export default function StockMaster() {
   const [stock, setStock] = useState<Stock[]>([]);
@@ -13,6 +16,18 @@ export default function StockMaster() {
   useEffect(() => {
     setStock(loadStock());
   }, []);
+
+  const handleResetStock = () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to reset all stock?\n\nThis will clear the current stock records."
+    );
+
+    if (!confirmed) return;
+
+    resetStock();
+
+    setStock([]);
+  };
 
   const filteredStock = stock.filter(
     (item) =>
@@ -25,13 +40,20 @@ export default function StockMaster() {
       item.hsn.includes(search)
   );
 
+  const totalStock = filteredStock.reduce(
+    (total, item) =>
+      total + Number(item.currentStock || 0),
+    0
+  );
+
   return (
     <div
       style={{
         background: "#fff",
         padding: "20px",
         borderRadius: "10px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        boxShadow:
+          "0 2px 8px rgba(0,0,0,0.08)",
       }}
     >
       <h2 style={{ marginTop: 0 }}>
@@ -44,6 +66,7 @@ export default function StockMaster() {
           justifyContent: "space-between",
           marginBottom: "15px",
           alignItems: "center",
+          gap: "15px",
         }}
       >
         <input
@@ -55,21 +78,41 @@ export default function StockMaster() {
           }
           style={{
             width: "320px",
+            maxWidth: "100%",
             padding: "10px",
             border: "1px solid #ccc",
             borderRadius: "6px",
+            boxSizing: "border-box",
           }}
         />
 
-        <h3 style={{ margin: 0 }}>
-          Total Stock :
-          {" "}
-          {filteredStock.reduce(
-            (total, item) =>
-              total + item.currentStock,
-            0
-          )}
-        </h3>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "15px",
+          }}
+        >
+          <h3 style={{ margin: 0 }}>
+            Total Stock : {totalStock}
+          </h3>
+
+          <button
+            type="button"
+            onClick={handleResetStock}
+            style={{
+              padding: "9px 14px",
+              background: "#dc2626",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontWeight: 700,
+            }}
+          >
+            🗑️ Reset Stock
+          </button>
+        </div>
       </div>
 
       <StockTable stock={filteredStock} />
