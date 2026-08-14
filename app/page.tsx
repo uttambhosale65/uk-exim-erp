@@ -1,21 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import PurchaseReport from "./components/customer/purchase/PurchaseReport";
+import SalesReport from "./components/customer/sales/SalesReport";
+
 import StockMaster from "./components/stock/StockMaster";
 import ProductMaster from "./product/components/ProductMaster";
 import CustomerMaster from "./components/customer/CustomerMaster";
 import SupplierMaster from "./components/supplier/SupplierMaster";
 import PurchaseMaster from "./components/customer/purchase/PurchaseMaster";
+
 import SalesPage from "./sales/page";
-import SalesMaster from "./components/customer/sales/SalesMaster";
+
 import { loadProducts } from "./product/components/ProductStorage";
 import { loadCustomers } from "./components/customer/CustomerStorage";
 import { loadSuppliers } from "./components/supplier/SupplierStorage";
 import { loadPurchases } from "./components/customer/purchase/PurchaseStorage";
 import { loadSales } from "./components/customer/sales/SalesStorage";
 import { loadStock } from "./components/stock/StockStorage";
+
 import Settings from "./components/settings/Settings";
+
 export default function Home() {
   const [activePage, setActivePage] =
     useState("dashboard");
@@ -44,90 +50,140 @@ export default function Home() {
       "0 2px 8px rgba(0,0,0,0.08)",
     minHeight: "90px",
   };
+
   const [dashboard, setDashboard] = useState({
-  products: 0,
-  customers: 0,
-  suppliers: 0,
-  stock: 0,
-  sales: 0,
-  purchase: 0,
-});
-useEffect(() => {
-  const products = loadProducts();
-  const customers = loadCustomers();
-  const suppliers = loadSuppliers();
-  const purchases = loadPurchases();
-  const sales = loadSales();
-  const stock = loadStock();
-console.log("Purchases:", purchases);
-console.log("Sales:", sales);
-  setDashboard({
-    products: products.length,
-    customers: customers.length,
-    suppliers: suppliers.length,
-  stock: stock.reduce(
-  (total: number, item: any) =>
-    total + Number(item.currentStock),
-  0
-),
-    sales: sales.reduce(
-      (total, sale) =>
-       total + Number(sale.grandTotal ?? 0),
-      0
-    ),
-    purchase: purchases.reduce(
-  (total, purchase) =>
-    total + purchase.netAmount,
-  0
-),
+    products: 0,
+    customers: 0,
+    suppliers: 0,
+    stock: 0,
+    sales: 0,
+    purchase: 0,
   });
-}, [activePage]);
+
+  // =====================================================
+  // DASHBOARD DATA
+  // =====================================================
+
+  useEffect(() => {
+    const products = loadProducts();
+    const customers = loadCustomers();
+    const suppliers = loadSuppliers();
+    const purchases = loadPurchases();
+    const sales = loadSales();
+    const stock = loadStock();
+
+    console.log("Purchases:", purchases);
+    console.log("Sales:", sales);
+    console.log("Stock:", stock);
+
+    setDashboard({
+      products: products.length,
+
+      customers: customers.length,
+
+      suppliers: suppliers.length,
+
+      stock: stock.reduce(
+        (total: number, item: any) =>
+          total + Number(item.currentStock || 0),
+        0
+      ),
+
+      sales: sales.reduce(
+        (total, sale) =>
+          total + Number(sale.grandTotal ?? 0),
+        0
+      ),
+
+      purchase: purchases.reduce(
+        (total, purchase) =>
+          total + Number(purchase.netAmount ?? 0),
+        0
+      ),
+    });
+  }, [activePage]);
+
+  // =====================================================
+  // PAGE RENDER
+  // =====================================================
+
   const renderPage = () => {
     switch (activePage) {
+      // -------------------------------------------------
+      // PRODUCT
+      // -------------------------------------------------
+
       case "products":
         return <ProductMaster />;
-        case "stock":
-  return <StockMaster />;
+
+      // -------------------------------------------------
+      // CUSTOMER
+      // -------------------------------------------------
+
       case "customers":
         return <CustomerMaster />;
-        case "purchase":
-  return <PurchaseReport />; 
+
+      // -------------------------------------------------
+      // SUPPLIER
+      // -------------------------------------------------
 
       case "suppliers":
         return <SupplierMaster />;
 
+      // -------------------------------------------------
+      // PURCHASE / GRN
+      // -------------------------------------------------
+
       case "grn":
         return <PurchaseMaster />;
 
+      // -------------------------------------------------
+      // SALES / ISSUE
+      // -------------------------------------------------
+
       case "issue":
-  return <SalesPage />;
+        return <SalesPage />;
+
+      // -------------------------------------------------
+      // STOCK REPORT
+      // -------------------------------------------------
 
       case "stock":
-        return (
-          <>
-            <h2>📦 Stock Report</h2>
-            <p>Coming Soon...</p>
-          </>
-        );
+        return <StockMaster />;
 
-   case "sales":
-  return <SalesPage />;
+      // -------------------------------------------------
+      // PURCHASE REPORT
+      // -------------------------------------------------
 
       case "purchase":
-        return (
-          <>
-            <h2>🛒 Purchase Report</h2>
-            <p>Coming Soon...</p>
-          </>
-        );
+        return <PurchaseReport />;
+
+      // -------------------------------------------------
+      // SALES REPORT
+      // -------------------------------------------------
+
+      case "sales":
+        return <SalesReport />;
+
+      // -------------------------------------------------
+      // SETTINGS
+      // -------------------------------------------------
 
       case "settings":
-  return <Settings />;
+        return <Settings />;
+
+      // -------------------------------------------------
+      // DASHBOARD
+      // -------------------------------------------------
 
       default:
         return (
           <>
-            <h2 style={{ marginTop: 0 }}>
+            <h2
+              style={{
+                marginTop: 0,
+              }}
+            >
               Dashboard
             </h2>
 
@@ -139,40 +195,81 @@ console.log("Sales:", sales);
                 gap: "15px",
               }}
             >
+              {/* PRODUCTS */}
+
               <div style={card}>
                 <h3>📦 Products</h3>
-                <h1>{dashboard.products}</h1>
+
+                <h1>
+                  {dashboard.products}
+                </h1>
               </div>
+
+              {/* CUSTOMERS */}
 
               <div style={card}>
                 <h3>👥 Customers</h3>
-                <h1>{dashboard.customers}</h1>
+
+                <h1>
+                  {dashboard.customers}
+                </h1>
               </div>
+
+              {/* SUPPLIERS */}
 
               <div style={card}>
                 <h3>🚚 Suppliers</h3>
-                <h1>{dashboard.suppliers}</h1>
+
+                <h1>
+                  {dashboard.suppliers}
+                </h1>
               </div>
+
+              {/* STOCK */}
 
               <div style={card}>
                 <h3>📦 Stock</h3>
-                <h1>{dashboard.stock}</h1>
+
+                <h1>
+                  {dashboard.stock}
+                </h1>
               </div>
+
+              {/* SALES */}
 
               <div style={card}>
                 <h3>💰 Sales</h3>
-                <h1>₹{dashboard.sales.toFixed(2)}</h1>
+
+                <h1>
+                  ₹
+                  {dashboard.sales.toFixed(
+                    2
+                  )}
+                </h1>
               </div>
+
+              {/* PURCHASE */}
 
               <div style={card}>
                 <h3>🛒 Purchase</h3>
-                <h1>₹{dashboard.purchase.toFixed(2)}</h1>
+
+                <h1>
+                  ₹
+                  {dashboard.purchase.toFixed(
+                    2
+                  )}
+                </h1>
               </div>
             </div>
           </>
         );
     }
   };
+
+  // =====================================================
+  // MAIN LAYOUT
+  // =====================================================
+
   return (
     <div
       style={{
@@ -182,7 +279,10 @@ console.log("Sales:", sales);
         background: "#f3f4f6",
       }}
     >
-      {/* Sidebar */}
+      {/* =================================================
+          SIDEBAR
+      ================================================= */}
+
       <div
         style={{
           width: "240px",
@@ -191,9 +291,15 @@ console.log("Sales:", sales);
           padding: "20px",
         }}
       >
-        <h2 style={{ marginTop: 0 }}>
+        <h2
+          style={{
+            marginTop: 0,
+          }}
+        >
           UK EXIM ERP
         </h2>
+
+        {/* DASHBOARD */}
 
         <div
           style={
@@ -208,6 +314,8 @@ console.log("Sales:", sales);
           🏠 Dashboard
         </div>
 
+        {/* PRODUCT MASTER */}
+
         <div
           style={
             activePage === "products"
@@ -220,6 +328,8 @@ console.log("Sales:", sales);
         >
           📦 Product Master
         </div>
+
+        {/* CUSTOMER MASTER */}
 
         <div
           style={
@@ -234,6 +344,8 @@ console.log("Sales:", sales);
           👥 Customer Master
         </div>
 
+        {/* SUPPLIER MASTER */}
+
         <div
           style={
             activePage === "suppliers"
@@ -246,6 +358,8 @@ console.log("Sales:", sales);
         >
           🚚 Supplier Master
         </div>
+
+        {/* PURCHASE GRN */}
 
         <div
           style={
@@ -260,6 +374,8 @@ console.log("Sales:", sales);
           📥 Purchase (GRN)
         </div>
 
+        {/* ISSUE SALES */}
+
         <div
           style={
             activePage === "issue"
@@ -272,6 +388,8 @@ console.log("Sales:", sales);
         >
           📤 Issue (Sales)
         </div>
+
+        {/* STOCK REPORT */}
 
         <div
           style={
@@ -286,6 +404,8 @@ console.log("Sales:", sales);
           📦 Stock Report
         </div>
 
+        {/* PURCHASE REPORT */}
+
         <div
           style={
             activePage === "purchase"
@@ -299,6 +419,8 @@ console.log("Sales:", sales);
           🛒 Purchase Report
         </div>
 
+        {/* SALES REPORT */}
+
         <div
           style={
             activePage === "sales"
@@ -311,6 +433,8 @@ console.log("Sales:", sales);
         >
           💰 Sales Report
         </div>
+
+        {/* SETTINGS */}
 
         <div
           style={
@@ -326,7 +450,10 @@ console.log("Sales:", sales);
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* =================================================
+          MAIN CONTENT
+      ================================================= */}
+
       <div
         style={{
           flex: 1,
