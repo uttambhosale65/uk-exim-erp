@@ -1,13 +1,14 @@
-export type Purchase = {
-  id: string;
+/* =========================================================
+   UK EXIM ERP – PURCHASE / GRN TYPES
+   VERSION 1.0 – PROFESSIONAL ERP ARCHITECTURE
+========================================================= */
 
-  purchaseNo: string;
-  purchaseDate: string;
-  invoiceNo: string;
+/* =========================================================
+   PURCHASE ITEM
+   प्रत्येक GRN मधील स्वतंत्र Product Row
+========================================================= */
 
-  supplierCode: string;
-  supplierName: string;
-
+export type PurchaseItem = {
   productCode: string;
   productName: string;
 
@@ -21,6 +22,51 @@ export type Purchase = {
   gst: number;
   gstAmount: number;
   netAmount: number;
+};
+
+/* =========================================================
+   PURCHASE / GRN
+   एक GRN = एक Document
+   त्यामध्ये अनेक PurchaseItem असू शकतात.
+========================================================= */
+
+export type Purchase = {
+  /* -------------------------------------------------------
+     DOCUMENT INFORMATION
+  ------------------------------------------------------- */
+
+  id: string;
+
+  purchaseNo: string;
+  purchaseDate: string;
+  invoiceNo: string;
+
+  /* -------------------------------------------------------
+     SUPPLIER INFORMATION
+  ------------------------------------------------------- */
+
+  supplierCode: string;
+  supplierName: string;
+
+  /* -------------------------------------------------------
+     GRN ITEMS
+     Multi Product structure
+  ------------------------------------------------------- */
+
+  items: PurchaseItem[];
+
+  /* -------------------------------------------------------
+     GRN TOTALS
+  ------------------------------------------------------- */
+
+  totalQty: number;
+  totalAmount: number;
+  totalGstAmount: number;
+  totalNetAmount: number;
+
+  /* -------------------------------------------------------
+     REMARKS
+  ------------------------------------------------------- */
 
   remarks: string;
 };

@@ -460,8 +460,56 @@ export default function Home() {
           padding: "25px",
         }}
       >
-        {renderPage()}
-      </div>
+       {renderPage()}
+
+{activePage === "dashboard" && (
+  <div
+    style={{
+      marginTop: "50px",
+      paddingTop: "20px",
+      borderTop: "1px solid #d1d5db",
+      textAlign: "center",
+      fontSize: "12px",
+      color: "#6b7280",
+    }}
+  >
+    <div>
+      Designed and Developed by
     </div>
+
+    <div
+      style={{
+        marginTop: "4px",
+        fontSize: "15px",
+        fontWeight: 700,
+        color: "#14532d",
+      }}
+    >
+      Uttam Bhosale
+    </div>
+
+    <div
+      style={{
+        marginTop: "10px",
+      }}
+    >
+      AI Development Assistant
+    </div>
+
+    <div
+      style={{
+        marginTop: "4px",
+        fontSize: "14px",
+        fontWeight: 700,
+        color: "#0F4C81",
+      }}
+    >
+      ChatGPT
+    </div>
+  </div>
+)}
+</div>
+  </div>
   );
+
 }

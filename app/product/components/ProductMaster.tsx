@@ -1,14 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import ProductForm from "./ProductForm";
 import ProductTable from "./ProductTable";
 import { Product } from "./ProductTypes";
+
 import {
   loadProducts,
   saveProducts,
   getNextProductCode,
 } from "./ProductStorage";
+
+import {
+  syncProductToStock,
+} from "../../components/stock/StockStorage";
 
 export default function ProductMaster() {
   const [products, setProducts] =
@@ -17,6 +27,10 @@ export default function ProductMaster() {
   const [editingProduct, setEditingProduct] =
     useState<Product | null>(null);
 
+  /* =========================================
+     PRODUCT CODE
+  ========================================= */
+
   const productCode = useMemo(() => {
     if (editingProduct) {
       return editingProduct.code;
@@ -24,43 +38,97 @@ export default function ProductMaster() {
 
     return getNextProductCode(products);
   }, [products, editingProduct]);
+
+  /* =========================================
+     PRODUCT → STOCK SYNC
+     Existing Products
+  ========================================= */
+
+  useEffect(() => {
+    products.forEach((product) => {
+      syncProductToStock(product);
+    });
+  }, [products]);
+
+  /* =========================================
+     SAVE PRODUCT
+     PRODUCT → STOCK
+  ========================================= */
+
   const handleSave = (product: Product) => {
     let updatedProducts: Product[];
 
     if (editingProduct) {
       updatedProducts = products.map((item) =>
-        item.id === product.id ? product : item
+        item.id === product.id
+          ? product
+          : item
       );
     } else {
-      updatedProducts = [...products, product];
+      updatedProducts = [
+        ...products,
+        product,
+      ];
     }
+
+    /* SAVE PRODUCT */
 
     setProducts(updatedProducts);
     saveProducts(updatedProducts);
+
+    /* PRODUCT → STOCK */
+
+    syncProductToStock(product);
+
+    /* EXIT EDIT MODE */
 
     setEditingProduct(null);
   };
 
-  const handleEdit = (product: Product) => {
+  /* =========================================
+     EDIT PRODUCT
+  ========================================= */
+
+  const handleEdit = (
+    product: Product
+  ) => {
     setEditingProduct(product);
   };
 
-  const handleDelete = (id: string) => {
-    const updatedProducts = products.filter(
-      (item) => item.id !== id
-    );
+  /* =========================================
+     DELETE PRODUCT
+  ========================================= */
+
+  const handleDelete = (
+    id: string
+  ) => {
+    const updatedProducts =
+      products.filter(
+        (item) => item.id !== id
+      );
 
     setProducts(updatedProducts);
     saveProducts(updatedProducts);
 
-    if (editingProduct?.id === id) {
+    if (
+      editingProduct?.id === id
+    ) {
       setEditingProduct(null);
     }
   };
 
+  /* =========================================
+     CANCEL EDIT
+  ========================================= */
+
   const handleCancelEdit = () => {
     setEditingProduct(null);
   };
+
+  /* =========================================
+     PAGE
+  ========================================= */
+
   return (
     <div
       style={{
@@ -76,12 +144,20 @@ export default function ProductMaster() {
         📦 Product Master
       </h2>
 
+      {/* =====================================
+          PRODUCT ENTRY
+      ===================================== */}
+
       <ProductForm
         productCode={productCode}
         editingProduct={editingProduct}
         onSave={handleSave}
         onCancelEdit={handleCancelEdit}
       />
+
+      {/* =====================================
+          PRODUCT REGISTER
+      ===================================== */}
 
       <ProductTable
         products={products}

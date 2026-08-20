@@ -28,25 +28,32 @@ import {
 function restoreSaleStock(sale: Sales) {
   const stock = loadStock();
 
-  sale.items.forEach((item) => {
+  // Old sales records may not have items
+  const items = Array.isArray(sale.items)
+    ? sale.items
+    : [];
+
+  items.forEach((item) => {
     const index = stock.findIndex(
       (stockItem) =>
-        stockItem.productCode === item.productCode
+        stockItem.productCode ===
+        item.productCode
     );
 
     if (index === -1) return;
 
     stock[index].salesQty = Math.max(
       0,
-      stock[index].salesQty - Number(item.qty)
+      Number(stock[index].salesQty || 0) -
+        Number(item.qty || 0)
     );
 
     stock[index].currentStock =
       Math.max(
         0,
-        stock[index].openingStock +
-          stock[index].purchaseQty -
-          stock[index].salesQty
+        Number(stock[index].openingStock || 0) +
+          Number(stock[index].purchaseQty || 0) -
+          Number(stock[index].salesQty || 0)
       );
   });
 
@@ -205,7 +212,10 @@ export default function SalesPage() {
     if (!confirmed) {
       return;
     }
-
+console.log("DELETE ID:", id);
+console.log("SALES IDs:", sales.map((sale) => sale.id));
+console.log("DELETE CLICKED ID:", id);
+console.log("SALE FOUND:", sales.find((sale) => sale.id === id));
     const saleToDelete =
       sales.find(
         (sale) =>
@@ -301,12 +311,13 @@ export default function SalesPage() {
   if (selectedSale) {
     return (
       <div
-        style={{
-          minHeight: "100vh",
-          background: "#f3f4f6",
-          padding: "20px",
-        }}
-      >
+  className="invoice-page-wrapper"
+  style={{
+    minHeight: "100vh",
+    background: "#f3f4f6",
+    padding: "20px",
+  }}
+>
         <InvoicePrint
           sale={selectedSale}
           onClose={

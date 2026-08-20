@@ -17,56 +17,132 @@ import {
 export default function StockPage() {
   const [stock, setStock] = useState<Stock[]>([]);
   const [search, setSearch] = useState("");
+  const [loaded, setLoaded] = useState(false);
 
- useEffect(() => {
-  const loadData = () => {
-    setStock(loadStock());
-  };
-
-  loadData();
-
-  window.addEventListener("focus", loadData);
-
-  return () => {
-    window.removeEventListener("focus", loadData);
-  };
-}, []);
+  /* =========================
+     LOAD STOCK
+  ========================= */
 
   useEffect(() => {
-    saveStock(stock);
-  }, [stock]);
+    const data = loadStock();
 
-  const filteredStock = stock.filter((item) =>
-    `${item.productCode} ${item.productName}`
-      .toLowerCase()
-      .includes(search.toLowerCase())
-  );
+    setStock(data);
+    setLoaded(true);
+
+    const handleFocus = () => {
+      setStock(loadStock());
+    };
+
+    window.addEventListener(
+      "focus",
+      handleFocus
+    );
+
+    return () => {
+      window.removeEventListener(
+        "focus",
+        handleFocus
+      );
+    };
+  }, []);
+
+  /* =========================
+     SAVE STOCK
+     Initial empty state save होऊ नये
+  ========================= */
+
+  useEffect(() => {
+    if (!loaded) {
+      return;
+    }
+
+    saveStock(stock);
+  }, [stock, loaded]);
+
+  /* =========================
+     OPENING STOCK CHANGE
+  ========================= */
+
+  const handleOpeningChange = (
+    id: string,
+    value: number
+  ) => {
+    setStock((currentStock) =>
+      currentStock.map((item) => {
+        if (item.id !== id) {
+          return item;
+        }
+
+        const openingStock =
+          Number(value) || 0;
+
+        const currentStockValue =
+          openingStock +
+          Number(item.purchaseQty || 0) -
+          Number(item.salesQty || 0);
+
+        return {
+          ...item,
+          openingStock,
+          currentStock:
+            Math.max(
+              0,
+              currentStockValue
+            ),
+        };
+      })
+    );
+  };
+
+  /* =========================
+     SEARCH
+  ========================= */
+
+  const filteredStock =
+    stock.filter((item) =>
+      `${item.productCode} ${item.productName} ${item.hsn}`
+        .toLowerCase()
+        .includes(
+          search.toLowerCase()
+        )
+    );
+
+  /* =========================
+     PAGE
+  ========================= */
 
   return (
     <Layout title="UK EXIM ERP">
+
       <PageTitle
         title="📦 Stock Register"
         subtitle="Live Stock Position"
       />
 
       <Card title="Stock Register">
+
         <input
           type="text"
-          placeholder="🔍 Search Product Code / Product Name"
+          placeholder="🔍 Search Product Code / Product Name / HSN..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) =>
+            setSearch(e.target.value)
+          }
           style={{
             width: "100%",
             height: "40px",
             padding: "0 12px",
-            border: "1px solid #d1d5db",
+            border:
+              "1px solid #d1d5db",
             borderRadius: "6px",
             marginBottom: "12px",
-            boxSizing: "border-box",
+            boxSizing:
+              "border-box",
           }}
         />
 
-        <StockTable stock={filteredStock} />
+       <StockTable stock={filteredStock} />
+
       </Card>
     </Layout>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ProductForm from "./components/ProductForm";
 import ProductTable from "./components/ProductTable";
 import { Product } from "./components/ProductTypes";
@@ -9,6 +9,9 @@ import {
   saveProducts,
   getNextProductCode,
 } from "./components/ProductStorage";
+import {
+  syncProductToStock,
+} from "../components/stock/StockStorage";
 
 export default function ProductPage() {
   const [products, setProducts] =
@@ -16,13 +19,29 @@ export default function ProductPage() {
 
   const [editingProduct, setEditingProduct] =
     useState<Product | null>(null);
+useEffect(() => {
+  products.forEach((product) => {
+    syncProductToStock(product);
+  });
+}, [products]);
+  /* =========================
+     SAVE PRODUCT
+     PRODUCT → STOCK SYNC
+  ========================= */
 
   const handleSave = (product: Product) => {
+    console.log(
+      "🔥 HANDLE SAVE CALLED:",
+      product
+    );
+
     let updatedProducts: Product[];
 
     if (editingProduct) {
       updatedProducts = products.map((item) =>
-        item.id === product.id ? product : item
+        item.id === product.id
+          ? product
+          : item
       );
     } else {
       updatedProducts = [
@@ -34,12 +53,27 @@ export default function ProductPage() {
     setProducts(updatedProducts);
     saveProducts(updatedProducts);
 
+    console.log(
+      "🔥 CALLING STOCK SYNC:",
+      product
+    );
+
+    syncProductToStock(product);
+
     setEditingProduct(null);
   };
+
+  /* =========================
+     EDIT PRODUCT
+  ========================= */
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
   };
+
+  /* =========================
+     DELETE PRODUCT
+  ========================= */
 
   const handleDelete = (id: string) => {
     const updatedProducts =
@@ -54,6 +88,10 @@ export default function ProductPage() {
       setEditingProduct(null);
     }
   };
+
+  /* =========================
+     PAGE
+  ========================= */
 
   return (
     <div

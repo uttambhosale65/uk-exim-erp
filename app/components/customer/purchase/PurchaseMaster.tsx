@@ -21,14 +21,14 @@ export default function PurchaseMaster() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
 
   const [purchaseNo, setPurchaseNo] =
-    useState("PUR-0001");
+    useState("GRN-0001");
 
   const [editingPurchase, setEditingPurchase] =
     useState<Purchase | null>(null);
 
-  /* ==========================================
+  /* =================================================
      LOAD PURCHASES
-  ========================================== */
+  ================================================== */
 
   useEffect(() => {
     const data = loadPurchases();
@@ -40,30 +40,50 @@ export default function PurchaseMaster() {
     );
   }, []);
 
-  /* ==========================================
+  /* =================================================
      SAVE / UPDATE PURCHASE
-  ========================================== */
+  ================================================== */
 
   const handleSave = (purchase: Purchase) => {
-    /* ========================================
-       EDIT EXISTING PURCHASE
-    ======================================== */
+    /* =================================================
+       EDIT EXISTING GRN
+    ================================================== */
 
     if (editingPurchase) {
-      // First remove old purchase quantity
-      reversePurchaseStock(
-        editingPurchase.productCode,
-        editingPurchase.qty
-      );
+      /* -----------------------------------------------
+         1. REVERSE OLD GRN STOCK
+      ------------------------------------------------ */
 
-      // Then add new purchase quantity
-      updateStock(
-        purchase.productCode,
-        purchase.productName,
-        purchase.hsn,
-        purchase.unit,
-        purchase.qty
-      );
+      const oldItems =
+        editingPurchase.items ?? [];
+
+      oldItems.forEach((item) => {
+        reversePurchaseStock(
+          item.productCode,
+          Number(item.qty)
+        );
+      });
+
+      /* -----------------------------------------------
+         2. ADD NEW GRN STOCK
+      ------------------------------------------------ */
+
+      const newItems =
+        purchase.items ?? [];
+
+      newItems.forEach((item) => {
+        updateStock(
+          item.productCode,
+          item.productName,
+          item.hsn,
+          item.unit,
+          Number(item.qty)
+        );
+      });
+
+      /* -----------------------------------------------
+         3. UPDATE GRN
+      ------------------------------------------------ */
 
       const updatedPurchases =
         purchases.map((p) =>
@@ -72,9 +92,17 @@ export default function PurchaseMaster() {
             : p
         );
 
-      setPurchases(updatedPurchases);
+      setPurchases(
+        updatedPurchases
+      );
 
-      savePurchases(updatedPurchases);
+      savePurchases(
+        updatedPurchases
+      );
+
+      /* -----------------------------------------------
+         4. NEXT GRN NUMBER
+      ------------------------------------------------ */
 
       setPurchaseNo(
         getNextPurchaseNo(
@@ -87,30 +115,43 @@ export default function PurchaseMaster() {
       return;
     }
 
-    /* ========================================
-       NEW PURCHASE
-    ======================================== */
+    /* =================================================
+       NEW GRN
+    ================================================== */
 
     const updatedPurchases = [
       ...purchases,
       purchase,
     ];
 
-    setPurchases(updatedPurchases);
-
-    savePurchases(updatedPurchases);
-
-    /* ========================================
-       PURCHASE → STOCK
-    ======================================== */
-
-    updateStock(
-      purchase.productCode,
-      purchase.productName,
-      purchase.hsn,
-      purchase.unit,
-      purchase.qty
+    setPurchases(
+      updatedPurchases
     );
+
+    savePurchases(
+      updatedPurchases
+    );
+
+    /* -----------------------------------------------
+       PURCHASE → STOCK
+    ------------------------------------------------ */
+
+    const items =
+      purchase.items ?? [];
+
+    items.forEach((item) => {
+      updateStock(
+        item.productCode,
+        item.productName,
+        item.hsn,
+        item.unit,
+        Number(item.qty)
+      );
+    });
+
+    /* -----------------------------------------------
+       NEXT GRN NUMBER
+    ------------------------------------------------ */
 
     setPurchaseNo(
       getNextPurchaseNo(
@@ -121,47 +162,61 @@ export default function PurchaseMaster() {
     setEditingPurchase(null);
   };
 
-  /* ==========================================
-     EDIT
-  ========================================== */
+  /* =================================================
+     EDIT GRN
+  ================================================== */
 
   const handleEdit = (
     purchase: Purchase
   ) => {
-    setEditingPurchase(purchase);
+    setEditingPurchase(
+      purchase
+    );
   };
 
-  /* ==========================================
-     DELETE PURCHASE
-  ========================================== */
+  /* =================================================
+     DELETE GRN
+  ================================================== */
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (
+    id: string
+  ) => {
     const purchaseToDelete =
       purchases.find(
         (purchase) =>
           purchase.id === id
       );
 
-    if (!purchaseToDelete) return;
+    if (!purchaseToDelete) {
+      return;
+    }
 
-    const confirmed = confirm(
-      `Delete Purchase ${purchaseToDelete.purchaseNo}?\n\nStock will also be reduced by ${purchaseToDelete.qty} ${purchaseToDelete.unit}.`
-    );
+    const confirmed =
+      window.confirm(
+        `Delete GRN ${purchaseToDelete.purchaseNo}?\n\nAll product quantities from this GRN will also be removed from stock.`
+      );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
-    /* ========================================
-       PURCHASE → REVERSE STOCK
-    ======================================== */
+    /* -----------------------------------------------
+       REVERSE ALL PRODUCTS FROM STOCK
+    ------------------------------------------------ */
 
-    reversePurchaseStock(
-      purchaseToDelete.productCode,
-      purchaseToDelete.qty
-    );
+    const items =
+      purchaseToDelete.items ?? [];
 
-    /* ========================================
-       DELETE PURCHASE
-    ======================================== */
+    items.forEach((item) => {
+      reversePurchaseStock(
+        item.productCode,
+        Number(item.qty)
+      );
+    });
+
+    /* -----------------------------------------------
+       DELETE GRN
+    ------------------------------------------------ */
 
     const updatedPurchases =
       purchases.filter(
@@ -169,39 +224,83 @@ export default function PurchaseMaster() {
           purchase.id !== id
       );
 
-    setPurchases(updatedPurchases);
+    setPurchases(
+      updatedPurchases
+    );
 
-    savePurchases(updatedPurchases);
+    savePurchases(
+      updatedPurchases
+    );
+
+    /* -----------------------------------------------
+       NEXT GRN NUMBER
+    ------------------------------------------------ */
 
     setPurchaseNo(
       getNextPurchaseNo(
         updatedPurchases
       )
     );
+
+    /* -----------------------------------------------
+       CLOSE EDIT MODE IF REQUIRED
+    ------------------------------------------------ */
+
+    if (
+      editingPurchase?.id === id
+    ) {
+      setEditingPurchase(null);
+    }
   };
 
-  /* ==========================================
+  /* =================================================
+     CANCEL EDIT
+  ================================================== */
+
+  const handleCancelEdit = () => {
+    setEditingPurchase(null);
+
+    const data =
+      loadPurchases();
+
+    setPurchaseNo(
+      getNextPurchaseNo(data)
+    );
+  };
+
+  /* =================================================
      UI
-  ========================================== */
+  ================================================== */
 
   return (
     <div
       style={{
-        background: "#fff",
+        background: "#ffffff",
         padding: "20px",
         borderRadius: "10px",
         boxShadow:
           "0 2px 8px rgba(0,0,0,0.08)",
       }}
     >
+      {/* =================================================
+          PAGE TITLE
+      ================================================== */}
+
       <h2
         style={{
           marginTop: 0,
           marginBottom: "20px",
+          color: "#14532d",
+          fontSize: "20px",
+          fontWeight: 700,
         }}
       >
         📥 Purchase Master
       </h2>
+
+      {/* =================================================
+          PURCHASE FORM
+      ================================================== */}
 
       <PurchaseForm
         purchaseNo={purchaseNo}
@@ -211,6 +310,64 @@ export default function PurchaseMaster() {
         onSave={handleSave}
       />
 
+      {/* =================================================
+          EDIT MODE MESSAGE
+      ================================================== */}
+
+      {editingPurchase && (
+        <div
+          style={{
+            marginTop: "12px",
+            padding: "9px 12px",
+            background: "#fef3c7",
+            border:
+              "1px solid #fcd34d",
+            borderRadius: "6px",
+            color: "#92400e",
+            fontSize: "12px",
+            fontWeight: 600,
+            display: "flex",
+            justifyContent:
+              "space-between",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <span>
+            ✏️ Editing GRN:{" "}
+            {editingPurchase.purchaseNo}
+          </span>
+
+          <button
+            type="button"
+            onClick={
+              handleCancelEdit
+            }
+            style={{
+              border: "none",
+              background:
+                "#92400e",
+              color: "#ffffff",
+              padding:
+                "5px 10px",
+              borderRadius:
+                "4px",
+              cursor:
+                "pointer",
+              fontSize:
+                "11px",
+              fontWeight: 700,
+            }}
+          >
+            Cancel Edit
+          </button>
+        </div>
+      )}
+
+      {/* =================================================
+          SEPARATOR
+      ================================================== */}
+
       <hr
         style={{
           margin: "25px 0",
@@ -219,6 +376,10 @@ export default function PurchaseMaster() {
             "1px solid #e5e7eb",
         }}
       />
+
+      {/* =================================================
+          PURCHASE REGISTER
+      ================================================== */}
 
       <PurchaseTable
         purchases={purchases}

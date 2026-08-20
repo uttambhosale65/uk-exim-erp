@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-
+import {
+  downloadERPBackup,
+  restoreERPBackup,
+} from "../../utils/ERPBackup";
 type CompanySettings = {
   companyName: string;
   address: string;
@@ -278,7 +281,142 @@ export default function Settings() {
           🏦 Bank & UPI
         </button>
       </div>
+N{/* ERP DATA BACKUP */}
 
+<div
+  style={{
+    background: "#ffffff",
+    borderRadius: "10px",
+    padding: "18px 20px",
+    marginBottom: "18px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+    border: "1px solid #e5e7eb",
+  }}
+>
+  <h3
+    style={{
+      margin: "0 0 6px 0",
+      color: "#0F4C81",
+    }}
+  >
+    💾 ERP Data Backup
+  </h3>
+
+  <p
+    style={{
+      margin: "0 0 14px 0",
+      color: "#6b7280",
+      fontSize: "12px",
+    }}
+  >
+    Backup and restore your complete ERP business data.
+  </p>
+
+  <div
+    style={{
+      display: "flex",
+      gap: "10px",
+      flexWrap: "wrap",
+    }}
+  >
+    <button
+      type="button"
+      onClick={() => {
+        try {
+          downloadERPBackup();
+
+          alert(
+            "ERP backup downloaded successfully."
+          );
+        } catch (error) {
+          console.error(
+            "Backup failed:",
+            error
+          );
+
+          alert(
+            "Backup failed. Please try again."
+          );
+        }
+      }}
+      style={{
+        padding: "10px 16px",
+        border: "none",
+        borderRadius: "6px",
+        background: "#14532d",
+        color: "#ffffff",
+        fontWeight: 700,
+        fontSize: "13px",
+        cursor: "pointer",
+      }}
+    >
+      💾 Backup ERP Data
+    </button>
+
+    <label
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "10px 16px",
+        borderRadius: "6px",
+        background: "#2563eb",
+        color: "#ffffff",
+        fontWeight: 700,
+        fontSize: "13px",
+        cursor: "pointer",
+      }}
+    >
+      📥 Restore ERP Data
+
+      <input
+        type="file"
+        accept=".json,application/json"
+        style={{
+          display: "none",
+        }}
+        onChange={async (e) => {
+          const file =
+            e.target.files?.[0];
+
+          if (!file) {
+            return;
+          }
+
+          const confirmed =
+            window.confirm(
+              "Restore backup? Existing ERP data will be replaced."
+            );
+
+          if (!confirmed) {
+            e.target.value = "";
+            return;
+          }
+
+          try {
+            await restoreERPBackup(file);
+
+            alert(
+              "ERP data restored successfully. Please refresh the page."
+            );
+
+            window.location.reload();
+          } catch (error) {
+            console.error(
+              "Restore failed:",
+              error
+            );
+
+            alert(
+              "Restore failed. Invalid or corrupted backup file."
+            );
+          }
+
+          e.target.value = "";
+        }}
+      />
+    </label>
+  </div>
+</div>
       {/* MAIN CARD */}
 
       <div

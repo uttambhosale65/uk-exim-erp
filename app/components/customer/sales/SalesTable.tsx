@@ -571,42 +571,26 @@ export default function SalesTable({
                           🧾 Invoice
                         </button>
 
-                        {/* DELETE */}
+     {/* DELETE */}
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                "Are you sure you want to delete this sales record?"
-                              )
-                            ) {
-                              onDelete(
-                                sale.id
-                              );
-                            }
-                          }}
-                          style={{
-                            padding:
-                              "6px 9px",
-                            border:
-                              "none",
-                            borderRadius:
-                              "4px",
-                            background:
-                              "#dc2626",
-                            color:
-                              "#ffffff",
-                            fontSize:
-                              "11px",
-                            fontWeight: 600,
-                            cursor:
-                              "pointer",
-                          }}
-                        >
-                          🗑️ Delete
-                        </button>
-
+<button
+  type="button"
+  onClick={() =>
+    onDelete(sale.id)
+  }
+  style={{
+    padding: "6px 9px",
+    border: "none",
+    borderRadius: "4px",
+    background: "#dc2626",
+    color: "#ffffff",
+    fontSize: "11px",
+    fontWeight: 600,
+    cursor: "pointer",
+  }}
+>
+  🗑️ Delete
+</button>
                       </td>
                     </tr>
                   );

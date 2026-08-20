@@ -147,12 +147,12 @@ export default function InvoicePrint({
     <div
       id="invoice-print"
       style={{
-        width: "100%",
-        maxWidth: "900px",
+        width: "210mm",
+        maxWidth: "210mm",
+        minHeight: "297mm",
         margin: "0 auto",
-        minHeight: "100%",
-        overflowY: "auto",
-        padding: "30px",
+        overflow: "visible",
+        padding: "8mm",
         background: "#ffffff",
         boxSizing: "border-box",
       }}
@@ -402,8 +402,6 @@ export default function InvoicePrint({
         >
           <tbody>
 
-            {/* TAXABLE */}
-
             <tr>
               <td style={td}>
                 <b>Taxable Amount</b>
@@ -418,8 +416,6 @@ export default function InvoicePrint({
                 ₹{taxableAmount.toFixed(2)}
               </td>
             </tr>
-
-            {/* CGST */}
 
             <tr>
               <td style={td}>
@@ -436,8 +432,6 @@ export default function InvoicePrint({
               </td>
             </tr>
 
-            {/* SGST */}
-
             <tr>
               <td style={td}>
                 SGST @ {sgstRate.toFixed(2)}%
@@ -452,8 +446,6 @@ export default function InvoicePrint({
                 ₹{sgstAmount.toFixed(2)}
               </td>
             </tr>
-
-            {/* TOTAL GST */}
 
             <tr>
               <td
@@ -475,8 +467,6 @@ export default function InvoicePrint({
                 ₹{totalGST.toFixed(2)}
               </td>
             </tr>
-
-            {/* GRAND TOTAL */}
 
             <tr>
               <td
@@ -706,63 +696,154 @@ export default function InvoicePrint({
       </div>
 
       {/* =========================
-          PRINT STYLE
+          SCREEN + PRINT STYLE
       ========================= */}
 
       <style>
         {`
+
+          /* =========================================
+             NORMAL SCREEN VIEW
+             ONLY SCREEN IS SCALED DOWN
+             PRINT IS NOT AFFECTED
+          ========================================= */
+
+          @media screen {
+
+            #invoice-print {
+              zoom: 0.72 !important;
+              margin: 0 auto !important;
+            }
+
+          }
+
+
+          /* =========================================
+             PRINT SETTINGS
+             KEEPING OUR WORKING 1-PAGE PRINT
+          ========================================= */
+
           @page {
             size: A4;
-            margin: 12mm;
+            margin: 0;
           }
 
           @media print {
 
+            html {
+              width: 210mm !important;
+              height: 297mm !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+
             body {
-              margin: 0;
-              padding: 0;
-              background: white;
+              width: 210mm !important;
+              height: 297mm !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+              overflow: hidden !important;
             }
 
-            body * {
-              visibility: hidden;
+            .invoice-page-wrapper {
+              min-height: 0 !important;
+              height: auto !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              background: #ffffff !important;
+              overflow: visible !important;
             }
 
-            #invoice-print,
-            #invoice-print * {
-              visibility: visible;
+            body {
+              visibility: hidden !important;
             }
 
             #invoice-print {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-              margin: 0;
-              padding: 20px;
-              background: white;
+              visibility: visible !important;
+
+              position: absolute !important;
+
+              left: 0 !important;
+              top: 0 !important;
+
+              width: 210mm !important;
+              height: 290mm !important;
+              max-height: 290mm !important;
+
+              max-width: none !important;
+              min-height: 0 !important;
+
+              margin: 0 !important;
+              padding: 5mm !important;
+
+              box-sizing: border-box !important;
+
+              background: #ffffff !important;
+
+              overflow: hidden !important;
+
+              zoom: 0.90 !important;
+            }
+
+            #invoice-print * {
+              visibility: visible !important;
             }
 
             .invoice-actions {
               display: none !important;
             }
 
-            table {
-              page-break-inside: avoid;
+            #invoice-print table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
 
-            tr {
-              page-break-inside: avoid;
+            #invoice-print tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
 
-            h1,
-            h2,
-            h3 {
-              page-break-after: avoid;
+            #invoice-print th,
+            #invoice-print td {
+              padding: 4px !important;
+              font-size: 10px !important;
             }
+
+            #invoice-print h1 {
+              font-size: 25px !important;
+            }
+
+            #invoice-print h3 {
+              font-size: 13px !important;
+            }
+
+            #invoice-print img {
+              max-width: 90px !important;
+              height: auto !important;
+            }
+
+            #invoice-print ol {
+              margin: 0 !important;
+              padding-left: 18px !important;
+              line-height: 15px !important;
+              font-size: 9px !important;
+            }
+
+            #invoice-print,
+            #invoice-print * {
+              page-break-before: avoid !important;
+              page-break-after: avoid !important;
+            }
+
           }
+
         `}
       </style>
+
     </div>
   );
 }

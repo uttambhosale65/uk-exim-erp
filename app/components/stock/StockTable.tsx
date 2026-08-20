@@ -20,7 +20,12 @@ export default function StockTable({
         }}
       >
         <thead>
-          <tr style={{ background: "#1976d2", color: "#fff" }}>
+          <tr
+            style={{
+              background: "#1976d2",
+              color: "#fff",
+            }}
+          >
             <th style={thStyle}>Product Code</th>
             <th style={thStyle}>Product Name</th>
             <th style={thStyle}>HSN</th>
@@ -52,17 +57,43 @@ export default function StockTable({
                 key={item.id}
                 style={{
                   background:
-                    index % 2 === 0 ? "#ffffff" : "#f8fafc",
+                    index % 2 === 0
+                      ? "#ffffff"
+                      : "#f8fafc",
                 }}
               >
-                <td style={tdStyle}>{item.productCode}</td>
-                <td style={tdStyle}>{item.productName}</td>
-                <td style={tdCenter}>{item.hsn}</td>
-                <td style={tdCenter}>{item.unit}</td>
-                <td style={tdCenter}>{item.openingStock}</td>
-                <td style={tdCenter}>{item.purchaseQty}</td>
-                <td style={tdCenter}>{item.salesQty}</td>
+                <td style={tdStyle}>
+                  {item.productCode}
+                </td>
 
+                <td style={tdStyle}>
+                  {item.productName}
+                </td>
+
+                <td style={tdCenter}>
+                  {item.hsn}
+                </td>
+
+                <td style={tdCenter}>
+                  {item.unit}
+                </td>
+
+                {/* OPENING STOCK */}
+                <td style={tdCenter}>
+                  {item.openingStock}
+                </td>
+
+                {/* PURCHASE */}
+                <td style={tdCenter}>
+                  {item.purchaseQty}
+                </td>
+
+                {/* SALES */}
+                <td style={tdCenter}>
+                  {item.salesQty}
+                </td>
+
+                {/* CURRENT STOCK */}
                 <td
                   style={{
                     ...tdCenter,

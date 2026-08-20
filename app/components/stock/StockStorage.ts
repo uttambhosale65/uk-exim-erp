@@ -222,3 +222,54 @@ export function resetStock(): void {
     );
   }
 }
+/* =========================
+   PRODUCT MASTER → STOCK
+   OPENING STOCK
+========================= */
+
+export function syncProductToStock(
+  product: {
+    id: string;
+    code: string;
+    name: string;
+    hsn: string;
+    unit: string;
+    stock: number;
+  }
+): void {
+  const stock = loadStock();
+console.log("🔥 SYNC PRODUCT TO STOCK:", product);
+console.log("🔥 STOCK BEFORE SYNC:", loadStock());
+  const index = stock.findIndex(
+    (item) =>
+      item.productCode === product.code
+  );
+
+  /* Product already exists in Stock */
+  if (index >= 0) {
+    return;
+  }
+
+  /* Create new Stock record */
+
+  const opening =
+    Number(product.stock) || 0;
+
+  stock.push({
+    id: getNextStockId(stock),
+
+    productCode: product.code,
+    productName: product.name,
+
+    hsn: product.hsn,
+    unit: product.unit,
+
+    openingStock: opening,
+    purchaseQty: 0,
+    salesQty: 0,
+
+    currentStock: opening,
+  });
+
+  saveStock(stock);
+}
