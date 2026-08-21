@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import PurchaseForm from "./PurchaseForm";
 import PurchaseTable from "./PurchaseTable";
+import GRNPrint from "./GRNPrint";
+
 import { Purchase } from "./PurchaseTypes";
 
 import {
@@ -18,12 +20,20 @@ import {
 } from "../../stock/StockStorage";
 
 export default function PurchaseMaster() {
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [purchases, setPurchases] =
+    useState<Purchase[]>([]);
 
   const [purchaseNo, setPurchaseNo] =
     useState("GRN-0001");
 
   const [editingPurchase, setEditingPurchase] =
+    useState<Purchase | null>(null);
+
+  /* =================================================
+     SELECTED GRN FOR PRINT
+  ================================================== */
+
+  const [printPurchase, setPrintPurchase] =
     useState<Purchase | null>(null);
 
   /* =================================================
@@ -44,7 +54,9 @@ export default function PurchaseMaster() {
      SAVE / UPDATE PURCHASE
   ================================================== */
 
-  const handleSave = (purchase: Purchase) => {
+  const handleSave = (
+    purchase: Purchase
+  ) => {
     /* =================================================
        EDIT EXISTING GRN
     ================================================== */
@@ -172,6 +184,8 @@ export default function PurchaseMaster() {
     setEditingPurchase(
       purchase
     );
+
+    setPrintPurchase(null);
   };
 
   /* =================================================
@@ -243,7 +257,7 @@ export default function PurchaseMaster() {
     );
 
     /* -----------------------------------------------
-       CLOSE EDIT MODE IF REQUIRED
+       CLOSE EDIT MODE
     ------------------------------------------------ */
 
     if (
@@ -251,6 +265,38 @@ export default function PurchaseMaster() {
     ) {
       setEditingPurchase(null);
     }
+
+    /* -----------------------------------------------
+       CLOSE PRINT VIEW
+    ------------------------------------------------ */
+
+    if (
+      printPurchase?.id === id
+    ) {
+      setPrintPurchase(null);
+    }
+  };
+
+  /* =================================================
+     PRINT GRN
+  ================================================== */
+
+  const handlePrint = (
+    purchase: Purchase
+  ) => {
+    setEditingPurchase(null);
+
+    setPrintPurchase(
+      purchase
+    );
+  };
+
+  /* =================================================
+     CLOSE PRINT VIEW
+  ================================================== */
+
+  const handleClosePrint = () => {
+    setPrintPurchase(null);
   };
 
   /* =================================================
@@ -269,7 +315,106 @@ export default function PurchaseMaster() {
   };
 
   /* =================================================
-     UI
+     PRINT VIEW
+  ================================================== */
+
+  if (printPurchase) {
+    return (
+      <div
+        style={{
+          background: "#f3f4f6",
+          padding: "20px",
+          boxSizing: "border-box",
+        }}
+      >
+
+        {/* =============================================
+            BACK TO PURCHASE REGISTER
+        ============================================== */}
+
+        <div
+          className="screen-only"
+          style={{
+            width: "100%",
+            maxWidth: "1120px",
+            margin: "0 auto 12px auto",
+            display: "flex",
+            justifyContent:
+              "space-between",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={
+              handleClosePrint
+            }
+            style={{
+              background: "#374151",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "6px",
+              padding: "9px 16px",
+              fontSize: "12px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            ← Back to Purchase Register
+          </button>
+
+          <div
+            style={{
+              color: "#14532d",
+              fontSize: "13px",
+              fontWeight: 700,
+            }}
+          >
+            GRN Print Preview
+          </div>
+        </div>
+
+        {/* =============================================
+            GRN PRINT COMPONENT
+        ============================================== */}
+
+   <div id="grn-print-root">
+  <GRNPrint purchase={printPurchase} />
+</div>
+
+        <style jsx>{`
+      @media print {
+ @page {
+  size: A4;
+  margin: 0;
+}
+
+  :global(body *) {
+    visibility: hidden !important;
+  }
+
+  :global(#grn-print-root),
+  :global(#grn-print-root *) {
+    visibility: visible !important;
+  }
+
+  :global(#grn-print-root) {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
+  }
+}
+        `}</style>
+
+      </div>
+    );
+  }
+
+  /* =================================================
+     MAIN UI
   ================================================== */
 
   return (
@@ -282,6 +427,7 @@ export default function PurchaseMaster() {
           "0 2px 8px rgba(0,0,0,0.08)",
       }}
     >
+
       {/* =================================================
           PAGE TITLE
       ================================================== */}
@@ -333,6 +479,7 @@ export default function PurchaseMaster() {
             gap: "10px",
           }}
         >
+
           <span>
             ✏️ Editing GRN:{" "}
             {editingPurchase.purchaseNo}
@@ -361,6 +508,7 @@ export default function PurchaseMaster() {
           >
             Cancel Edit
           </button>
+
         </div>
       )}
 
@@ -385,7 +533,9 @@ export default function PurchaseMaster() {
         purchases={purchases}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onPrint={handlePrint}
       />
+
     </div>
   );
 }

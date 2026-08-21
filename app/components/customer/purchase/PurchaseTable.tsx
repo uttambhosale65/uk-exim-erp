@@ -1,18 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Purchase } from "./PurchaseTypes";
 
 type PurchaseTableProps = {
   purchases: Purchase[];
   onEdit: (purchase: Purchase) => void;
   onDelete: (id: string) => void;
+  onPrint: (purchase: Purchase) => void;
 };
 
 export default function PurchaseTable({
   purchases,
   onEdit,
   onDelete,
+  onPrint,
 }: PurchaseTableProps) {
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] =
@@ -381,7 +383,7 @@ export default function PurchaseTable({
                     purchase.id;
 
                   return (
-                    <>
+  <React.Fragment key={purchase.id}>
                       {/* =================================================
                           MAIN GRN ROW
                       ================================================== */}
@@ -608,8 +610,30 @@ export default function PurchaseTable({
                                 ? "▲"
                                 : "▼"}
                             </button>
+{/* PRINT GRN */}
 
-                            {/* EDIT GRN */}
+<button
+  type="button"
+  onClick={() => {
+  alert(`Print GRN: ${purchase.purchaseNo}`);
+  onPrint(purchase);
+}}
+  title="Print GRN"
+  style={{
+    padding: "5px 8px",
+    border: "none",
+    borderRadius: "4px",
+    background: "#15803d",
+    color: "#ffffff",
+    fontSize: "11px",
+    fontWeight: 600,
+    cursor: "pointer",
+  }}
+>
+  🖨️
+</button>
+
+{/* EDIT GRN */}
 
                             <button
                               type="button"
@@ -1182,7 +1206,7 @@ export default function PurchaseTable({
                           </td>
                         </tr>
                       )}
-                    </>
+                  </React.Fragment>
                   );
                 }
               )
