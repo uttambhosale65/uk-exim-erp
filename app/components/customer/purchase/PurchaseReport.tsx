@@ -2,7 +2,16 @@
 
 /* =========================================================
    UK EXIM ERP – PURCHASE / GRN REPORT
-   VERSION 1.0 – PROFESSIONAL ERP ARCHITECTURE
+   VERSION 1.0 – PROFESSIONAL ERP
+
+   LAYOUT STANDARD
+   - Horizontal report layout
+   - All columns visible
+   - No data hiding
+   - Compact professional spacing
+   - Vertical rows allowed
+   - Responsive screen layout
+   - Print-ready structure
 ========================================================= */
 
 import {
@@ -14,6 +23,10 @@ import {
 
 import { Purchase } from "./PurchaseTypes";
 import { loadPurchases } from "./PurchaseStorage";
+
+/* =========================================================
+   MAIN PURCHASE REPORT
+========================================================= */
 
 export default function PurchaseReport() {
   const [purchases, setPurchases] =
@@ -35,56 +48,78 @@ export default function PurchaseReport() {
   ======================================================= */
 
   const filteredPurchases = useMemo(() => {
-    const keyword = search
-      .toLowerCase()
-      .trim();
+    const keyword =
+      search.toLowerCase().trim();
 
     if (!keyword) {
       return purchases;
     }
 
-    return purchases.filter((purchase) => {
-      const documentMatch =
-        String(purchase.purchaseNo ?? "")
-          .toLowerCase()
-          .includes(keyword) ||
-        String(purchase.purchaseDate ?? "")
-          .toLowerCase()
-          .includes(keyword) ||
-        String(purchase.invoiceNo ?? "")
-          .toLowerCase()
-          .includes(keyword) ||
-        String(purchase.supplierCode ?? "")
-          .toLowerCase()
-          .includes(keyword) ||
-        String(purchase.supplierName ?? "")
-          .toLowerCase()
-          .includes(keyword) ||
-        String(purchase.remarks ?? "")
-          .toLowerCase()
-          .includes(keyword);
+    return purchases.filter(
+      (purchase) => {
+        const documentMatch =
+          String(
+            purchase.purchaseNo ?? ""
+          )
+            .toLowerCase()
+            .includes(keyword) ||
+          String(
+            purchase.purchaseDate ?? ""
+          )
+            .toLowerCase()
+            .includes(keyword) ||
+          String(
+            purchase.invoiceNo ?? ""
+          )
+            .toLowerCase()
+            .includes(keyword) ||
+          String(
+            purchase.supplierCode ?? ""
+          )
+            .toLowerCase()
+            .includes(keyword) ||
+          String(
+            purchase.supplierName ?? ""
+          )
+            .toLowerCase()
+            .includes(keyword) ||
+          String(
+            purchase.remarks ?? ""
+          )
+            .toLowerCase()
+            .includes(keyword);
 
-      const itemMatch =
-        purchase.items?.some((item) =>
-          String(item.productCode ?? "")
-            .toLowerCase()
-            .includes(keyword) ||
-          String(item.productName ?? "")
-            .toLowerCase()
-            .includes(keyword) ||
-          String(item.hsn ?? "")
-            .toLowerCase()
-            .includes(keyword) ||
-          String(item.unit ?? "")
-            .toLowerCase()
-            .includes(keyword)
-        ) ?? false;
+        const itemMatch =
+          purchase.items?.some(
+            (item) =>
+              String(
+                item.productCode ?? ""
+              )
+                .toLowerCase()
+                .includes(keyword) ||
+              String(
+                item.productName ?? ""
+              )
+                .toLowerCase()
+                .includes(keyword) ||
+              String(
+                item.hsn ?? ""
+              )
+                .toLowerCase()
+                .includes(keyword) ||
+              String(
+                item.unit ?? ""
+              )
+                .toLowerCase()
+                .includes(keyword)
+          ) ?? false;
 
-      return (
-        documentMatch ||
-        itemMatch
-      );
-    });
+        return (
+          documentMatch ||
+          itemMatch
+        );
+      }
+    );
   }, [purchases, search]);
 
   /* =======================================================
@@ -95,12 +130,14 @@ export default function PurchaseReport() {
     filteredPurchases.length;
 
   const totalQuantity =
-  filteredPurchases.reduce(
-    (total, purchase) =>
-      total +
-      Number(purchase.totalQty ?? 0),
-    0
-  );
+    filteredPurchases.reduce(
+      (total, purchase) =>
+        total +
+        Number(
+          purchase.totalQty ?? 0
+        ),
+      0
+    );
 
   const totalAmount =
     filteredPurchases.reduce(
@@ -145,7 +182,8 @@ export default function PurchaseReport() {
 
       <div style={headerStyle}>
 
-        <div>
+        <div style={titleGroupStyle}>
+
           <h2 style={titleStyle}>
             📊 Purchase Register
           </h2>
@@ -153,6 +191,7 @@ export default function PurchaseReport() {
           <div style={subtitleStyle}>
             GRN-wise Purchase Details
           </div>
+
         </div>
 
         {/* SEARCH */}
@@ -166,6 +205,7 @@ export default function PurchaseReport() {
           }
           style={searchStyle}
         />
+
       </div>
 
       {/* =================================================
@@ -177,6 +217,7 @@ export default function PurchaseReport() {
         {/* TOTAL GRN */}
 
         <div style={summaryCardStyle}>
+
           <div style={summaryLabelStyle}>
             Total GRN
           </div>
@@ -184,11 +225,13 @@ export default function PurchaseReport() {
           <div style={summaryValueStyle}>
             {totalGRN}
           </div>
+
         </div>
 
         {/* TOTAL QUANTITY */}
 
         <div style={summaryCardStyle}>
+
           <div style={summaryLabelStyle}>
             Total Quantity
           </div>
@@ -196,30 +239,37 @@ export default function PurchaseReport() {
           <div style={summaryValueStyle}>
             {totalQuantity.toFixed(2)}
           </div>
+
         </div>
 
         {/* TOTAL AMOUNT */}
 
         <div style={summaryCardStyle}>
+
           <div style={summaryLabelStyle}>
             Total Amount
           </div>
 
           <div style={summaryValueStyle}>
-            ₹{totalAmount.toFixed(2)}
+            ₹
+            {totalAmount.toFixed(2)}
           </div>
+
         </div>
 
         {/* TOTAL GST */}
 
         <div style={summaryCardStyle}>
+
           <div style={summaryLabelStyle}>
             Total GST
           </div>
 
           <div style={summaryValueStyle}>
-            ₹{totalGST.toFixed(2)}
+            ₹
+            {totalGST.toFixed(2)}
           </div>
+
         </div>
 
         {/* NET PURCHASE */}
@@ -228,8 +278,10 @@ export default function PurchaseReport() {
           style={{
             ...summaryCardStyle,
             background: "#f0fdf4",
+            borderColor: "#bbf7d0",
           }}
         >
+
           <div style={summaryLabelStyle}>
             Net Purchase
           </div>
@@ -240,8 +292,10 @@ export default function PurchaseReport() {
               color: "#14532d",
             }}
           >
-            ₹{totalNetAmount.toFixed(2)}
+            ₹
+            {totalNetAmount.toFixed(2)}
           </div>
+
         </div>
 
       </div>
@@ -259,66 +313,149 @@ export default function PurchaseReport() {
           ================================================= */}
 
           <thead>
+
             <tr
               style={{
                 background: "#14532d",
                 color: "#ffffff",
               }}
             >
-              <th style={thStyle}>#</th>
 
-              <th style={thStyle}>
+              <th
+                style={{
+                  ...thStyle,
+                  width: "3%",
+                  textAlign: "center",
+                }}
+              >
+                #
+              </th>
+
+              <th
+                style={{
+                  ...thStyle,
+                  width: "7%",
+                }}
+              >
                 GRN No
               </th>
 
-              <th style={thStyle}>
+              <th
+                style={{
+                  ...thStyle,
+                  width: "7%",
+                }}
+              >
                 Date
               </th>
 
-              <th style={thStyle}>
+              <th
+                style={{
+                  ...thStyle,
+                  width: "8%",
+                }}
+              >
                 Invoice
               </th>
 
-              <th style={thStyle}>
+              <th
+                style={{
+                  ...thStyle,
+                  width: "12%",
+                }}
+              >
                 Supplier
               </th>
 
-              <th style={thStyle}>
+              <th
+                style={{
+                  ...thStyle,
+                  width: "15%",
+                }}
+              >
                 Product
               </th>
 
-              <th style={thStyle}>
+              <th
+                style={{
+                  ...thStyle,
+                  width: "6%",
+                }}
+              >
                 HSN
               </th>
 
-              <th style={thStyle}>
+              <th
+                style={{
+                  ...thStyle,
+                  width: "5%",
+                }}
+              >
                 Unit
               </th>
 
-              <th style={thStyle}>
+              <th
+                style={{
+                  ...thStyle,
+                  width: "6%",
+                  textAlign: "right",
+                }}
+              >
                 Qty
               </th>
 
-              <th style={thStyle}>
+              <th
+                style={{
+                  ...thStyle,
+                  width: "7%",
+                  textAlign: "right",
+                }}
+              >
                 Rate
               </th>
 
-              <th style={thStyle}>
+              <th
+                style={{
+                  ...thStyle,
+                  width: "8%",
+                  textAlign: "right",
+                }}
+              >
                 Amount
               </th>
 
-              <th style={thStyle}>
+              <th
+                style={{
+                  ...thStyle,
+                  width: "5%",
+                  textAlign: "center",
+                }}
+              >
                 GST
               </th>
 
-              <th style={thStyle}>
+              <th
+                style={{
+                  ...thStyle,
+                  width: "8%",
+                  textAlign: "right",
+                }}
+              >
                 GST Amount
               </th>
 
-              <th style={thStyle}>
+              <th
+                style={{
+                  ...thStyle,
+                  width: "8%",
+                  textAlign: "right",
+                }}
+              >
                 Net Amount
               </th>
+
             </tr>
+
           </thead>
 
           {/* =================================================
@@ -336,7 +473,7 @@ export default function PurchaseReport() {
                   style={{
                     ...tdStyle,
                     textAlign: "center",
-                    padding: "35px",
+                    padding: "30px 12px",
                     color: "#6b7280",
                     fontWeight: 600,
                   }}
@@ -378,6 +515,48 @@ export default function PurchaseReport() {
 
       </div>
 
+      {/* =================================================
+          REPORT FOOTER SUMMARY
+      ================================================= */}
+
+      {filteredPurchases.length > 0 && (
+
+        <div
+          style={reportFooterStyle}
+        >
+
+          <span>
+            Showing{" "}
+            <strong>
+              {filteredPurchases.length}
+            </strong>{" "}
+            of{" "}
+            <strong>
+              {purchases.length}
+            </strong>{" "}
+            GRN records
+          </span>
+
+          {search && (
+
+            <button
+              type="button"
+              onClick={() =>
+                setSearch("")
+              }
+              style={
+                clearSearchButtonStyle
+              }
+            >
+              ✖ Clear Search
+            </button>
+
+          )}
+
+        </div>
+
+      )}
+
     </div>
   );
 }
@@ -409,53 +588,53 @@ function PurchaseRows({
   if (safeItems.length === 0) {
 
     return (
-      <>
-        <tr>
+      <tr>
 
-          <td style={tdCenterStyle}>
-            {purchaseIndex + 1}
-          </td>
+        <td
+          style={tdCenterStyle}
+        >
+          {purchaseIndex + 1}
+        </td>
 
-          <td
-            style={{
-              ...tdStyle,
-              fontWeight: 700,
-              color: "#14532d",
-            }}
-          >
-            {purchase.purchaseNo}
-          </td>
+        <td
+          style={{
+            ...tdStyle,
+            fontWeight: 700,
+            color: "#14532d",
+          }}
+        >
+          {purchase.purchaseNo}
+        </td>
 
-          <td style={tdStyle}>
-            {purchase.purchaseDate}
-          </td>
+        <td style={tdStyle}>
+          {purchase.purchaseDate}
+        </td>
 
-          <td style={tdStyle}>
-            {purchase.invoiceNo || "-"}
-          </td>
+        <td style={tdStyle}>
+          {purchase.invoiceNo || "-"}
+        </td>
 
-          <td
-            style={{
-              ...tdStyle,
-              fontWeight: 600,
-            }}
-          >
-            {purchase.supplierName}
-          </td>
+        <td
+          style={{
+            ...tdStyle,
+            fontWeight: 600,
+          }}
+        >
+          {purchase.supplierName}
+        </td>
 
-          <td
-            colSpan={9}
-            style={{
-              ...tdStyle,
-              textAlign: "center",
-              color: "#6b7280",
-            }}
-          >
-            No Product Items
-          </td>
+        <td
+          colSpan={9}
+          style={{
+            ...tdStyle,
+            textAlign: "center",
+            color: "#6b7280",
+          }}
+        >
+          No Product Items
+        </td>
 
-        </tr>
-      </>
+      </tr>
     );
   }
 
@@ -537,6 +716,9 @@ function PurchaseRows({
               style={{
                 ...tdStyle,
                 fontWeight: 600,
+                whiteSpace: "normal",
+                wordBreak: "break-word",
+                lineHeight: 1.2,
               }}
             >
               {item.productName}
@@ -605,7 +787,7 @@ function PurchaseRows({
             >
               {Number(
                 item.gst ?? 0
-              )}
+              ).toFixed(2)}
               %
             </td>
 
@@ -660,6 +842,7 @@ function PurchaseRows({
             ...tdStyle,
             textAlign: "right",
             color: "#14532d",
+            fontWeight: 800,
           }}
         >
           GRN TOTAL
@@ -748,13 +931,14 @@ function PurchaseRows({
 
 const containerStyle: CSSProperties = {
   background: "#ffffff",
-  padding: "20px",
+  padding: "14px",
   borderRadius: "10px",
   border: "1px solid #d1d5db",
   boxShadow:
     "0 2px 8px rgba(0,0,0,0.08)",
   width: "100%",
   boxSizing: "border-box",
+  overflow: "hidden",
 };
 
 /* =========================================================
@@ -765,8 +949,18 @@ const headerStyle: CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  gap: "15px",
-  marginBottom: "18px",
+  gap: "12px",
+  marginBottom: "12px",
+  width: "100%",
+};
+
+/* =========================================================
+   TITLE GROUP
+========================================================= */
+
+const titleGroupStyle: CSSProperties = {
+  minWidth: 0,
+  flex: "1 1 auto",
 };
 
 /* =========================================================
@@ -776,8 +970,9 @@ const headerStyle: CSSProperties = {
 const titleStyle: CSSProperties = {
   margin: 0,
   color: "#14532d",
-  fontSize: "20px",
+  fontSize: "18px",
   fontWeight: 700,
+  lineHeight: 1.2,
 };
 
 /* =========================================================
@@ -785,9 +980,9 @@ const titleStyle: CSSProperties = {
 ========================================================= */
 
 const subtitleStyle: CSSProperties = {
-  marginTop: "5px",
+  marginTop: "4px",
   color: "#6b7280",
-  fontSize: "12px",
+  fontSize: "11px",
 };
 
 /* =========================================================
@@ -795,15 +990,16 @@ const subtitleStyle: CSSProperties = {
 ========================================================= */
 
 const searchStyle: CSSProperties = {
-  width: "340px",
-  maxWidth: "45%",
-  height: "38px",
-  padding: "0 12px",
+  width: "300px",
+  maxWidth: "40%",
+  height: "34px",
+  padding: "0 10px",
   border: "1px solid #d1d5db",
   borderRadius: "6px",
-  fontSize: "13px",
+  fontSize: "12px",
   outline: "none",
   boxSizing: "border-box",
+  flexShrink: 0,
 };
 
 /* =========================================================
@@ -813,9 +1009,10 @@ const searchStyle: CSSProperties = {
 const summaryGridStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns:
-    "repeat(5, 1fr)",
-  gap: "10px",
-  marginBottom: "18px",
+    "repeat(5, minmax(0, 1fr))",
+  gap: "8px",
+  marginBottom: "12px",
+  width: "100%",
 };
 
 /* =========================================================
@@ -825,10 +1022,11 @@ const summaryGridStyle: CSSProperties = {
 const summaryCardStyle: CSSProperties = {
   background: "#f8fafc",
   border: "1px solid #d1d5db",
-  borderRadius: "8px",
-  padding: "12px",
-  minHeight: "72px",
+  borderRadius: "7px",
+  padding: "8px 10px",
+  minHeight: "58px",
   boxSizing: "border-box",
+  minWidth: 0,
 };
 
 /* =========================================================
@@ -837,9 +1035,12 @@ const summaryCardStyle: CSSProperties = {
 
 const summaryLabelStyle: CSSProperties = {
   color: "#6b7280",
-  fontSize: "11px",
+  fontSize: "10px",
   fontWeight: 600,
-  marginBottom: "8px",
+  marginBottom: "5px",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 };
 
 /* =========================================================
@@ -848,8 +1049,11 @@ const summaryLabelStyle: CSSProperties = {
 
 const summaryValueStyle: CSSProperties = {
   color: "#111827",
-  fontSize: "18px",
+  fontSize: "15px",
   fontWeight: 800,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 };
 
 /* =========================================================
@@ -858,20 +1062,27 @@ const summaryValueStyle: CSSProperties = {
 
 const tableWrapperStyle: CSSProperties = {
   width: "100%",
-  overflowX: "auto",
+  overflowX: "hidden",
+  overflowY: "visible",
   border: "1px solid #d1d5db",
-  borderRadius: "8px",
+  borderRadius: "7px",
+  boxSizing: "border-box",
 };
 
 /* =========================================================
    TABLE STYLE
+
+   IMPORTANT:
+   No fixed min-width.
+   All 14 columns remain visible.
 ========================================================= */
 
 const tableStyle: CSSProperties = {
   width: "100%",
+  minWidth: "100%",
+  tableLayout: "fixed",
   borderCollapse: "collapse",
-  minWidth: "1500px",
-  fontSize: "12px",
+  fontSize: "10px",
 };
 
 /* =========================================================
@@ -880,11 +1091,14 @@ const tableStyle: CSSProperties = {
 
 const thStyle: CSSProperties = {
   border: "1px solid #d1d5db",
-  padding: "9px 8px",
+  padding: "6px 4px",
   textAlign: "left",
-  whiteSpace: "nowrap",
-  fontSize: "11px",
+  whiteSpace: "normal",
+  wordBreak: "break-word",
+  lineHeight: 1.15,
+  fontSize: "9px",
   fontWeight: 700,
+  verticalAlign: "middle",
 };
 
 /* =========================================================
@@ -893,9 +1107,14 @@ const thStyle: CSSProperties = {
 
 const tdStyle: CSSProperties = {
   border: "1px solid #d1d5db",
-  padding: "8px",
+  padding: "5px 4px",
   whiteSpace: "nowrap",
-  fontSize: "11px",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  fontSize: "9px",
+  lineHeight: 1.2,
+  verticalAlign: "middle",
+  boxSizing: "border-box",
 };
 
 /* =========================================================
@@ -905,4 +1124,37 @@ const tdStyle: CSSProperties = {
 const tdCenterStyle: CSSProperties = {
   ...tdStyle,
   textAlign: "center",
+};
+
+/* =========================================================
+   REPORT FOOTER
+========================================================= */
+
+const reportFooterStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "10px",
+  marginTop: "10px",
+  padding: "7px 10px",
+  background: "#f0fdf4",
+  border: "1px solid #bbf7d0",
+  borderRadius: "6px",
+  color: "#166534",
+  fontSize: "10px",
+  fontWeight: 600,
+};
+
+/* =========================================================
+   CLEAR SEARCH BUTTON
+========================================================= */
+
+const clearSearchButtonStyle: CSSProperties = {
+  border: "none",
+  background: "transparent",
+  color: "#2563eb",
+  fontSize: "10px",
+  fontWeight: 700,
+  cursor: "pointer",
+  padding: "2px 4px",
 };

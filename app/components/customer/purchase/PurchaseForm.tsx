@@ -1005,8 +1005,11 @@ export default function PurchaseForm({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns:
-                "2fr 2fr 120px 90px 100px 100px 100px auto",
+              width: "100%",
+minWidth: 0,
+boxSizing: "border-box",
+             gridTemplateColumns:
+  "minmax(140px, 2fr) minmax(140px, 2fr) minmax(70px, 1fr) minmax(65px, 1fr) minmax(75px, 1fr) minmax(75px, 1fr) minmax(75px, 1fr) auto",
               gap: "8px",
               alignItems: "end",
             }}

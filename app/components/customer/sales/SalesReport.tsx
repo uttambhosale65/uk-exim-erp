@@ -288,7 +288,7 @@ export default function SalesReport() {
         <table
           style={{
             width: "100%",
-            minWidth: "1250px",
+            minWidth: 0,
             borderCollapse:
               "collapse",
             fontSize: "12px",

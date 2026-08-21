@@ -46,76 +46,149 @@ export default function StockMaster() {
     0
   );
 
-  return (
+ return (
+  <div
+    style={{
+      background: "#ffffff",
+      padding: "14px",
+      borderRadius: "10px",
+      border: "1px solid #d1d5db",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+      width: "100%",
+      boxSizing: "border-box",
+      overflow: "hidden",
+    }}
+  >
+    {/* =================================================
+        HEADER
+    ================================================== */}
+
     <div
       style={{
-        background: "#fff",
-        padding: "20px",
-        borderRadius: "10px",
-        boxShadow:
-          "0 2px 8px rgba(0,0,0,0.08)",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: "12px",
+        marginBottom: "12px",
+        flexWrap: "wrap",
       }}
     >
-      <h2 style={{ marginTop: 0 }}>
-        📦 Stock Report
-      </h2>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: "15px",
-          alignItems: "center",
-          gap: "15px",
-        }}
-      >
-        <input
-          type="text"
-          placeholder="Search Product / Code / HSN..."
-          value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
-          }
+      <div>
+        <h2
           style={{
-            width: "320px",
-            maxWidth: "100%",
-            padding: "10px",
-            border: "1px solid #ccc",
-            borderRadius: "6px",
-            boxSizing: "border-box",
+            margin: 0,
+            color: "#14532d",
+            fontSize: "18px",
+            fontWeight: 700,
           }}
-        />
+        >
+          📦 Stock Report
+        </h2>
 
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "15px",
+            marginTop: "4px",
+            color: "#6b7280",
+            fontSize: "11px",
           }}
         >
-          <h3 style={{ margin: 0 }}>
-            Total Stock : {totalStock}
-          </h3>
-
-          <button
-            type="button"
-            onClick={handleResetStock}
-            style={{
-              padding: "9px 14px",
-              background: "#dc2626",
-              color: "#fff",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontWeight: 700,
-            }}
-          >
-            🗑️ Reset Stock
-          </button>
+          Product-wise Current Stock Details
         </div>
       </div>
 
-      <StockTable stock={filteredStock} />
+      <input
+        type="text"
+        placeholder="🔍 Search Product / Code / HSN..."
+        value={search}
+        onChange={(e) =>
+          setSearch(e.target.value)
+        }
+        style={{
+          width: "300px",
+          maxWidth: "100%",
+          height: "34px",
+          padding: "0 10px",
+          border: "1px solid #d1d5db",
+          borderRadius: "6px",
+          fontSize: "12px",
+          outline: "none",
+          boxSizing: "border-box",
+        }}
+      />
     </div>
-  );
+
+    {/* =================================================
+        SUMMARY
+    ================================================== */}
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns:
+          "minmax(0, 1fr) auto",
+        gap: "8px",
+        marginBottom: "12px",
+        width: "100%",
+      }}
+    >
+      <div
+        style={{
+          background: "#f8fafc",
+          border: "1px solid #d1d5db",
+          borderRadius: "7px",
+          padding: "9px 12px",
+          minHeight: "58px",
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            color: "#6b7280",
+            fontSize: "10px",
+            fontWeight: 600,
+            marginBottom: "4px",
+          }}
+        >
+          TOTAL CURRENT STOCK
+        </div>
+
+        <div
+          style={{
+            color: "#14532d",
+            fontSize: "18px",
+            fontWeight: 800,
+          }}
+        >
+          {totalStock}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleResetStock}
+        style={{
+          padding: "0 14px",
+          background: "#dc2626",
+          color: "#ffffff",
+          border: "none",
+          borderRadius: "7px",
+          cursor: "pointer",
+          fontWeight: 700,
+          fontSize: "11px",
+          minHeight: "58px",
+          whiteSpace: "nowrap",
+        }}
+      >
+        🗑️ Reset Stock
+      </button>
+    </div>
+
+    {/* =================================================
+        STOCK TABLE
+    ================================================== */}
+
+    <StockTable stock={filteredStock} />
+
+  </div>
+);
 }

@@ -1061,8 +1061,8 @@ const [customerSearch, setCustomerSearch] =
       key={index}
       style={{
         display: "grid",
-        gridTemplateColumns:
-          "80px 1.6fr 100px 80px 80px 100px 40px",
+       gridTemplateColumns:
+  "70px minmax(0,1.6fr) 80px 65px 65px 80px 40px",
         gap: "6px",
         alignItems: "end",
         marginBottom: "10px",
@@ -1265,8 +1265,8 @@ const [customerSearch, setCustomerSearch] =
         <div
           style={{
             display: "grid",
-            gridTemplateColumns:
-              "0.8fr 0.8fr 80px 0.8fr 0.8fr 0.8fr 0.9fr auto auto",
+           gridTemplateColumns:
+  "minmax(0,1fr) minmax(0,1fr) 70px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto auto",
             gap: "6px",
             alignItems: "end",
             marginTop: "14px",

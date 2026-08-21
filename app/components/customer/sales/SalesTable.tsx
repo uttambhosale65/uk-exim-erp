@@ -174,7 +174,7 @@ export default function SalesTable({
         <table
           style={{
             width: "100%",
-            minWidth: "1250px",
+            minWidth: 0,
             borderCollapse:
               "collapse",
             fontSize: "13px",

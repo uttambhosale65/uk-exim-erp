@@ -420,12 +420,12 @@ export default function PurchaseMaster() {
   return (
     <div
       style={{
-        background: "#ffffff",
-        padding: "20px",
-        borderRadius: "10px",
-        boxShadow:
-          "0 2px 8px rgba(0,0,0,0.08)",
-      }}
+  background: "#ffffff",
+  padding: "20px",
+  borderRadius: "10px",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+  overflowX: "hidden",
+}}
     >
 
       {/* =================================================

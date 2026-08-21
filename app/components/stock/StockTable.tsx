@@ -10,110 +10,174 @@ type StockTableProps = {
 export default function StockTable({
   stock,
 }: StockTableProps) {
-  return (
-    <div style={{ overflowX: "auto" }}>
-      <table
-        style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          minWidth: "1000px",
-        }}
-      >
-        <thead>
-          <tr
-            style={{
-              background: "#1976d2",
-              color: "#fff",
-            }}
-          >
-            <th style={thStyle}>Product Code</th>
-            <th style={thStyle}>Product Name</th>
-            <th style={thStyle}>HSN</th>
-            <th style={thStyle}>Unit</th>
-            <th style={thStyle}>Opening</th>
-            <th style={thStyle}>Purchase</th>
-            <th style={thStyle}>Sales</th>
-            <th style={thStyle}>Current Stock</th>
-          </tr>
-        </thead>
+ return (
+  <div
+    style={{
+      width: "100%",
+      overflow: "hidden",
+      border: "1px solid #d1d5db",
+      borderRadius: "7px",
+      boxSizing: "border-box",
+    }}
+  >
+    <table
+      style={{
+        width: "100%",
+        borderCollapse: "collapse",
+        tableLayout: "fixed",
+        fontSize: "10px",
+      }}
+    >
+      <thead>
+        <tr
+          style={{
+            background: "#14532d",
+            color: "#ffffff",
+          }}
+        >
+          <th style={{ ...thStyle, width: "13%" }}>
+            Product Code
+          </th>
 
-        <tbody>
-          {stock.length === 0 ? (
-            <tr>
+          <th style={{ ...thStyle, width: "25%" }}>
+            Product Name
+          </th>
+
+          <th style={{ ...thStyle, width: "12%" }}>
+            HSN
+          </th>
+
+          <th style={{ ...thStyle, width: "9%" }}>
+            Unit
+          </th>
+
+          <th style={{ ...thStyle, width: "10%" }}>
+            Opening
+          </th>
+
+          <th style={{ ...thStyle, width: "10%" }}>
+            Purchase
+          </th>
+
+          <th style={{ ...thStyle, width: "10%" }}>
+            Sales
+          </th>
+
+          <th style={{ ...thStyle, width: "11%" }}>
+            Current Stock
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {stock.length === 0 ? (
+          <tr>
+            <td
+              colSpan={8}
+              style={{
+                ...tdStyle,
+                textAlign: "center",
+                padding: "30px",
+                color: "#6b7280",
+                fontWeight: 600,
+              }}
+            >
+              📋 No Stock Records Found
+            </td>
+          </tr>
+        ) : (
+          stock.map((item, index) => (
+            <tr
+              key={item.id}
+              style={{
+                background:
+                  index % 2 === 0
+                    ? "#ffffff"
+                    : "#f8fafc",
+              }}
+            >
               <td
-                colSpan={8}
                 style={{
-                  textAlign: "center",
-                  padding: "20px",
-                  border: "1px solid #ddd",
+                  ...tdStyle,
+                  fontWeight: 700,
+                  color: "#14532d",
                 }}
               >
-                No Stock Records Found
+                {item.productCode}
+              </td>
+
+              <td
+                style={{
+                  ...tdStyle,
+                  fontWeight: 600,
+                }}
+              >
+                {item.productName}
+              </td>
+
+              <td style={tdCenter}>
+                {item.hsn}
+              </td>
+
+              <td style={tdCenter}>
+                {item.unit}
+              </td>
+
+              <td style={tdNumber}>
+                {Number(
+                  item.openingStock || 0
+                ).toFixed(2)}
+              </td>
+
+              <td style={tdNumber}>
+                {Number(
+                  item.purchaseQty || 0
+                ).toFixed(2)}
+              </td>
+
+              <td style={tdNumber}>
+                {Number(
+                  item.salesQty || 0
+                ).toFixed(2)}
+              </td>
+
+              <td
+                style={{
+                  ...tdNumber,
+                  fontWeight: 800,
+                  color:
+                    Number(
+                      item.currentStock || 0
+                    ) > 0
+                      ? "#14532d"
+                      : "#dc2626",
+                }}
+              >
+                {Number(
+                  item.currentStock || 0
+                ).toFixed(2)}
               </td>
             </tr>
-          ) : (
-            stock.map((item, index) => (
-              <tr
-                key={item.id}
-                style={{
-                  background:
-                    index % 2 === 0
-                      ? "#ffffff"
-                      : "#f8fafc",
-                }}
-              >
-                <td style={tdStyle}>
-                  {item.productCode}
-                </td>
-
-                <td style={tdStyle}>
-                  {item.productName}
-                </td>
-
-                <td style={tdCenter}>
-                  {item.hsn}
-                </td>
-
-                <td style={tdCenter}>
-                  {item.unit}
-                </td>
-
-                {/* OPENING STOCK */}
-                <td style={tdCenter}>
-                  {item.openingStock}
-                </td>
-
-                {/* PURCHASE */}
-                <td style={tdCenter}>
-                  {item.purchaseQty}
-                </td>
-
-                {/* SALES */}
-                <td style={tdCenter}>
-                  {item.salesQty}
-                </td>
-
-                {/* CURRENT STOCK */}
-                <td
-                  style={{
-                    ...tdCenter,
-                    fontWeight: "bold",
-                    color:
-                      item.currentStock > 0
-                        ? "#2e7d32"
-                        : "#d32f2f",
-                  }}
-                >
-                  {item.currentStock}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+);
 }
+
+const tdNumber: React.CSSProperties = {
+  border: "1px solid #d1d5db",
+  padding: "5px 4px",
+  textAlign: "right",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  fontSize: "9px",
+  lineHeight: 1.2,
+  verticalAlign: "middle",
+  boxSizing: "border-box",
+};
 
 const thStyle: React.CSSProperties = {
   border: "1px solid #ddd",
