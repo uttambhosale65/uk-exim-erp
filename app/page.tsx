@@ -26,6 +26,10 @@ export default function Home() {
   const [activePage, setActivePage] =
     useState("dashboard");
 
+  /* =====================================================
+     MENU STYLE
+  ===================================================== */
+
   const menuItem = {
     padding: "7px 10px",
     marginBottom: "2px",
@@ -42,6 +46,10 @@ export default function Home() {
     fontWeight: "bold",
   };
 
+  /* =====================================================
+     DASHBOARD CARD
+  ===================================================== */
+
   const card = {
     background: "#fff",
     borderRadius: "10px",
@@ -50,6 +58,10 @@ export default function Home() {
       "0 2px 8px rgba(0,0,0,0.08)",
     minHeight: "90px",
   };
+
+  /* =====================================================
+     DASHBOARD DATA
+  ===================================================== */
 
   const [dashboard, setDashboard] = useState({
     products: 0,
@@ -60,9 +72,9 @@ export default function Home() {
     purchase: 0,
   });
 
-  // =====================================================
-  // DASHBOARD DATA
-  // =====================================================
+  /* =====================================================
+     LOAD DASHBOARD DATA
+  ===================================================== */
 
   useEffect(() => {
     const products = loadProducts();
@@ -85,96 +97,101 @@ export default function Home() {
 
       stock: stock.reduce(
         (total: number, item: any) =>
-          total + Number(item.currentStock || 0),
+          total +
+          Number(item.currentStock || 0),
         0
       ),
 
       sales: sales.reduce(
         (total, sale) =>
-          total + Number(sale.grandTotal ?? 0),
+          total +
+          Number(sale.grandTotal ?? 0),
         0
       ),
 
       purchase: purchases.reduce(
         (total, purchase) =>
-          total + Number(purchase.netAmount ?? 0),
+          total +
+          Number(
+            (purchase as any).netAmount ?? 0
+          ),
         0
       ),
     });
   }, [activePage]);
 
-  // =====================================================
-  // PAGE RENDER
-  // =====================================================
+  /* =====================================================
+     PAGE RENDER
+  ===================================================== */
 
   const renderPage = () => {
     switch (activePage) {
-      // -------------------------------------------------
-      // PRODUCT
-      // -------------------------------------------------
+      /* -------------------------------------------------
+         PRODUCT
+      ------------------------------------------------- */
 
       case "products":
         return <ProductMaster />;
 
-      // -------------------------------------------------
-      // CUSTOMER
-      // -------------------------------------------------
+      /* -------------------------------------------------
+         CUSTOMER
+      ------------------------------------------------- */
 
       case "customers":
         return <CustomerMaster />;
 
-      // -------------------------------------------------
-      // SUPPLIER
-      // -------------------------------------------------
+      /* -------------------------------------------------
+         SUPPLIER
+      ------------------------------------------------- */
 
       case "suppliers":
         return <SupplierMaster />;
 
-      // -------------------------------------------------
-      // PURCHASE / GRN
-      // -------------------------------------------------
+      /* -------------------------------------------------
+         PURCHASE / GRN
+      ------------------------------------------------- */
 
       case "grn":
         return <PurchaseMaster />;
 
-      // -------------------------------------------------
-      // SALES / ISSUE
-      // -------------------------------------------------
+      /* -------------------------------------------------
+         SALES / ISSUE
+      ------------------------------------------------- */
 
       case "issue":
         return <SalesPage />;
 
-      // -------------------------------------------------
-      // STOCK REPORT
-      // -------------------------------------------------
+      /* -------------------------------------------------
+         STOCK REPORT
+      ------------------------------------------------- */
 
       case "stock":
         return <StockMaster />;
 
-      // -------------------------------------------------
-      // PURCHASE REPORT
-      // -------------------------------------------------
+      /* -------------------------------------------------
+         PURCHASE REPORT
+      ------------------------------------------------- */
 
       case "purchase":
         return <PurchaseReport />;
 
-      // -------------------------------------------------
-      // SALES REPORT
-      // -------------------------------------------------
+      /* -------------------------------------------------
+         SALES REPORT
+      ------------------------------------------------- */
 
       case "sales":
         return <SalesReport />;
 
-      // -------------------------------------------------
-      // SETTINGS
-      // -------------------------------------------------
+      /* -------------------------------------------------
+         SETTINGS
+      ------------------------------------------------- */
 
       case "settings":
         return <Settings />;
 
-      // -------------------------------------------------
-      // DASHBOARD
-      // -------------------------------------------------
+      /* -------------------------------------------------
+         DASHBOARD
+      ------------------------------------------------- */
 
       default:
         return (
@@ -266,250 +283,341 @@ export default function Home() {
     }
   };
 
-  // =====================================================
-  // MAIN LAYOUT
-  // =====================================================
+  /* =====================================================
+     MAIN LAYOUT
+  ===================================================== */
 
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        fontFamily: "Arial",
-        background: "#f3f4f6",
-      }}
-    >
-      {/* =================================================
-          SIDEBAR
-      ================================================= */}
-
+    <>
       <div
         style={{
-          width: "240px",
-          background: "#111827",
-          color: "#fff",
-          padding: "20px",
+          display: "flex",
+          minHeight: "100vh",
+          fontFamily: "Arial",
+          background: "#f3f4f6",
         }}
       >
-        <h2
+        {/* =================================================
+            SIDEBAR
+        ================================================== */}
+
+        <div
+          className="erp-sidebar"
           style={{
-            marginTop: 0,
+            width: "240px",
+            background: "#111827",
+            color: "#fff",
+            padding: "20px",
           }}
         >
-          UK EXIM ERP
-        </h2>
+          <h2
+            style={{
+              marginTop: 0,
+            }}
+          >
+            UK EXIM ERP
+          </h2>
 
-        {/* DASHBOARD */}
+          {/* DASHBOARD */}
 
-        <div
-          style={
-            activePage === "dashboard"
-              ? activeMenu
-              : menuItem
-          }
-          onClick={() =>
-            setActivePage("dashboard")
-          }
-        >
-          🏠 Dashboard
+          <div
+            style={
+              activePage === "dashboard"
+                ? activeMenu
+                : menuItem
+            }
+            onClick={() =>
+              setActivePage("dashboard")
+            }
+          >
+            🏠 Dashboard
+          </div>
+
+          {/* PRODUCT MASTER */}
+
+          <div
+            style={
+              activePage === "products"
+                ? activeMenu
+                : menuItem
+            }
+            onClick={() =>
+              setActivePage("products")
+            }
+          >
+            📦 Product Master
+          </div>
+
+          {/* CUSTOMER MASTER */}
+
+          <div
+            style={
+              activePage === "customers"
+                ? activeMenu
+                : menuItem
+            }
+            onClick={() =>
+              setActivePage("customers")
+            }
+          >
+            👥 Customer Master
+          </div>
+
+          {/* SUPPLIER MASTER */}
+
+          <div
+            style={
+              activePage === "suppliers"
+                ? activeMenu
+                : menuItem
+            }
+            onClick={() =>
+              setActivePage("suppliers")
+            }
+          >
+            🚚 Supplier Master
+          </div>
+
+          {/* PURCHASE GRN */}
+
+          <div
+            style={
+              activePage === "grn"
+                ? activeMenu
+                : menuItem
+            }
+            onClick={() =>
+              setActivePage("grn")
+            }
+          >
+            📥 Purchase (GRN)
+          </div>
+
+          {/* ISSUE SALES */}
+
+          <div
+            style={
+              activePage === "issue"
+                ? activeMenu
+                : menuItem
+            }
+            onClick={() =>
+              setActivePage("issue")
+            }
+          >
+            📤 Issue (Sales)
+          </div>
+
+          {/* STOCK REPORT */}
+
+          <div
+            style={
+              activePage === "stock"
+                ? activeMenu
+                : menuItem
+            }
+            onClick={() =>
+              setActivePage("stock")
+            }
+          >
+            📦 Stock Report
+          </div>
+
+          {/* PURCHASE REPORT */}
+
+          <div
+            style={
+              activePage === "purchase"
+                ? activeMenu
+                : menuItem
+            }
+            onClick={() =>
+              setActivePage("purchase")
+            }
+          >
+            🛒 Purchase Report
+          </div>
+
+          {/* SALES REPORT */}
+
+          <div
+            style={
+              activePage === "sales"
+                ? activeMenu
+                : menuItem
+            }
+            onClick={() =>
+              setActivePage("sales")
+            }
+          >
+            💰 Sales Report
+          </div>
+
+          {/* SETTINGS */}
+
+          <div
+            style={
+              activePage === "settings"
+                ? activeMenu
+                : menuItem
+            }
+            onClick={() =>
+              setActivePage("settings")
+            }
+          >
+            ⚙️ Settings
+          </div>
         </div>
 
-        {/* PRODUCT MASTER */}
+        {/* =================================================
+            MAIN CONTENT
+        ================================================== */}
 
         <div
-          style={
-            activePage === "products"
-              ? activeMenu
-              : menuItem
-          }
-          onClick={() =>
-            setActivePage("products")
-          }
+          className="erp-main-content"
+          style={{
+            flex: 1,
+            padding: "25px",
+          }}
         >
-          📦 Product Master
-        </div>
+          {renderPage()}
 
-        {/* CUSTOMER MASTER */}
+          {/* =================================================
+              FOOTER
+          ================================================== */}
 
-        <div
-          style={
-            activePage === "customers"
-              ? activeMenu
-              : menuItem
-          }
-          onClick={() =>
-            setActivePage("customers")
-          }
-        >
-          👥 Customer Master
-        </div>
-
-        {/* SUPPLIER MASTER */}
-
-        <div
-          style={
-            activePage === "suppliers"
-              ? activeMenu
-              : menuItem
-          }
-          onClick={() =>
-            setActivePage("suppliers")
-          }
-        >
-          🚚 Supplier Master
-        </div>
-
-        {/* PURCHASE GRN */}
-
-        <div
-          style={
-            activePage === "grn"
-              ? activeMenu
-              : menuItem
-          }
-          onClick={() =>
-            setActivePage("grn")
-          }
-        >
-          📥 Purchase (GRN)
-        </div>
-
-        {/* ISSUE SALES */}
-
-        <div
-          style={
-            activePage === "issue"
-              ? activeMenu
-              : menuItem
-          }
-          onClick={() =>
-            setActivePage("issue")
-          }
-        >
-          📤 Issue (Sales)
-        </div>
-
-        {/* STOCK REPORT */}
-
-        <div
-          style={
-            activePage === "stock"
-              ? activeMenu
-              : menuItem
-          }
-          onClick={() =>
-            setActivePage("stock")
-          }
-        >
-          📦 Stock Report
-        </div>
-
-        {/* PURCHASE REPORT */}
-
-        <div
-          style={
-            activePage === "purchase"
-              ? activeMenu
-              : menuItem
-          }
-          onClick={() =>
-            setActivePage("purchase")
-          }
-        >
-          🛒 Purchase Report
-        </div>
-
-        {/* SALES REPORT */}
-
-        <div
-          style={
-            activePage === "sales"
-              ? activeMenu
-              : menuItem
-          }
-          onClick={() =>
-            setActivePage("sales")
-          }
-        >
-          💰 Sales Report
-        </div>
-
-        {/* SETTINGS */}
-
-        <div
-          style={
-            activePage === "settings"
-              ? activeMenu
-              : menuItem
-          }
-          onClick={() =>
-            setActivePage("settings")
-          }
-        >
-          ⚙️ Settings
-        </div>
-      </div>
-
-      {/* =================================================
-          MAIN CONTENT
-      ================================================= */}
-
-      <div
-        style={{
-          flex: 1,
-          padding: "25px",
-        }}
-      >
-       {renderPage()}
-
-{activePage === "dashboard" && (
+       {activePage === "dashboard" && (
   <div
     style={{
       marginTop: "50px",
-      paddingTop: "20px",
+      paddingTop: "18px",
       borderTop: "1px solid #d1d5db",
-      textAlign: "center",
-      fontSize: "12px",
-      color: "#6b7280",
+      overflow: "hidden",
+      whiteSpace: "nowrap",
+      width: "100%",
+      boxSizing: "border-box",
     }}
   >
-    <div>
-      Designed and Developed by
-    </div>
-
     <div
       style={{
-        marginTop: "4px",
-        fontSize: "15px",
-        fontWeight: 700,
-        color: "#14532d",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "14px",
+        paddingLeft: "100%",
+        animation:
+          "ukEximFooterMove 18s linear infinite",
+        fontSize: "12px",
+        color: "#6b7280",
       }}
     >
-      Uttam Bhosale
+      {/* UK EXIM LOGO */}
+
+      <img
+        src="/uklogo.png"
+        alt="UK EXIM Logo"
+        style={{
+          width: "42px",
+          height: "42px",
+          objectFit: "contain",
+          flexShrink: 0,
+        }}
+      />
+
+      {/* DEVELOPED BY */}
+
+      <span>
+        Designed and Developed by{" "}
+        <strong
+          style={{
+            color: "#14532d",
+            fontSize: "14px",
+          }}
+        >
+          Uttam Bhosale
+        </strong>
+      </span>
+
+      <span
+        style={{
+          color: "#9ca3af",
+          fontSize: "14px",
+        }}
+      >
+        •
+      </span>
+
+      {/* AI ASSISTANT */}
+
+      <span>
+        AI Development Assistant{" "}
+        <strong
+          style={{
+            color: "#0F4C81",
+            fontSize: "13px",
+          }}
+        >
+          ChatGPT
+        </strong>
+      </span>
     </div>
 
-    <div
-      style={{
-        marginTop: "10px",
-      }}
-    >
-      AI Development Assistant
-    </div>
+    <style jsx>{`
+      @keyframes ukEximFooterMove {
+        from {
+          transform: translateX(0);
+        }
 
-    <div
-      style={{
-        marginTop: "4px",
-        fontSize: "14px",
-        fontWeight: 700,
-        color: "#0F4C81",
-      }}
-    >
-      ChatGPT
-    </div>
+        to {
+          transform: translateX(-100%);
+        }
+      }
+    `}</style>
   </div>
 )}
-</div>
-  </div>
-  );
+        </div>
+      </div>
 
+      {/* =====================================================
+          PRINT STYLE
+      ===================================================== */}
+
+      <style>{`
+        @media print {
+
+          /* HIDE ERP SIDEBAR */
+          .erp-sidebar {
+            display: none !important;
+          }
+
+          /* MAIN REPORT FULL WIDTH */
+          .erp-main-content {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+
+          /* WHITE PRINT BACKGROUND */
+          body {
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          /* HIDE INPUTS AND BUTTONS */
+          button,
+          input,
+          select {
+            display: none !important;
+          }
+
+          /* LANDSCAPE A4 */
+          @page {
+            size: A4 landscape;
+            margin: 10mm;
+          }
+        }
+      `}</style>
+    </>
+  );
 }

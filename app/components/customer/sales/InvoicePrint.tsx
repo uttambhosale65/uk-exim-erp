@@ -126,15 +126,20 @@ export default function InvoicePrint({
      GST CALCULATION
   ========================= */
 
-  const taxableAmount = Number(sale.taxableAmount || 0);
+  const taxableAmount = Number(
+    sale.taxableAmount || 0
+  );
 
-  const totalGST = Number(sale.gstAmount || 0);
+  const totalGST = Number(
+    sale.gstAmount || 0
+  );
 
   const cgstAmount = totalGST / 2;
   const sgstAmount = totalGST / 2;
 
-  const gstRate =
-    Number(sale.items?.[0]?.gst || 0);
+  const gstRate = Number(
+    sale.items?.[0]?.gst || 0
+  );
 
   const cgstRate = gstRate / 2;
   const sgstRate = gstRate / 2;
@@ -144,729 +149,793 @@ export default function InvoicePrint({
   );
 
   return (
-    <div
-      id="invoice-print"
-      style={{
-        width: "210mm",
-        maxWidth: "210mm",
-        minHeight: "297mm",
-        margin: "0 auto",
-        overflow: "visible",
-        padding: "8mm",
-        background: "#ffffff",
-        boxSizing: "border-box",
-      }}
-    >
+    <div className="invoice-page-wrapper">
 
       {/* =========================
-          HEADER
+          INVOICE
       ========================= */}
 
       <div
-        style={{
-          textAlign: "center",
-          borderBottom: "2px solid black",
-          paddingBottom: "15px",
-        }}
+        id="invoice-print"
+        className="invoice-print-page"
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "15px",
-          }}
-        >
 
-          {/* LOGO */}
+        {/* =========================
+            HEADER
+        ========================= */}
 
-          <img
-            src="/uklogo.png"
-            alt="Company Logo"
-            style={{
-              width: "120px",
-              height: "auto",
-            }}
-          />
+        <div className="invoice-header">
 
-          {/* COMPANY */}
+          <div className="invoice-logo">
+            <img
+              src="/uklogo.png"
+              alt="Company Logo"
+            />
+          </div>
 
-          <div
-            style={{
-              textAlign: "center",
-              flex: 1,
-            }}
-          >
-            <h1
-              style={{
-                margin: 0,
-                color: "#0F4C81",
-                fontSize: "34px",
-                fontWeight: "bold",
-              }}
-            >
+          <div className="company-details">
+
+            <h1>
               UK EXIM ENTERPRISES
             </h1>
 
-            <div
-              style={{
-                fontWeight: "bold",
-                marginTop: "8px",
-              }}
-            >
+            <div className="company-subtitle">
               Exporter • Importer • Supplier
             </div>
 
-            <div style={{ fontSize: "14px" }}>
+            <div>
               A-703, Vishnu Greens, City Pride School Road,
               Jadhavwadi, Chikhali, Pune - 411062,
               Maharashtra, India
             </div>
 
-            <div
-              style={{
-                fontSize: "13px",
-                marginTop: "6px",
-              }}
-            >
+            <div className="company-small">
               GSTIN : 27AJUPB0025D1ZO |
               FSSAI : 21525038000816 |
               IEC : AJUPB0025D
             </div>
 
-            <div style={{ fontSize: "13px" }}>
+            <div className="company-small">
               📞 +91 9970187185 |
               ✉️ uk37exim@gmail.com |
               🌐 www.ukeximenterprises.com
             </div>
+
           </div>
 
-          {/* TAX INVOICE */}
-
-          <div
-            style={{
-              fontSize: "32px",
-              fontWeight: "bold",
-              color: "#0F4C81",
-            }}
-          >
+          <div className="tax-invoice">
             TAX
             <br />
             INVOICE
           </div>
 
         </div>
-      </div>
 
-      {/* =========================
-          CUSTOMER DETAILS
-      ========================= */}
+        {/* =========================
+            CUSTOMER DETAILS
+        ========================= */}
 
-      <table
-        style={{
-          width: "100%",
-          marginTop: "20px",
-          borderCollapse: "collapse",
-        }}
-      >
-        <tbody>
-
-          <tr>
-            <td style={customerTd}>
-              <b>Invoice No</b>
-              <br />
-              {sale.invoiceNo}
-            </td>
-
-            <td style={customerTd}>
-              <b>Date</b>
-              <br />
-              {sale.salesDate}
-            </td>
-          </tr>
-
-          <tr>
-            <td style={customerTd}>
-              <b>Customer</b>
-              <br />
-              {sale.customerName}
-            </td>
-
-            <td style={customerTd}>
-              <b>Customer Code</b>
-              <br />
-              {sale.customerCode}
-            </td>
-          </tr>
-
-        </tbody>
-      </table>
-
-      {/* =========================
-          PRODUCT DETAILS
-      ========================= */}
-
-      <table
-        style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          marginTop: "20px",
-        }}
-      >
-        <thead>
-          <tr
-            style={{
-              background: "#0F4C81",
-              color: "#ffffff",
-            }}
-          >
-            <th style={th}>Sr.</th>
-            <th style={th}>Product Name</th>
-            <th style={th}>HSN</th>
-            <th style={th}>Unit</th>
-            <th style={th}>Qty</th>
-            <th style={th}>Rate</th>
-            <th style={th}>Amount</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {sale.items.map((item, index) => (
-            <tr
-              key={`${item.productCode}-${index}`}
-            >
-              <td style={td}>
-                {index + 1}
-              </td>
-
-              <td style={td}>
-                {item.productName}
-              </td>
-
-              <td style={td}>
-                {item.hsn}
-              </td>
-
-              <td style={td}>
-                {item.unit}
-              </td>
-
-              <td
-                style={{
-                  ...td,
-                  textAlign: "center",
-                }}
-              >
-                {item.qty}
-              </td>
-
-              <td
-                style={{
-                  ...td,
-                  textAlign: "right",
-                }}
-              >
-                ₹{Number(item.rate || 0).toFixed(2)}
-              </td>
-
-              <td
-                style={{
-                  ...td,
-                  textAlign: "right",
-                  fontWeight: "bold",
-                }}
-              >
-                ₹{Number(item.amount || 0).toFixed(2)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {/* =========================
-          GST SUMMARY
-      ========================= */}
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          marginTop: "20px",
-        }}
-      >
-        <table
-          style={{
-            width: "380px",
-            borderCollapse: "collapse",
-          }}
-        >
+        <table className="customer-table">
           <tbody>
 
             <tr>
-              <td style={td}>
-                <b>Taxable Amount</b>
+              <td>
+                <b>Invoice No</b>
+                <br />
+                {sale.invoiceNo}
               </td>
 
-              <td
-                style={{
-                  ...td,
-                  textAlign: "right",
-                }}
-              >
-                ₹{taxableAmount.toFixed(2)}
-              </td>
-            </tr>
-
-            <tr>
-              <td style={td}>
-                CGST @ {cgstRate.toFixed(2)}%
-              </td>
-
-              <td
-                style={{
-                  ...td,
-                  textAlign: "right",
-                }}
-              >
-                ₹{cgstAmount.toFixed(2)}
+              <td>
+                <b>Date</b>
+                <br />
+                {sale.salesDate}
               </td>
             </tr>
 
             <tr>
-              <td style={td}>
-                SGST @ {sgstRate.toFixed(2)}%
+              <td>
+                <b>Customer</b>
+                <br />
+                {sale.customerName}
               </td>
 
-              <td
-                style={{
-                  ...td,
-                  textAlign: "right",
-                }}
-              >
-                ₹{sgstAmount.toFixed(2)}
-              </td>
-            </tr>
-
-            <tr>
-              <td
-                style={{
-                  ...td,
-                  fontWeight: "bold",
-                }}
-              >
-                Total GST
-              </td>
-
-              <td
-                style={{
-                  ...td,
-                  textAlign: "right",
-                  fontWeight: "bold",
-                }}
-              >
-                ₹{totalGST.toFixed(2)}
-              </td>
-            </tr>
-
-            <tr>
-              <td
-                style={{
-                  ...td,
-                  fontWeight: "bold",
-                  fontSize: "15px",
-                }}
-              >
-                Grand Total
-              </td>
-
-              <td
-                style={{
-                  ...td,
-                  textAlign: "right",
-                  fontWeight: "bold",
-                  color: "#0F4C81",
-                  fontSize: "18px",
-                }}
-              >
-                ₹{grandTotal.toFixed(2)}
+              <td>
+                <b>Customer Code</b>
+                <br />
+                {sale.customerCode}
               </td>
             </tr>
 
           </tbody>
         </table>
-      </div>
 
-      {/* =========================
-          AMOUNT IN WORDS
-      ========================= */}
+        {/* =========================
+            PRODUCT DETAILS
+        ========================= */}
 
-      <div
-        style={{
-          border: "1px solid black",
-          padding: "10px",
-          marginTop: "20px",
-        }}
-      >
-        <b>Amount in Words :</b>
+        <table className="product-table">
+
+          <thead>
+            <tr>
+              <th>Sr.</th>
+              <th>Product Name</th>
+              <th>HSN</th>
+              <th>Unit</th>
+              <th>Qty</th>
+              <th>Rate</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            {sale.items.map((item, index) => (
+              <tr
+                key={`${item.productCode}-${index}`}
+              >
+                <td className="center">
+                  {index + 1}
+                </td>
+
+                <td>
+                  {item.productName}
+                </td>
+
+                <td className="center">
+                  {item.hsn}
+                </td>
+
+                <td className="center">
+                  {item.unit}
+                </td>
+
+                <td className="center">
+                  {item.qty}
+                </td>
+
+                <td className="right">
+                  ₹{Number(item.rate || 0).toFixed(2)}
+                </td>
+
+                <td className="right bold">
+                  ₹{Number(item.amount || 0).toFixed(2)}
+                </td>
+
+              </tr>
+            ))}
+
+          </tbody>
+
+        </table>
+
+        {/* =========================
+            GST SUMMARY
+        ========================= */}
+
+        <div className="gst-wrapper">
+
+          <table className="gst-table">
+
+            <tbody>
+
+              <tr>
+                <td>
+                  <b>Taxable Amount</b>
+                </td>
+
+                <td className="right">
+                  ₹{taxableAmount.toFixed(2)}
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  CGST @ {cgstRate.toFixed(2)}%
+                </td>
+
+                <td className="right">
+                  ₹{cgstAmount.toFixed(2)}
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  SGST @ {sgstRate.toFixed(2)}%
+                </td>
+
+                <td className="right">
+                  ₹{sgstAmount.toFixed(2)}
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <b>Total GST</b>
+                </td>
+
+                <td className="right bold">
+                  ₹{totalGST.toFixed(2)}
+                </td>
+              </tr>
+
+              <tr className="grand-total-row">
+                <td>
+                  Grand Total
+                </td>
+
+                <td className="right">
+                  ₹{grandTotal.toFixed(2)}
+                </td>
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+        {/* =========================
+            AMOUNT IN WORDS
+        ========================= */}
+
+        <div className="amount-words">
+
+          <b>Amount in Words :</b>
+
+          <div>
+            {numberToWords(grandTotal)}
+          </div>
+
+        </div>
+
+        {/* =========================
+            REMARKS
+        ========================= */}
+
+        <div className="remarks">
+
+          <b>Remarks :</b>
+
+          <div>
+            {sale.remarks || "-"}
+          </div>
+
+        </div>
+
+        {/* =========================
+            SIGNATURE
+        ========================= */}
+
+        <div className="signature-section">
+
+          <div>
+            Customer Signature
+          </div>
+
+          <div className="authorized-signature">
+
+            <div>For</div>
+
+            <b>
+              UK EXIM ENTERPRISES
+            </b>
+
+            <div className="signature-space"></div>
+
+            <div>
+              Authorized Signatory
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* =========================
+            TERMS & CONDITIONS
+        ========================= */}
+
+        <div className="terms">
+
+          <h3>
+            Terms & Conditions
+          </h3>
+
+          <ol>
+
+            <li>
+              Goods once sold will not be taken back.
+            </li>
+
+            <li>
+              Subject to Pune Jurisdiction only.
+            </li>
+
+            <li>
+              Please check the material before accepting
+              delivery.
+            </li>
+
+            <li>
+              Interest @18% p.a. will be charged on overdue
+              bills.
+            </li>
+
+            <li>
+              Thank you for your valuable business.
+            </li>
+
+          </ol>
+
+        </div>
+
+        {/* =========================
+            FOOTER
+        ========================= */}
+
+        <div className="invoice-footer">
+
+          <div>
+            This is a Computer Generated GST Invoice.
+          </div>
+
+          <div className="developer-credit">
+            Designed & Developed by
+            <br />
+            <b>Uttam Bhosale</b>
+            <br />
+            AI Development Assistance
+            <br />
+            <b>ChatGPT (OpenAI)</b>
+          </div>
+
+        </div>
+
+        {/* =========================
+            ACTION BUTTONS
+        ========================= */}
 
         <div
-          style={{
-            marginTop: "8px",
-            fontWeight: "bold",
-            color: "#0F4C81",
-          }}
+          className="invoice-actions"
         >
-          {numberToWords(grandTotal)}
-        </div>
-      </div>
 
-      {/* =========================
-          REMARKS
-      ========================= */}
-
-      <div
-        style={{
-          border: "1px solid black",
-          padding: "10px",
-          marginTop: "15px",
-        }}
-      >
-        <b>Remarks :</b>
-        <br />
-        {sale.remarks || "-"}
-      </div>
-
-      {/* =========================
-          SIGNATURE
-      ========================= */}
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginTop: "60px",
-        }}
-      >
-        <div>
-          Customer Signature
-        </div>
-
-        <div
-          style={{
-            textAlign: "center",
-          }}
-        >
-          For
-          <br />
-          <b>UK EXIM ENTERPRISES</b>
-          <br />
-          <br />
-          <br />
-          Authorized Signatory
-        </div>
-      </div>
-
-      {/* =========================
-          TERMS & CONDITIONS
-      ========================= */}
-
-      <div
-        style={{
-          marginTop: "30px",
-          border: "1px solid #000",
-          padding: "10px",
-        }}
-      >
-        <h3
-          style={{
-            margin: "0 0 10px 0",
-            fontSize: "16px",
-          }}
-        >
-          Terms & Conditions
-        </h3>
-
-        <ol
-          style={{
-            margin: 0,
-            paddingLeft: "20px",
-            lineHeight: "24px",
-            fontSize: "13px",
-          }}
-        >
-          <li>
-            Goods once sold will not be taken back.
-          </li>
-
-          <li>
-            Subject to Pune Jurisdiction only.
-          </li>
-
-          <li>
-            Please check the material before accepting
-            delivery.
-          </li>
-
-          <li>
-            Interest @18% p.a. will be charged on overdue
-            bills.
-          </li>
-
-          <li>
-            Thank you for your valuable business.
-          </li>
-        </ol>
-      </div>
-
-      {/* =========================
-          ACTION BUTTONS
-      ========================= */}
-
-      <div
-        className="invoice-actions"
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          gap: "15px",
-          marginTop: "30px",
-        }}
-      >
-        <button
-          type="button"
-          onClick={printInvoice}
-          style={{
-            padding: "10px 20px",
-            background: "#2563eb",
-            color: "#fff",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
-          🖨️ Print Invoice
-        </button>
-
-        {onClose && (
           <button
             type="button"
-            onClick={onClose}
-            style={{
-              padding: "10px 20px",
-              background: "#6b7280",
-              color: "#fff",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
+            onClick={printInvoice}
           >
-            ❌ Close
+            🖨️ Print Invoice
           </button>
-        )}
+
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="close-button"
+            >
+              ❌ Close
+            </button>
+          )}
+
+        </div>
+
       </div>
 
-      {/* =========================
-          FOOTER
-      ========================= */}
+      {/* =================================================
+          SCREEN + PRINT CSS
+      ================================================= */}
 
-      <div
-        style={{
-          marginTop: "25px",
-          textAlign: "center",
-          fontSize: "12px",
-          color: "#555",
-        }}
-      >
-        <div>
-          This is a Computer Generated GST Invoice.
-        </div>
+      <style jsx>{`
 
-        <div style={{ marginTop: "8px" }}>
-          Designed & Developed by
-        </div>
+        * {
+          box-sizing: border-box;
+        }
 
-        <b>Uttam Bhosale</b>
+        .invoice-page-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  background: #f3f4f6;
+  padding: 20px 0;
+  margin: 0 auto;
+}
 
-        <div>
-          AI Development Assistance
-        </div>
+        .invoice-print-page {
+          width: 190mm;
+          min-height: 277mm;
+          background: #ffffff;
+          padding: 7mm;
+          color: #000000;
+          font-family: Arial, Helvetica, sans-serif;
+          font-size: 11px;
+          box-sizing: border-box;
+          margin: 0 auto;
+        }
 
-        <b>ChatGPT (OpenAI)</b>
-      </div>
+        /* =========================
+           HEADER
+        ========================= */
 
-      {/* =========================
-          SCREEN + PRINT STYLE
-      ========================= */}
+        .invoice-header {
+          display: grid;
+          grid-template-columns: 75px 1fr 85px;
+          align-items: center;
+          column-gap: 8px;
+          border-bottom: 1.5px solid #000;
+          padding-bottom: 7px;
+        }
 
-      <style>
-        {`
+        .invoice-logo {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
 
-          /* =========================================
-             NORMAL SCREEN VIEW
-             ONLY SCREEN IS SCALED DOWN
-             PRINT IS NOT AFFECTED
-          ========================================= */
+        .invoice-logo img {
+          width: 65px;
+          height: auto;
+          display: block;
+        }
 
-          @media screen {
+        .company-details {
+          text-align: center;
+          line-height: 1.25;
+          font-size: 9px;
+        }
 
-            #invoice-print {
-              zoom: 0.72 !important;
-              margin: 0 auto !important;
-            }
+        .company-details h1 {
+          margin: 0;
+          color: #0f4c81;
+          font-size: 20px;
+          font-weight: 800;
+          line-height: 1.1;
+        }
 
+        .company-subtitle {
+          font-weight: 700;
+          font-size: 9px;
+          margin-top: 3px;
+        }
+
+        .company-small {
+          font-size: 8px;
+          margin-top: 2px;
+        }
+
+        .tax-invoice {
+          text-align: center;
+          color: #0f4c81;
+          font-size: 20px;
+          line-height: 1.05;
+          font-weight: 800;
+        }
+
+        /* =========================
+           TABLES
+        ========================= */
+
+        .customer-table,
+        .product-table,
+        .gst-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        .customer-table {
+          margin-top: 8px;
+        }
+
+        .customer-table td {
+          border: 1px solid #000;
+          padding: 5px 7px;
+          font-size: 9px;
+          line-height: 1.25;
+        }
+
+        .product-table {
+          margin-top: 8px;
+        }
+
+        .product-table th {
+          border: 1px solid #000;
+          background: #0f4c81;
+          color: #ffffff;
+          padding: 5px 4px;
+          font-size: 8px;
+          font-weight: 700;
+          text-align: center;
+          white-space: nowrap;
+        }
+
+        .product-table td {
+          border: 1px solid #000;
+          padding: 5px 4px;
+          font-size: 8.5px;
+          line-height: 1.2;
+        }
+
+        .product-table th:nth-child(1) {
+          width: 7%;
+        }
+
+        .product-table th:nth-child(2) {
+          width: 34%;
+        }
+
+        .product-table th:nth-child(3) {
+          width: 14%;
+        }
+
+        .product-table th:nth-child(4) {
+          width: 10%;
+        }
+
+        .product-table th:nth-child(5) {
+          width: 8%;
+        }
+
+        .product-table th:nth-child(6) {
+          width: 13%;
+        }
+
+        .product-table th:nth-child(7) {
+          width: 14%;
+        }
+
+        .center {
+          text-align: center;
+        }
+
+        .right {
+          text-align: right;
+        }
+
+        .bold {
+          font-weight: 700;
+        }
+
+        /* =========================
+           GST
+        ========================= */
+
+        .gst-wrapper {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: 7px;
+        }
+
+        .gst-table {
+          width: 48%;
+        }
+
+        .gst-table td {
+          border: 1px solid #000;
+          padding: 4px 6px;
+          font-size: 8.5px;
+          line-height: 1.15;
+        }
+
+        .grand-total-row td {
+          font-size: 11px;
+          font-weight: 800;
+          color: #0f4c81;
+        }
+
+        /* =========================
+           AMOUNT / REMARKS
+        ========================= */
+
+        .amount-words,
+        .remarks {
+          border: 1px solid #000;
+          padding: 6px 8px;
+          margin-top: 7px;
+          font-size: 8.5px;
+          line-height: 1.3;
+        }
+
+        .amount-words > div {
+          margin-top: 3px;
+          font-weight: 700;
+          color: #0f4c81;
+        }
+
+        .remarks > div {
+          margin-top: 3px;
+          min-height: 15px;
+        }
+
+        /* =========================
+           SIGNATURE
+        ========================= */
+
+        .signature-section {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          margin-top: 18px;
+          font-size: 8.5px;
+        }
+
+        .authorized-signature {
+          text-align: center;
+          min-width: 160px;
+        }
+
+        .signature-space {
+          height: 22px;
+        }
+
+        /* =========================
+           TERMS
+        ========================= */
+
+        .terms {
+          border: 1px solid #000;
+          padding: 6px 8px;
+          margin-top: 12px;
+        }
+
+        .terms h3 {
+          margin: 0 0 4px 0;
+          font-size: 9px;
+        }
+
+        .terms ol {
+          margin: 0;
+          padding-left: 17px;
+          font-size: 7.5px;
+          line-height: 1.35;
+        }
+
+        .terms li {
+          margin: 0;
+          padding: 0;
+        }
+
+        /* =========================
+           FOOTER
+        ========================= */
+
+        .invoice-footer {
+          text-align: center;
+          margin-top: 8px;
+          font-size: 7.5px;
+          color: #555;
+          line-height: 1.3;
+        }
+
+        .developer-credit {
+          margin-top: 3px;
+        }
+
+        /* =========================
+           BUTTONS
+        ========================= */
+
+        .invoice-actions {
+          display: flex;
+          justify-content: center;
+          gap: 12px;
+          margin-top: 18px;
+        }
+
+        .invoice-actions button {
+          padding: 9px 18px;
+          background: #2563eb;
+          color: #ffffff;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 700;
+          font-size: 12px;
+        }
+
+        .invoice-actions .close-button {
+          background: #6b7280;
+        }
+
+        /* =================================================
+           PRINT
+        ================================================= */
+
+        @page {
+          size: A4 portrait;
+          margin: 0;
+        }
+
+        @media print {
+
+          html,
+          body {
+            width: 210mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
           }
 
-
-          /* =========================================
-             PRINT SETTINGS
-             KEEPING OUR WORKING 1-PAGE PRINT
-          ========================================= */
-
-          @page {
-            size: A4;
-            margin: 0;
+          body {
+            visibility: hidden !important;
           }
 
-          @media print {
-
-            html {
-              width: 210mm !important;
-              height: 297mm !important;
-              margin: 0 !important;
-              padding: 0 !important;
-            }
-
-            body {
-              width: 210mm !important;
-              height: 297mm !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              background: #ffffff !important;
-              overflow: hidden !important;
-            }
-
-            .invoice-page-wrapper {
-              min-height: 0 !important;
-              height: auto !important;
-              padding: 0 !important;
-              margin: 0 !important;
-              background: #ffffff !important;
-              overflow: visible !important;
-            }
-
-            body {
-              visibility: hidden !important;
-            }
-
-            #invoice-print {
-              visibility: visible !important;
-
-              position: absolute !important;
-
-              left: 0 !important;
-              top: 0 !important;
-
-              width: 210mm !important;
-              height: 290mm !important;
-              max-height: 290mm !important;
-
-              max-width: none !important;
-              min-height: 0 !important;
-
-              margin: 0 !important;
-              padding: 5mm !important;
-
-              box-sizing: border-box !important;
-
-              background: #ffffff !important;
-
-              overflow: hidden !important;
-
-              zoom: 0.90 !important;
-            }
-
-            #invoice-print * {
-              visibility: visible !important;
-            }
-
-            .invoice-actions {
-              display: none !important;
-            }
-
-            #invoice-print table {
-              width: 100% !important;
-              border-collapse: collapse !important;
-
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-            }
-
-            #invoice-print tr {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-            }
-
-            #invoice-print th,
-            #invoice-print td {
-              padding: 4px !important;
-              font-size: 10px !important;
-            }
-
-            #invoice-print h1 {
-              font-size: 25px !important;
-            }
-
-            #invoice-print h3 {
-              font-size: 13px !important;
-            }
-
-            #invoice-print img {
-              max-width: 90px !important;
-              height: auto !important;
-            }
-
-            #invoice-print ol {
-              margin: 0 !important;
-              padding-left: 18px !important;
-              line-height: 15px !important;
-              font-size: 9px !important;
-            }
-
-            #invoice-print,
-            #invoice-print * {
-              page-break-before: avoid !important;
-              page-break-after: avoid !important;
-            }
-
+          .invoice-page-wrapper {
+            visibility: visible !important;
+            width: 210mm !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: flex !important;
+justify-content: center !important;
+align-items: flex-start !important;
+            background: #ffffff !important;
           }
 
-        `}
-      </style>
+          #invoice-print {
+            visibility: visible !important;
+            width: 190mm !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            margin: 0 auto !important;
+            padding: 5mm !important;
+            background: #ffffff !important;
+            overflow: visible !important;
+
+            /* IMPORTANT:
+               No zoom
+               No transform
+               No absolute positioning
+            */
+           margin: 0 auto !important;
+
+position: absolute !important;
+left: 50% !important;
+top: 10 !important;
+transform: translate(-50%, 10mm) !important;
+            zoom: 1 !important;
+          }
+
+          #invoice-print * {
+            visibility: visible !important;
+          }
+
+          .invoice-actions {
+            display: none !important;
+          }
+
+          .invoice-header,
+          .customer-table,
+          .product-table,
+          .gst-wrapper,
+          .amount-words,
+          .remarks,
+          .signature-section,
+          .terms,
+          .invoice-footer {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+
+          table {
+            break-inside: auto;
+            page-break-inside: auto;
+          }
+
+          tr {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+
+          .product-table thead {
+            display: table-header-group;
+          }
+
+          .product-table tfoot {
+            display: table-footer-group;
+          }
+
+        }
+
+      `}</style>
 
     </div>
   );
 }
-
-/* =========================
-   TABLE STYLES
-========================= */
-
-const th: React.CSSProperties = {
-  border: "1px solid #000",
-  padding: "8px",
-  textAlign: "center",
-  fontWeight: "bold",
-  fontSize: "13px",
-};
-
-const td: React.CSSProperties = {
-  border: "1px solid #000",
-  padding: "8px",
-  fontSize: "13px",
-};
-
-const customerTd: React.CSSProperties = {
-  border: "1px solid black",
-  padding: "10px",
-};
