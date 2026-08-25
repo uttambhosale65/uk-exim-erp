@@ -2,6 +2,10 @@ import { Stock } from "./StockTypes";
 
 const STORAGE_KEY = "uk-exim-stock";
 
+/* =========================
+   LOAD STOCK
+========================= */
+
 export function loadStock(): Stock[] {
   if (typeof window === "undefined") return [];
 
@@ -15,6 +19,10 @@ export function loadStock(): Stock[] {
   }
 }
 
+/* =========================
+   SAVE STOCK
+========================= */
+
 export function saveStock(stock: Stock[]): void {
   if (typeof window === "undefined") return;
 
@@ -27,6 +35,10 @@ export function saveStock(stock: Stock[]): void {
     console.error("Error saving stock:", error);
   }
 }
+
+/* =========================
+   NEXT STOCK ID
+========================= */
 
 export function getNextStockId(
   stock: Stock[]
@@ -72,22 +84,25 @@ export function updateStock(
     stock[index].purchaseQty += qty;
 
     stock[index].currentStock =
-      stock[index].openingStock +
-      stock[index].purchaseQty -
-      stock[index].salesQty;
-  } else {
-    stock.push({
-      id: getNextStockId(stock),
-      productCode,
-      productName,
-      hsn,
-      unit,
-      openingStock: 0,
-      purchaseQty: qty,
-      salesQty: 0,
-      currentStock: qty,
-    });
+      Number(stock[index].openingStock || 0) +
+      Number(stock[index].purchaseQty || 0) -
+      Number(stock[index].salesQty || 0);
+
+    saveStock(stock);
+    return;
   }
+
+  stock.push({
+    id: getNextStockId(stock),
+    productCode,
+    productName,
+    hsn,
+    unit,
+    openingStock: 0,
+    purchaseQty: qty,
+    salesQty: 0,
+    currentStock: qty,
+  });
 
   saveStock(stock);
 }
@@ -113,15 +128,16 @@ export function reversePurchaseStock(
   stock[index].purchaseQty =
     Math.max(
       0,
-      stock[index].purchaseQty - qty
+      Number(stock[index].purchaseQty || 0) -
+        Number(qty || 0)
     );
 
   stock[index].currentStock =
     Math.max(
       0,
-      stock[index].openingStock +
-        stock[index].purchaseQty -
-        stock[index].salesQty
+      Number(stock[index].openingStock || 0) +
+        Number(stock[index].purchaseQty || 0) -
+        Number(stock[index].salesQty || 0)
     );
 
   saveStock(stock);
@@ -144,12 +160,14 @@ export function reduceStock(
 
   if (index === -1) return;
 
-  stock[index].salesQty += qty;
+  stock[index].salesQty =
+    Number(stock[index].salesQty || 0) +
+    Number(qty || 0);
 
   stock[index].currentStock =
-    stock[index].openingStock +
-    stock[index].purchaseQty -
-    stock[index].salesQty;
+    Number(stock[index].openingStock || 0) +
+    Number(stock[index].purchaseQty || 0) -
+    Number(stock[index].salesQty || 0);
 
   if (stock[index].currentStock < 0) {
     stock[index].currentStock = 0;
@@ -159,7 +177,7 @@ export function reduceStock(
 }
 
 /* =========================
-   DELETE STOCK
+   DELETE STOCK BY ID
 ========================= */
 
 export function deleteStock(
@@ -173,6 +191,25 @@ export function deleteStock(
   saveStock(updatedStock);
 
   return updatedStock;
+}
+
+/* =========================
+   DELETE STOCK BY PRODUCT CODE
+   PRODUCT DELETE → STOCK DELETE
+========================= */
+
+export function deleteStockByProductCode(
+  productCode: string
+): void {
+  const stock = loadStock();
+
+  const updatedStock =
+    stock.filter(
+      (item) =>
+        item.productCode !== productCode
+    );
+
+  saveStock(updatedStock);
 }
 
 /* =========================
@@ -202,7 +239,7 @@ export function getCurrentStock(
   );
 
   return item
-    ? item.currentStock
+    ? Number(item.currentStock || 0)
     : 0;
 }
 
@@ -222,9 +259,10 @@ export function resetStock(): void {
     );
   }
 }
+
 /* =========================
    PRODUCT MASTER → STOCK
-   OPENING STOCK
+   OPENING STOCK SYNC
 ========================= */
 
 export function syncProductToStock(
@@ -238,19 +276,61 @@ export function syncProductToStock(
   }
 ): void {
   const stock = loadStock();
-console.log("🔥 SYNC PRODUCT TO STOCK:", product);
-console.log("🔥 STOCK BEFORE SYNC:", loadStock());
+
   const index = stock.findIndex(
     (item) =>
       item.productCode === product.code
   );
 
-  /* Product already exists in Stock */
+  /* =========================
+     PRODUCT ALREADY EXISTS
+     UPDATE PRODUCT DETAILS
+     + OPENING STOCK
+  ========================= */
+
   if (index >= 0) {
+    stock[index].productName =
+      product.name;
+
+    stock[index].hsn =
+      product.hsn;
+
+    stock[index].unit =
+      product.unit;
+
+    /*
+      Product Master Opening Stock
+      becomes Stock Master Opening Stock.
+    */
+
+    stock[index].openingStock =
+      Number(product.stock) || 0;
+
+    /*
+      IMPORTANT:
+      Current Stock is always:
+
+      Opening
+      + Purchase
+      - Sales
+    */
+
+    stock[index].currentStock =
+      Math.max(
+        0,
+        Number(stock[index].openingStock || 0) +
+          Number(stock[index].purchaseQty || 0) -
+          Number(stock[index].salesQty || 0)
+      );
+
+    saveStock(stock);
+
     return;
   }
 
-  /* Create new Stock record */
+  /* =========================
+     NEW PRODUCT
+  ========================= */
 
   const opening =
     Number(product.stock) || 0;
@@ -259,13 +339,17 @@ console.log("🔥 STOCK BEFORE SYNC:", loadStock());
     id: getNextStockId(stock),
 
     productCode: product.code,
+
     productName: product.name,
 
     hsn: product.hsn,
+
     unit: product.unit,
 
     openingStock: opening,
+
     purchaseQty: 0,
+
     salesQty: 0,
 
     currentStock: opening,

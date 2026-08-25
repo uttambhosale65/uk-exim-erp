@@ -113,7 +113,7 @@ export default function Home() {
         (total, purchase) =>
           total +
           Number(
-            (purchase as any).netAmount ?? 0
+            purchase.totalNetAmount ?? 0
           ),
         0
       ),
@@ -548,17 +548,7 @@ export default function Home() {
 
       {/* AI ASSISTANT */}
 
-      <span>
-        AI Development Assistant{" "}
-        <strong
-          style={{
-            color: "#0F4C81",
-            fontSize: "13px",
-          }}
-        >
-          ChatGPT
-        </strong>
-      </span>
+      
     </div>
 
     <style jsx>{`

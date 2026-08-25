@@ -11,6 +11,7 @@ import {
 } from "./components/ProductStorage";
 import {
   syncProductToStock,
+  deleteStockByProductCode,
 } from "../components/stock/StockStorage";
 
 export default function ProductPage() {

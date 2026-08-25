@@ -29,7 +29,7 @@ export type Sales = {
   salesNo: string;
   salesDate: string;
   invoiceNo: string;
-
+  invoiceType: "GST" | "NON_GST";
   // Customer
   customerCode: string;
   customerName: string;

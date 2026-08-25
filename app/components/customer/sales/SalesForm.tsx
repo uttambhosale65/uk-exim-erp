@@ -51,32 +51,45 @@ const [customerSearch, setCustomerSearch] =
      AUTO INVOICE NUMBER
   ========================= */
 
-  const getNextInvoiceNo = (): string => {
-    const sales = loadSales();
+ const getNextInvoiceNo = (
+  invoiceType: "GST" | "NON_GST"
+): string => {
+  const sales = loadSales();
 
-    if (!sales || sales.length === 0) {
-      return "INV-0001";
+  const year = new Date().getFullYear().toString().slice(-2);
+
+  const prefix =
+    invoiceType === "GST"
+      ? `UK${year}`
+      : `UKN${year}`;
+
+  let maxNumber = 0;
+
+  sales.forEach((sale) => {
+    if (sale.invoiceType !== invoiceType) {
+      return;
     }
 
-    let maxNumber = 0;
+    const match =
+      sale.invoiceNo?.match(
+        invoiceType === "GST"
+          ? new RegExp(`^UK${year}(\\d+)$`)
+          : new RegExp(`^UKN${year}(\\d+)$`)
+      );
 
-    sales.forEach((sale) => {
-      const match =
-        sale.invoiceNo?.match(/INV-(\d+)/);
+    if (match) {
+      const number = Number(match[1]);
 
-      if (match) {
-        const number = Number(match[1]);
-
-        if (number > maxNumber) {
-          maxNumber = number;
-        }
+      if (number > maxNumber) {
+        maxNumber = number;
       }
-    });
+    }
+  });
 
-    return `INV-${String(
-      maxNumber + 1
-    ).padStart(4, "0")}`;
-  };
+  return `${prefix}${String(
+    maxNumber + 1
+  ).padStart(4, "0")}`;
+};
 
   /* =========================
      EMPTY ITEM
@@ -114,8 +127,8 @@ const [customerSearch, setCustomerSearch] =
 
     salesDate: getToday(),
 
-    invoiceNo: getNextInvoiceNo(),
-
+    invoiceNo: getNextInvoiceNo("NON_GST"),
+    invoiceType: "NON_GST",
     customerCode: "",
     customerName: "",
 
@@ -198,58 +211,70 @@ const [customerSearch, setCustomerSearch] =
   /* =========================
      ITEM CALCULATION
   ========================= */
+const calculateItem = (
+  item: SalesItem,
+  invoiceType: "GST" | "NON_GST" = sale.invoiceType
+): SalesItem => {
 
-  const calculateItem = (
-    item: SalesItem
-  ): SalesItem => {
+  const qty =
+    Number(item.qty) || 0;
 
-    const qty =
-      Number(item.qty) || 0;
+  const rate =
+    Number(item.rate) || 0;
 
-    const rate =
-      Number(item.rate) || 0;
+  const amount =
+    qty * rate;
 
-    const gst =
-      Number(item.gst) || 0;
+  // =========================
+  // GST / NON-GST CALCULATION
+  // =========================
 
-    const amount =
-      qty * rate;
+  const gst =
+    invoiceType === "GST"
+      ? Number(item.gst) || 0
+      : 0;
 
-    const gstAmount =
-      (amount * gst) / 100;
+  const gstAmount =
+    invoiceType === "GST"
+      ? (amount * gst) / 100
+      : 0;
 
-    const cgst =
-      gstAmount / 2;
+  const cgst =
+    invoiceType === "GST"
+      ? gstAmount / 2
+      : 0;
 
-    const sgst =
-      gstAmount / 2;
+  const sgst =
+    invoiceType === "GST"
+      ? gstAmount / 2
+      : 0;
 
-    const grandTotal =
-      amount + gstAmount;
+  const grandTotal =
+    amount + gstAmount;
 
-    return {
-      ...item,
+  return {
+    ...item,
 
-      qty,
-      rate,
-      gst,
+    qty,
+    rate,
 
+    gst,
+
+    amount,
+
+    taxableAmount:
       amount,
 
-      taxableAmount:
-        amount,
+    gstAmount,
 
-      gstAmount,
+    cgst,
+    sgst,
 
-      cgst,
-      sgst,
+    igst: 0,
 
-      igst: 0,
-
-      grandTotal,
-    };
+    grandTotal,
   };
-
+};
   /* =========================
      UPDATE ITEM
   ========================= */
@@ -600,29 +625,128 @@ const [customerSearch, setCustomerSearch] =
       };
     });
   };
+ 
   /* =========================
      GENERAL FIELD CHANGE
   ========================= */
+const handleChange = (
+  e: React.ChangeEvent<
+    HTMLInputElement |
+    HTMLSelectElement |
+    HTMLTextAreaElement
+  >
+) => {
 
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement |
-      HTMLSelectElement |
-      HTMLTextAreaElement
-    >
-  ) => {
+  const {
+    name,
+    value,
+  } = e.target;
 
-    const {
-      name,
-      value,
-    } = e.target;
+  if (name === "invoiceType") {
 
-    setSale((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+    const invoiceType =
+      value as "GST" | "NON_GST";
 
+    setSale((prev) => {
+
+      const updatedItems =
+        prev.items.map((item) => {
+
+          // GST Invoice
+          if (invoiceType === "GST") {
+
+            const gstRate =
+              Number(item.gst) > 0
+                ? Number(item.gst)
+                : 5;
+
+            return calculateItem(
+              {
+                ...item,
+                gst: gstRate,
+              },
+              "GST"
+            );
+          }
+
+          // NON-GST Invoice
+          return calculateItem(
+            {
+              ...item,
+              gst: 0,
+            },
+            "NON_GST"
+          );
+        });
+
+      const taxableAmount =
+        updatedItems.reduce(
+          (sum, item) =>
+            sum + item.taxableAmount,
+          0
+        );
+
+      const gstAmount =
+        updatedItems.reduce(
+          (sum, item) =>
+            sum + item.gstAmount,
+          0
+        );
+
+      const cgst =
+        updatedItems.reduce(
+          (sum, item) =>
+            sum + item.cgst,
+          0
+        );
+
+      const sgst =
+        updatedItems.reduce(
+          (sum, item) =>
+            sum + item.sgst,
+          0
+        );
+
+      const grandTotal =
+        updatedItems.reduce(
+          (sum, item) =>
+            sum + item.grandTotal,
+          0
+        );
+
+      return {
+        ...prev,
+
+        invoiceType,
+
+        invoiceNo:
+          getNextInvoiceNo(invoiceType),
+
+        items:
+          updatedItems,
+
+        taxableAmount,
+
+        gstAmount,
+
+        cgst,
+
+        sgst,
+
+        igst: 0,
+
+        grandTotal,
+      };
+    });
+
+    return;
+  }
+
+  setSale((prev) => ({
+    ...prev,
+    [name]: value,
+  }));
+};
   /* =========================
      SUBMIT
   ========================= */
@@ -687,8 +811,7 @@ const [customerSearch, setCustomerSearch] =
 
       invoiceNo:
         sale.invoiceNo ||
-        getNextInvoiceNo(),
-
+       getNextInvoiceNo("NON_GST"),
       updatedAt: now,
 
       items:
@@ -850,8 +973,7 @@ const [customerSearch, setCustomerSearch] =
               "grid",
 
             gridTemplateColumns:
-              "repeat(4, minmax(0, 1fr))",
-
+  "repeat(5, minmax(0, 1fr))",
             gap:
               "8px",
 
@@ -964,7 +1086,28 @@ const [customerSearch, setCustomerSearch] =
             />
 
           </div>
+{/* INVOICE TYPE */}
 
+<div style={fieldStyle}>
+  <label style={labelStyle}>
+    Invoice Type
+  </label>
+
+  <select
+    name="invoiceType"
+    value={sale.invoiceType}
+    onChange={handleChange}
+    style={inputStyle}
+  >
+    <option value="GST">
+      GST Invoice
+    </option>
+
+    <option value="NON_GST">
+      Without GST
+    </option>
+  </select>
+</div>
           {/* CUSTOMER */}
 
           <div

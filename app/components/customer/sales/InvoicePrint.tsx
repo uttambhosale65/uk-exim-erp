@@ -311,7 +311,7 @@ export default function InvoicePrint({
         {/* =========================
             GST SUMMARY
         ========================= */}
-
+        sale.invoiceType === "GST" && (
         <div className="gst-wrapper">
 
           <table className="gst-table">
@@ -482,10 +482,7 @@ export default function InvoicePrint({
             Designed & Developed by
             <br />
             <b>Uttam Bhosale</b>
-            <br />
-            AI Development Assistance
-            <br />
-            <b>ChatGPT (OpenAI)</b>
+            
           </div>
 
         </div>

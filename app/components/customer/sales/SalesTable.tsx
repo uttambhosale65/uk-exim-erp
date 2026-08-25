@@ -21,56 +21,79 @@ export default function SalesTable({
   onDelete,
   onInvoice,
 }: SalesTableProps) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] =
+    useState("");
 
   const [selectedSale, setSelectedSale] =
     useState<Sales | null>(null);
 
+  /* =====================================================
+     SORT + SEARCH SALES
+     नवीन Sale सर्वात वर
+  ===================================================== */
+
   const filteredSales = useMemo(() => {
+    /*
+      sales array ची copy तयार केली आहे.
+      Original array बदलत नाही.
+      
+      नवीन entry → वर
+      जुनी entry → खाली
+    */
+
+    const orderedSales = [
+      ...sales,
+    ].reverse();
+
     const keyword =
       search.trim().toLowerCase();
 
+    /* SEARCH नसल्यास */
     if (!keyword) {
-      return sales;
+      return orderedSales;
     }
 
-    return sales.filter((sale) => {
-      const customerMatch =
-        sale.customerCode
-          ?.toLowerCase()
-          .includes(keyword) ||
-        sale.customerName
-          ?.toLowerCase()
-          .includes(keyword);
+    /* SEARCH असल्यास */
+    return orderedSales.filter(
+      (sale: Sales) => {
+        const customerMatch =
+          sale.customerCode
+            ?.toLowerCase()
+            .includes(keyword) ||
+          sale.customerName
+            ?.toLowerCase()
+            .includes(keyword);
 
-      const salesMatch =
-        sale.salesNo
-          ?.toLowerCase()
-          .includes(keyword) ||
-        sale.invoiceNo
-          ?.toLowerCase()
-          .includes(keyword) ||
-        sale.salesDate
-          ?.toLowerCase()
-          .includes(keyword);
+        const salesMatch =
+          sale.salesNo
+            ?.toLowerCase()
+            .includes(keyword) ||
+          sale.invoiceNo
+            ?.toLowerCase()
+            .includes(keyword) ||
+          sale.salesDate
+            ?.toLowerCase()
+            .includes(keyword);
 
-      const productMatch =
-        sale.items?.some((item) =>
-          (
-            (item.productCode || "") +
-            " " +
-            (item.productName || "")
-          )
-            .toLowerCase()
-            .includes(keyword)
+        const productMatch =
+          Array.isArray(sale.items) &&
+          sale.items.some((item) =>
+            (
+              (item.productCode || "") +
+              " " +
+              (item.productName || "")
+            )
+              .toLowerCase()
+              .includes(keyword)
+          );
+
+        return Boolean(
+          customerMatch ||
+          salesMatch ||
+          productMatch
         );
-
-      return Boolean(
-        customerMatch ||
-        salesMatch ||
-        productMatch
-      );
-    });
+      }
+    );
   }, [sales, search]);
 
   return (
@@ -85,9 +108,9 @@ export default function SalesTable({
           "0 2px 8px rgba(0,0,0,0.08)",
       }}
     >
-      {/* =========================
+      {/* =================================================
           HEADER
-      ========================= */}
+      ================================================= */}
 
       <div
         style={{
@@ -134,7 +157,9 @@ export default function SalesTable({
           </div>
         </div>
 
-        {/* SEARCH */}
+        {/* =================================================
+            SEARCH
+        ================================================= */}
 
         <input
           type="text"
@@ -158,9 +183,9 @@ export default function SalesTable({
         />
       </div>
 
-      {/* =========================
+      {/* =================================================
           TABLE
-      ========================= */}
+      ================================================= */}
 
       <div
         style={{
@@ -180,6 +205,10 @@ export default function SalesTable({
             fontSize: "13px",
           }}
         >
+          {/* =================================================
+              TABLE HEADER
+          ================================================= */}
+
           <thead>
             <tr
               style={{
@@ -288,6 +317,10 @@ export default function SalesTable({
             </tr>
           </thead>
 
+          {/* =================================================
+              TABLE BODY
+          ================================================= */}
+
           <tbody>
             {filteredSales.length === 0 ? (
               <tr>
@@ -305,37 +338,71 @@ export default function SalesTable({
               </tr>
             ) : (
               filteredSales.map(
-                (sale, index) => {
+                (
+                  sale: Sales,
+                  index: number
+                ) => {
+                  /* =================================================
+                     FIRST PRODUCT
+                  ================================================= */
+
                   const firstItem =
-                    sale.items?.[0];
+                    Array.isArray(
+                      sale.items
+                    )
+                      ? sale.items[0]
+                      : undefined;
+
+                  /* =================================================
+                     PRODUCT DISPLAY
+                  ================================================= */
 
                   const productText =
-                    sale.items &&
+                    Array.isArray(
+                      sale.items
+                    ) &&
                     sale.items.length > 1
                       ? `${
                           firstItem?.productName ||
                           "-"
                         } + ${
-                          sale.items.length - 1
+                          sale.items.length -
+                          1
                         } more`
                       : firstItem?.productName ||
                         "-";
 
+                  /* =================================================
+                     TOTAL QTY
+                  ================================================= */
+
                   const totalQty =
-                    sale.items?.reduce(
-                      (
-                        total: number,
-                        item
-                      ) =>
-                        total +
-                        Number(
-                          item.qty || 0
-                        ),
-                      0
-                    ) || 0;
+                    Array.isArray(
+                      sale.items
+                    )
+                      ? sale.items.reduce(
+                          (
+                            total: number,
+                            item
+                          ) =>
+                            total +
+                            Number(
+                              item.qty || 0
+                            ),
+                          0
+                        )
+                      : 0;
+
+                  /* =================================================
+                     FIRST RATE
+                  ================================================= */
 
                   const firstRate =
                     firstItem?.rate || 0;
+
+                  /* =================================================
+                     FIRST GST
+                  ================================================= */
 
                   const firstGST =
                     firstItem?.gst || 0;
@@ -362,7 +429,7 @@ export default function SalesTable({
                         {sale.salesDate}
                       </td>
 
-                      {/* INVOICE NO */}
+                      {/* INVOICE */}
 
                       <td style={tdStyle}>
                         {sale.invoiceNo ||
@@ -377,7 +444,8 @@ export default function SalesTable({
                           fontWeight: 600,
                         }}
                         title={
-                          sale.customerName
+                          sale.customerName ||
+                          ""
                         }
                       >
                         {sale.customerName ||
@@ -388,12 +456,22 @@ export default function SalesTable({
 
                       <td
                         style={tdStyle}
-                        title={sale.items
-                          ?.map(
-                            (item) =>
-                              item.productName
+                        title={
+                          Array.isArray(
+                            sale.items
                           )
-                          .join(", ")}
+                            ? sale.items
+                                .map(
+                                  (
+                                    item
+                                  ) =>
+                                    item.productName
+                                )
+                                .join(
+                                  ", "
+                                )
+                            : ""
+                        }
                       >
                         {productText}
                       </td>
@@ -403,7 +481,8 @@ export default function SalesTable({
                       <td
                         style={{
                           ...tdStyle,
-                          textAlign: "center",
+                          textAlign:
+                            "center",
                         }}
                       >
                         {totalQty}
@@ -414,7 +493,8 @@ export default function SalesTable({
                       <td
                         style={{
                           ...tdStyle,
-                          textAlign: "right",
+                          textAlign:
+                            "right",
                         }}
                       >
                         ₹{" "}
@@ -428,7 +508,8 @@ export default function SalesTable({
                       <td
                         style={{
                           ...tdStyle,
-                          textAlign: "center",
+                          textAlign:
+                            "center",
                         }}
                       >
                         {firstGST}%
@@ -439,9 +520,11 @@ export default function SalesTable({
                       <td
                         style={{
                           ...tdStyle,
-                          textAlign: "right",
+                          textAlign:
+                            "right",
                           fontWeight: 700,
-                          color: "#14532d",
+                          color:
+                            "#14532d",
                         }}
                       >
                         ₹{" "}
@@ -487,9 +570,9 @@ export default function SalesTable({
                         </span>
                       </td>
 
-                      {/* =========================
+                      {/* =================================================
                           ACTION BUTTONS
-                      ========================= */}
+                      ================================================= */}
 
                       <td
                         style={{
@@ -500,7 +583,6 @@ export default function SalesTable({
                             "nowrap",
                         }}
                       >
-
                         {/* EDIT */}
 
                         <button
@@ -571,26 +653,35 @@ export default function SalesTable({
                           🧾 Invoice
                         </button>
 
-     {/* DELETE */}
+                        {/* DELETE */}
 
-<button
-  type="button"
-  onClick={() =>
-    onDelete(sale.id)
-  }
-  style={{
-    padding: "6px 9px",
-    border: "none",
-    borderRadius: "4px",
-    background: "#dc2626",
-    color: "#ffffff",
-    fontSize: "11px",
-    fontWeight: 600,
-    cursor: "pointer",
-  }}
->
-  🗑️ Delete
-</button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onDelete(
+                              sale.id
+                            )
+                          }
+                          style={{
+                            padding:
+                              "6px 9px",
+                            border:
+                              "none",
+                            borderRadius:
+                              "4px",
+                            background:
+                              "#dc2626",
+                            color:
+                              "#ffffff",
+                            fontSize:
+                              "11px",
+                            fontWeight: 600,
+                            cursor:
+                              "pointer",
+                          }}
+                        >
+                          🗑️ Delete
+                        </button>
                       </td>
                     </tr>
                   );
@@ -601,54 +692,65 @@ export default function SalesTable({
         </table>
       </div>
 
-      {/* =========================
-          GST INVOICE
-      ========================= */}
+      {/* =================================================
+          INVOICE MODAL
+      ================================================= */}
 
       {selectedSale && (
-  <div
-    style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: "rgba(0,0,0,0.55)",
-      zIndex: 9999,
-      overflowY: "auto",
-      padding: "30px 15px",
-      boxSizing: "border-box",
-    }}
-  >
-    <div
-      style={{
-        background: "#ffffff",
-        width: "100%",
-        maxWidth: "950px",
-        margin: "0 auto",
-        borderRadius: "10px",
-        padding: "20px",
-        boxSizing: "border-box",
-        boxShadow:
-          "0 10px 40px rgba(0,0,0,0.3)",
-      }}
-    >
-      <InvoicePrint
-        sale={selectedSale}
-        onClose={() =>
-          setSelectedSale(null)
-        }
-      />
-    </div>
-  </div>
-)}
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background:
+              "rgba(0,0,0,0.55)",
+            zIndex: 9999,
+            overflowY: "auto",
+            padding:
+              "30px 15px",
+            boxSizing:
+              "border-box",
+          }}
+        >
+          <div
+            style={{
+              background:
+                "#ffffff",
+              width: "100%",
+              maxWidth:
+                "950px",
+              margin:
+                "0 auto",
+              borderRadius:
+                "10px",
+              padding:
+                "20px",
+              boxSizing:
+                "border-box",
+              boxShadow:
+                "0 10px 40px rgba(0,0,0,0.3)",
+            }}
+          >
+            <InvoicePrint
+              sale={selectedSale}
+              onClose={() =>
+                setSelectedSale(
+                  null
+                )
+              }
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-/* =========================
+/* =====================================================
    TABLE HEADER STYLE
-========================= */
+===================================================== */
 
 const thStyle: React.CSSProperties = {
   padding: "9px 7px",
@@ -662,9 +764,9 @@ const thStyle: React.CSSProperties = {
   whiteSpace: "nowrap",
 };
 
-/* =========================
+/* =====================================================
    TABLE DATA STYLE
-========================= */
+===================================================== */
 
 const tdStyle: React.CSSProperties = {
   padding: "9px 7px",
@@ -674,8 +776,11 @@ const tdStyle: React.CSSProperties = {
     "1px solid #e5e7eb",
   fontSize: "11px",
   color: "#374151",
-  verticalAlign: "middle",
+  verticalAlign:
+    "middle",
   overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
+  textOverflow:
+    "ellipsis",
+  whiteSpace:
+    "nowrap",
 };
