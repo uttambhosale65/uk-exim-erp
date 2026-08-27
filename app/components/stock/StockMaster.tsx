@@ -3,53 +3,186 @@
 import { useEffect, useState } from "react";
 
 import StockTable from "./StockTable";
+import StockMonthlyPage from "./StockMonthlyPage";
+
 import { Stock } from "./StockTypes";
+
 import {
   loadStock,
   resetStock,
 } from "./StockStorage";
 
 export default function StockMaster() {
-  const [stock, setStock] = useState<Stock[]>([]);
-  const [search, setSearch] = useState("");
+  const [stock, setStock] =
+    useState<Stock[]>([]);
+
+  const [search, setSearch] =
+    useState("");
+
+  const [activeView, setActiveView] =
+    useState<"current" | "monthly">(
+      "current"
+    );
+
+  /* =====================================================
+     LOAD STOCK
+  ===================================================== */
 
   useEffect(() => {
     setStock(loadStock());
   }, []);
 
+  /* =====================================================
+     RESET STOCK
+  ===================================================== */
+
   const handleResetStock = () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to reset all stock?\n\nThis will clear the current stock records."
-    );
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to reset all stock?\n\n" +
+          "This will clear the current stock records."
+      );
 
     if (!confirmed) return;
 
     resetStock();
+
     setStock([]);
   };
 
-  const filteredStock = stock.filter(
-    (item) =>
-      item.productName
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      item.productCode
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      item.hsn
-        .toLowerCase()
-        .includes(search.toLowerCase())
-  );
+  /* =====================================================
+     SEARCH
+  ===================================================== */
 
-  const totalStock = filteredStock.reduce(
-    (total, item) =>
-      total + Number(item.currentStock || 0),
-    0
-  );
+  const filteredStock =
+    stock.filter(
+      (item) =>
+        item.productName
+          .toLowerCase()
+          .includes(
+            search.toLowerCase()
+          ) ||
+        item.productCode
+          .toLowerCase()
+          .includes(
+            search.toLowerCase()
+          ) ||
+        item.hsn
+          .toLowerCase()
+          .includes(
+            search.toLowerCase()
+          )
+    );
 
-  const printDate = new Date().toLocaleDateString(
-    "en-IN"
-  );
+  /* =====================================================
+     TOTAL CURRENT STOCK
+  ===================================================== */
+
+  const totalStock =
+    filteredStock.reduce(
+      (total, item) =>
+        total +
+        Number(
+          item.currentStock || 0
+        ),
+      0
+    );
+
+  /* =====================================================
+     PRINT DATE
+  ===================================================== */
+
+  const printDate =
+    new Date().toLocaleDateString(
+      "en-IN"
+    );
+
+  /* =====================================================
+     VIEW
+  ===================================================== */
+
+  if (
+    activeView === "monthly"
+  ) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "1600px",
+          margin: "0 auto",
+          padding: "10px",
+          boxSizing: "border-box",
+          minWidth: 0,
+        }}
+      >
+        {/* =================================================
+            VIEW SWITCH
+        ================================================== */}
+
+        <div
+          className="stock-view-switch"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginBottom: "12px",
+            minWidth: 0,
+            flexWrap: "wrap",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() =>
+              setActiveView(
+                "current"
+              )
+            }
+            style={{
+              height: "34px",
+              padding:
+                "0 14px",
+              border: "1px solid #d1d5db",
+              borderRadius: "6px",
+              background:
+                "#ffffff",
+              color: "#374151",
+              cursor: "pointer",
+              fontSize: "11px",
+              fontWeight: 700,
+            }}
+          >
+            📦 Current Stock
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              setActiveView(
+                "monthly"
+              )
+            }
+            style={{
+              height: "34px",
+              padding:
+                "0 14px",
+              border: "none",
+              borderRadius: "6px",
+              background:
+                "#14532d",
+              color: "#ffffff",
+              cursor: "pointer",
+              fontSize: "11px",
+              fontWeight: 700,
+            }}
+          >
+            📊 Monthly Stock
+          </button>
+        </div>
+
+        <StockMonthlyPage />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -120,15 +253,18 @@ export default function StockMaster() {
           background: "#ffffff",
           padding: "14px",
           borderRadius: "10px",
-          border: "1px solid #d1d5db",
+          border:
+            "1px solid #d1d5db",
           boxShadow:
             "0 2px 8px rgba(0,0,0,0.08)",
           width: "100%",
+          maxWidth: "1600px",
+          margin: "0 auto",
           boxSizing: "border-box",
           overflow: "hidden",
+          minWidth: 0,
         }}
       >
-
         {/* =================================================
             PROFESSIONAL PRINT HEADER
         ================================================== */}
@@ -148,7 +284,8 @@ export default function StockMaster() {
               fontSize: "18px",
               fontWeight: 800,
               color: "#111827",
-              letterSpacing: "0.5px",
+              letterSpacing:
+                "0.5px",
             }}
           >
             UK EXIM ENTERPRISES
@@ -160,7 +297,8 @@ export default function StockMaster() {
               fontSize: "14px",
               fontWeight: 800,
               color: "#14532d",
-              letterSpacing: "0.3px",
+              letterSpacing:
+                "0.3px",
             }}
           >
             STOCK REPORT
@@ -173,7 +311,8 @@ export default function StockMaster() {
               color: "#6b7280",
             }}
           >
-            Product-wise Current Stock Details
+            Product-wise Current
+            Stock Details
           </div>
 
           <div
@@ -187,12 +326,15 @@ export default function StockMaster() {
             }}
           >
             <span>
-              Report Date: {printDate}
+              Report Date:{" "}
+              {printDate}
             </span>
 
             <span>
               Total Products:{" "}
-              {filteredStock.length}
+              {
+                filteredStock.length
+              }
             </span>
           </div>
         </div>
@@ -210,10 +352,17 @@ export default function StockMaster() {
             alignItems: "center",
             gap: "12px",
             marginBottom: "12px",
+            width: "100%",
+            minWidth: 0,
             flexWrap: "wrap",
           }}
         >
-          <div>
+          <div
+            style={{
+              minWidth: 0,
+              flex: "1 1 auto",
+            }}
+          >
             <h2
               style={{
                 margin: 0,
@@ -232,7 +381,8 @@ export default function StockMaster() {
                 fontSize: "11px",
               }}
             >
-              Product-wise Current Stock Details
+              Product-wise Current
+              Stock Details
             </div>
           </div>
 
@@ -243,7 +393,9 @@ export default function StockMaster() {
             placeholder="🔍 Search Product / Code / HSN..."
             value={search}
             onChange={(e) =>
-              setSearch(e.target.value)
+              setSearch(
+                e.target.value
+              )
             }
             style={{
               width: "300px",
@@ -256,8 +408,74 @@ export default function StockMaster() {
               fontSize: "12px",
               outline: "none",
               boxSizing: "border-box",
+              flexShrink: 1,
             }}
           />
+        </div>
+
+        {/* =================================================
+            STOCK VIEW BUTTONS
+        ================================================== */}
+
+        <div
+          className="stock-no-print"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginBottom: "12px",
+            minWidth: 0,
+            flexWrap: "wrap",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() =>
+              setActiveView(
+                "current"
+              )
+            }
+            style={{
+              height: "34px",
+              padding:
+                "0 14px",
+              border: "none",
+              borderRadius: "6px",
+              background:
+                "#14532d",
+              color: "#ffffff",
+              cursor: "pointer",
+              fontWeight: 700,
+              fontSize: "11px",
+            }}
+          >
+            📦 Current Stock
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              setActiveView(
+                "monthly"
+              )
+            }
+            style={{
+              height: "34px",
+              padding:
+                "0 14px",
+              border:
+                "1px solid #14532d",
+              borderRadius: "6px",
+              background:
+                "#ffffff",
+              color: "#14532d",
+              cursor: "pointer",
+              fontWeight: 700,
+              fontSize: "11px",
+            }}
+          >
+            📊 Monthly Stock
+          </button>
         </div>
 
         {/* =================================================
@@ -273,20 +491,24 @@ export default function StockMaster() {
             gap: "8px",
             marginBottom: "12px",
             width: "100%",
+            minWidth: 0,
           }}
         >
-
           {/* TOTAL CURRENT STOCK */}
 
           <div
             style={{
-              background: "#f8fafc",
+              background:
+                "#f8fafc",
               border:
                 "1px solid #d1d5db",
               borderRadius: "7px",
-              padding: "9px 12px",
+              padding:
+                "9px 12px",
               minHeight: "58px",
-              boxSizing: "border-box",
+              boxSizing:
+                "border-box",
+              minWidth: 0,
             }}
           >
             <div
@@ -297,7 +519,8 @@ export default function StockMaster() {
                 marginBottom: "4px",
               }}
             >
-              TOTAL CURRENT STOCK
+              TOTAL CURRENT
+              STOCK
             </div>
 
             <div
@@ -316,11 +539,12 @@ export default function StockMaster() {
           <div
             style={{
               display: "flex",
-              alignItems: "center",
+              alignItems:
+                "center",
               gap: "8px",
+              minWidth: 0,
             }}
           >
-
             {/* PRINT */}
 
             <button
@@ -329,13 +553,15 @@ export default function StockMaster() {
                 window.print()
               }
               style={{
-                padding: "0 14px",
+                padding:
+                  "0 14px",
                 background:
                   "#14532d",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "7px",
-                cursor: "pointer",
+                cursor:
+                  "pointer",
                 fontWeight: 700,
                 fontSize: "11px",
                 minHeight: "58px",
@@ -354,13 +580,15 @@ export default function StockMaster() {
                 handleResetStock
               }
               style={{
-                padding: "0 14px",
+                padding:
+                  "0 14px",
                 background:
                   "#dc2626",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "7px",
-                cursor: "pointer",
+                cursor:
+                  "pointer",
                 fontWeight: 700,
                 fontSize: "11px",
                 minHeight: "58px",
@@ -370,7 +598,6 @@ export default function StockMaster() {
             >
               🗑️ Reset Stock
             </button>
-
           </div>
         </div>
 
@@ -385,11 +612,13 @@ export default function StockMaster() {
             justifyContent:
               "space-between",
             alignItems: "center",
-            background: "#f0fdf4",
+            background:
+              "#f0fdf4",
             border:
               "1px solid #bbf7d0",
             borderRadius: "5px",
-            padding: "7px 10px",
+            padding:
+              "7px 10px",
             marginBottom: "10px",
             fontSize: "10px",
           }}
@@ -400,7 +629,8 @@ export default function StockMaster() {
               color: "#374151",
             }}
           >
-            TOTAL CURRENT STOCK
+            TOTAL CURRENT
+            STOCK
           </span>
 
           <span
@@ -419,7 +649,9 @@ export default function StockMaster() {
         ================================================== */}
 
         <StockTable
-          stock={filteredStock}
+          stock={
+            filteredStock
+          }
         />
 
         {/* =================================================
@@ -452,7 +684,6 @@ export default function StockMaster() {
             Generated by UK EXIM ERP
           </span>
         </div>
-
       </div>
     </>
   );

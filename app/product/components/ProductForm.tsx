@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Product } from "./ProductTypes";
+import {
+  Product,
+  ProductUnit,
+} from "./ProductTypes";
 
 type ProductFormProps = {
   productCode: string;
@@ -18,53 +21,123 @@ export default function ProductForm({
 }: ProductFormProps) {
   const emptyProduct = (): Product => ({
     id: crypto.randomUUID(),
+
     code: productCode,
 
-    // Basic Details
+    /* BASIC */
+
     name: "",
+
     category: "Spices",
 
-    // Tax Details
     hsn: "",
+
     gst: "5%",
 
-    // Product Details
+    /* UOM */
+
     unit: "Gram",
+
     netWeight: 0,
 
-    // Pricing
+    /* EXISTING PRICING */
+
     purchase: 0,
+
     sale: 0,
+
     mrp: 0,
 
-    // Stock
+    /* COST */
+
+    baseCost: 0,
+
+    packingCost: 0,
+
+    otherCharges: 0,
+
+    totalCost: 0,
+
+    /* STOCK */
+
     stock: 0,
+
     minimumStock: 0,
 
-    // Status
+    /* STATUS */
+
     active: true,
   });
 
   const [product, setProduct] =
-    useState<Product>(emptyProduct());
+    useState<Product>(
+      emptyProduct()
+    );
+
+  /* =====================================================
+     LOAD EDIT PRODUCT
+  ===================================================== */
 
   useEffect(() => {
     if (editingProduct) {
-      setProduct(editingProduct);
+      const baseCost =
+        Number(
+          editingProduct.baseCost ??
+            editingProduct.purchase ??
+            0
+        ) || 0;
+
+      const packingCost =
+        Number(
+          editingProduct.packingCost || 0
+        );
+
+      const otherCharges =
+        Number(
+          editingProduct.otherCharges || 0
+        );
+
+      setProduct({
+        ...editingProduct,
+
+        baseCost,
+
+        packingCost,
+
+        otherCharges,
+
+        totalCost:
+          baseCost +
+          packingCost +
+          otherCharges,
+      });
     } else {
       setProduct((prev) => ({
         ...prev,
         code: productCode,
       }));
     }
-  }, [productCode, editingProduct]);
+  }, [
+    productCode,
+    editingProduct,
+  ]);
+
+  /* =====================================================
+     HANDLE CHANGE
+  ===================================================== */
 
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement
     >
   ) => {
-    const { name, value, type } = e.target;
+    const {
+      name,
+      value,
+      type,
+    } = e.target;
+
+    /* CHECKBOX */
 
     if (type === "checkbox") {
       const checked = (
@@ -79,19 +152,56 @@ export default function ProductForm({
       return;
     }
 
-    setProduct((prev) => ({
-      ...prev,
-      [name]:
-        name === "netWeight" ||
-        name === "purchase" ||
-        name === "sale" ||
-        name === "mrp" ||
-        name === "stock" ||
-        name === "minimumStock"
+    /* NUMBER FIELDS */
+
+    const numberFields = [
+      "netWeight",
+      "purchase",
+      "sale",
+      "mrp",
+      "baseCost",
+      "packingCost",
+      "otherCharges",
+      "stock",
+      "minimumStock",
+    ];
+
+    setProduct((prev) => {
+      const updated = {
+        ...prev,
+        [name]: numberFields.includes(
+          name
+        )
           ? Number(value)
           : value,
-    }));
+      } as Product;
+
+      /* AUTOMATIC TOTAL COST */
+
+      if (
+        name === "baseCost" ||
+        name === "packingCost" ||
+        name === "otherCharges"
+      ) {
+        updated.totalCost =
+          Number(
+            updated.baseCost || 0
+          ) +
+          Number(
+            updated.packingCost || 0
+          ) +
+          Number(
+            updated.otherCharges || 0
+          );
+      }
+
+      return updated;
+    });
   };
+
+  /* =====================================================
+     SUBMIT
+  ===================================================== */
 
   const handleSubmit = (
     e: React.FormEvent
@@ -99,12 +209,16 @@ export default function ProductForm({
     e.preventDefault();
 
     if (!product.name.trim()) {
-      alert("Please enter Product Name");
+      alert(
+        "Please enter Product Name"
+      );
       return;
     }
 
     if (!product.hsn.trim()) {
-      alert("Please enter HSN Code");
+      alert(
+        "Please enter HSN Code"
+      );
       return;
     }
 
@@ -122,7 +236,48 @@ export default function ProductForm({
       return;
     }
 
-    onSave(product);
+    /*
+      Final Total Cost calculation
+      before saving.
+    */
+
+    const finalBaseCost =
+      Number(
+        product.baseCost || 0
+      );
+
+    const finalPackingCost =
+      Number(
+        product.packingCost || 0
+      );
+
+    const finalOtherCharges =
+      Number(
+        product.otherCharges || 0
+      );
+
+    const finalTotalCost =
+      finalBaseCost +
+      finalPackingCost +
+      finalOtherCharges;
+
+    const finalProduct: Product = {
+      ...product,
+
+      baseCost:
+        finalBaseCost,
+
+      packingCost:
+        finalPackingCost,
+
+      otherCharges:
+        finalOtherCharges,
+
+      totalCost:
+        finalTotalCost,
+    };
+
+    onSave(finalProduct);
 
     setProduct({
       ...emptyProduct(),
@@ -131,6 +286,10 @@ export default function ProductForm({
 
     onCancelEdit?.();
   };
+
+  /* =====================================================
+     RESET
+  ===================================================== */
 
   const handleReset = () => {
     setProduct({
@@ -141,15 +300,16 @@ export default function ProductForm({
     onCancelEdit?.();
   };
 
-  /* ================================
+  /* =====================================================
      COMMON STYLES
-  ================================= */
+  ===================================================== */
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
     height: "40px",
     padding: "0 10px",
-    border: "1px solid #d1d5db",
+    border:
+      "1px solid #d1d5db",
     borderRadius: "6px",
     fontSize: "13px",
     boxSizing: "border-box",
@@ -171,28 +331,35 @@ export default function ProductForm({
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-
-      {/* ==========================================
-          PRODUCT ENTRY BOX
-      =========================================== */}
-
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        width: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+      }}
+    >
       <div
         style={{
           background: "#ffffff",
-          border: "1px solid #d1d5db",
+          border:
+            "1px solid #d1d5db",
           borderRadius: "10px",
           padding: "18px",
+          width: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+          overflow: "hidden",
           boxShadow:
             "0 2px 8px rgba(0,0,0,0.08)",
         }}
       >
-
         {/* TITLE */}
 
         <h2
           style={{
-            margin: "0 0 18px 0",
+            margin:
+              "0 0 18px 0",
             color: "#14532d",
             fontSize: "19px",
             fontWeight: 700,
@@ -201,24 +368,25 @@ export default function ProductForm({
           📋 Product Entry
         </h2>
 
-        {/* ======================================
-            ROW 1 — BASIC PRODUCT DETAILS
-        ======================================= */}
+        {/* =================================================
+            ROW 1 — BASIC
+        ================================================= */}
 
         <div
           style={{
             display: "grid",
-            gridTemplateColumns:
-              "110px 2fr 1.15fr 1.2fr 100px 110px",
-            gap: "10px",
+           gridTemplateColumns:
+ "0.7fr 1.8fr 1.2fr 1.3fr 0.7fr 0.8fr",
+gap: "10px",
             alignItems: "end",
           }}
         >
-
-          {/* PRODUCT CODE */}
+          {/* CODE */}
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>
+            <label
+              style={labelStyle}
+            >
               Product Code
             </label>
 
@@ -228,16 +396,19 @@ export default function ProductForm({
               readOnly
               style={{
                 ...inputStyle,
-                background: "#f3f4f6",
+                background:
+                  "#f3f4f6",
                 fontWeight: 700,
               }}
             />
           </div>
 
-          {/* PRODUCT NAME */}
+          {/* NAME */}
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>
+            <label
+              style={labelStyle}
+            >
               Product Name *
             </label>
 
@@ -245,7 +416,9 @@ export default function ProductForm({
               type="text"
               name="name"
               value={product.name}
-              onChange={handleChange}
+              onChange={
+                handleChange
+              }
               required
               placeholder="Enter Product Name"
               style={{
@@ -258,24 +431,32 @@ export default function ProductForm({
           {/* CATEGORY */}
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>
+            <label
+              style={labelStyle}
+            >
               Category
             </label>
 
             <input
               type="text"
               name="category"
-              value={product.category}
-              onChange={handleChange}
+              value={
+                product.category
+              }
+              onChange={
+                handleChange
+              }
               placeholder="Category"
               style={inputStyle}
             />
           </div>
 
-          {/* HSN CODE */}
+          {/* HSN */}
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>
+            <label
+              style={labelStyle}
+            >
               HSN Code *
             </label>
 
@@ -283,7 +464,9 @@ export default function ProductForm({
               type="text"
               name="hsn"
               value={product.hsn}
-              onChange={handleChange}
+              onChange={
+                handleChange
+              }
               required
               placeholder="Enter HSN Code"
               style={{
@@ -296,38 +479,60 @@ export default function ProductForm({
           {/* GST */}
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>
+            <label
+              style={labelStyle}
+            >
               GST
             </label>
 
             <select
               name="gst"
               value={product.gst}
-              onChange={handleChange}
+              onChange={
+                handleChange
+              }
               style={{
                 ...inputStyle,
                 fontSize: "14px",
               }}
             >
-              <option value="0%">0%</option>
-              <option value="5%">5%</option>
-              <option value="12%">12%</option>
-              <option value="18%">18%</option>
-              <option value="28%">28%</option>
+              <option value="0%">
+                0%
+              </option>
+
+              <option value="5%">
+                5%
+              </option>
+
+              <option value="12%">
+                12%
+              </option>
+
+              <option value="18%">
+                18%
+              </option>
+
+              <option value="28%">
+                28%
+              </option>
             </select>
           </div>
 
-          {/* UNIT */}
+          {/* UOM */}
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>
-              Unit
+            <label
+              style={labelStyle}
+            >
+              UOM
             </label>
 
             <select
               name="unit"
               value={product.unit}
-              onChange={handleChange}
+              onChange={
+                handleChange
+              }
               style={{
                 ...inputStyle,
                 fontSize: "14px",
@@ -340,55 +545,70 @@ export default function ProductForm({
               <option value="KG">
                 KG
               </option>
+
+              <option value="Pkt">
+                Pkt
+              </option>
             </select>
           </div>
         </div>
 
-        {/* ======================================
-            ROW 2 — PRICE + STOCK + ACTION
-        ======================================= */}
+        {/* =================================================
+            ROW 2 — PACK / SELLING
+        ================================================= */}
 
         <div
           style={{
             display: "grid",
             gridTemplateColumns:
-              "1fr 1.15fr 1.15fr 1fr 1.15fr 1fr 110px auto auto",
+              "repeat(6, minmax(0, 1fr))",
             gap: "10px",
             alignItems: "end",
             marginTop: "14px",
           }}
         >
-
           {/* NET WEIGHT */}
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>
-              Net Weight
+            <label
+              style={labelStyle}
+            >
+              Net Weight (g)
             </label>
 
             <input
               type="number"
               name="netWeight"
-              value={product.netWeight}
-              onChange={handleChange}
+              value={
+                product.netWeight
+              }
+              onChange={
+                handleChange
+              }
               min="0"
               step="0.01"
               style={inputStyle}
             />
           </div>
 
-          {/* PURCHASE PRICE */}
+          {/* PURCHASE */}
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>
+            <label
+              style={labelStyle}
+            >
               Purchase Price
             </label>
 
             <input
               type="number"
               name="purchase"
-              value={product.purchase}
-              onChange={handleChange}
+              value={
+                product.purchase
+              }
+              onChange={
+                handleChange
+              }
               min="0"
               step="0.01"
               placeholder="Purchase Price"
@@ -399,10 +619,12 @@ export default function ProductForm({
             />
           </div>
 
-          {/* SALE PRICE */}
+          {/* SALE */}
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>
+            <label
+              style={labelStyle}
+            >
               Sale Price *
             </label>
 
@@ -410,10 +632,11 @@ export default function ProductForm({
               type="number"
               name="sale"
               value={product.sale}
-              onChange={handleChange}
+              onChange={
+                handleChange
+              }
               min="0"
               step="0.01"
-              placeholder="Sale Price"
               required
               style={{
                 ...inputStyle,
@@ -425,7 +648,9 @@ export default function ProductForm({
           {/* MRP */}
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>
+            <label
+              style={labelStyle}
+            >
               MRP
             </label>
 
@@ -433,7 +658,9 @@ export default function ProductForm({
               type="number"
               name="mrp"
               value={product.mrp}
-              onChange={handleChange}
+              onChange={
+                handleChange
+              }
               min="0"
               step="0.01"
               style={inputStyle}
@@ -443,7 +670,9 @@ export default function ProductForm({
           {/* OPENING STOCK */}
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>
+            <label
+              style={labelStyle}
+            >
               Opening Stock
             </label>
 
@@ -451,7 +680,9 @@ export default function ProductForm({
               type="number"
               name="stock"
               value={product.stock}
-              onChange={handleChange}
+              onChange={
+                handleChange
+              }
               min="0"
               step="0.01"
               style={inputStyle}
@@ -461,53 +692,271 @@ export default function ProductForm({
           {/* MIN STOCK */}
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>
+            <label
+              style={labelStyle}
+            >
               Min Stock
             </label>
 
             <input
               type="number"
               name="minimumStock"
-              value={product.minimumStock}
-              onChange={handleChange}
+              value={
+                product.minimumStock
+              }
+              onChange={
+                handleChange
+              }
               min="0"
               step="0.01"
               style={inputStyle}
             />
           </div>
+        </div>
 
+        {/* =================================================
+            ROW 3 — COST STRUCTURE
+        ================================================= */}
+
+        <div
+          style={{
+            marginTop: "14px",
+            padding:
+              "12px",
+            border:
+              "1px solid #d1d5db",
+            borderRadius:
+              "8px",
+            background:
+              "#f8fafc",
+          }}
+        >
+          <div
+            style={{
+              color:
+                "#14532d",
+              fontSize:
+                "13px",
+              fontWeight: 700,
+              marginBottom:
+                "10px",
+            }}
+          >
+            💰 Product Cost Structure
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(4, minmax(0, 1fr))",
+              gap: "10px",
+              alignItems:
+                "end",
+            }}
+          >
+            {/* BASE COST */}
+
+            <div
+              style={
+                fieldStyle
+              }
+            >
+              <label
+                style={
+                  labelStyle
+                }
+              >
+                Base Cost
+              </label>
+
+              <input
+                type="number"
+                name="baseCost"
+                value={
+                  product.baseCost
+                }
+                onChange={
+                  handleChange
+                }
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                style={
+                  inputStyle
+                }
+              />
+            </div>
+
+            {/* PACKING COST */}
+
+            <div
+              style={
+                fieldStyle
+              }
+            >
+              <label
+                style={
+                  labelStyle
+                }
+              >
+                Packing Cost
+              </label>
+
+              <input
+                type="number"
+                name="packingCost"
+                value={
+                  product.packingCost
+                }
+                onChange={
+                  handleChange
+                }
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                style={
+                  inputStyle
+                }
+              />
+            </div>
+
+            {/* OTHER CHARGES */}
+
+            <div
+              style={
+                fieldStyle
+              }
+            >
+              <label
+                style={
+                  labelStyle
+                }
+              >
+                Other Charges
+              </label>
+
+              <input
+                type="number"
+                name="otherCharges"
+                value={
+                  product.otherCharges
+                }
+                onChange={
+                  handleChange
+                }
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                style={
+                  inputStyle
+                }
+              />
+            </div>
+
+            {/* TOTAL COST */}
+
+            <div
+              style={
+                fieldStyle
+              }
+            >
+              <label
+                style={
+                  labelStyle
+                }
+              >
+                Total Cost
+              </label>
+
+              <input
+                type="number"
+                value={Number(
+                  product.totalCost ||
+                    0
+                ).toFixed(2)}
+                readOnly
+                style={{
+                  ...inputStyle,
+                  background:
+                    "#ecfdf5",
+                  color:
+                    "#166534",
+                  fontWeight: 700,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* =================================================
+            ROW 4 — STATUS + ACTION
+        ================================================= */}
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent:
+              "space-between",
+            alignItems:
+              "flex-end",
+            gap: "10px",
+            marginTop: "14px",
+          }}
+        >
           {/* STATUS */}
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          <div
+            style={{
+              minWidth:
+                "160px",
+            }}
+          >
+            <label
+              style={
+                labelStyle
+              }
+            >
               Status
             </label>
 
             <label
               style={{
-                height: "40px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                height:
+                  "40px",
+                display:
+                  "flex",
+                alignItems:
+                  "center",
+                justifyContent:
+                  "center",
                 gap: "6px",
                 border:
                   "1px solid #d1d5db",
-                borderRadius: "6px",
+                borderRadius:
+                  "6px",
                 background:
                   product.active
                     ? "#f0fdf4"
                     : "#f3f4f6",
-                fontSize: "12px",
+                fontSize:
+                  "12px",
                 fontWeight: 700,
-                cursor: "pointer",
-                boxSizing: "border-box",
+                cursor:
+                  "pointer",
+                boxSizing:
+                  "border-box",
               }}
             >
               <input
                 type="checkbox"
                 name="active"
-                checked={product.active}
-                onChange={handleChange}
+                checked={
+                  product.active
+                }
+                onChange={
+                  handleChange
+                }
               />
 
               {product.active
@@ -516,63 +965,65 @@ export default function ProductForm({
             </label>
           </div>
 
-          {/* RESET */}
+          {/* ACTIONS */}
 
-          <div>
-            <label
-              style={{
-                ...labelStyle,
-                visibility: "hidden",
-              }}
-            >
-              Action
-            </label>
-
+          <div
+            style={{
+              display:
+                "flex",
+              gap: "8px",
+            }}
+          >
             <button
               type="button"
-              onClick={handleReset}
+              onClick={
+                handleReset
+              }
               style={{
-                height: "40px",
-                padding: "0 16px",
-                border: "none",
-                borderRadius: "6px",
-                background: "#6b7280",
-                color: "#ffffff",
-                fontWeight: 700,
-                fontSize: "12px",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
+                height:
+                  "40px",
+                padding:
+                  "0 16px",
+                border:
+                  "none",
+                borderRadius:
+                  "6px",
+                background:
+                  "#6b7280",
+                color:
+                  "#ffffff",
+                fontWeight:
+                  700,
+                fontSize:
+                  "12px",
+                cursor:
+                  "pointer",
               }}
             >
               🔄 Reset
             </button>
-          </div>
-
-          {/* SAVE */}
-
-          <div>
-            <label
-              style={{
-                ...labelStyle,
-                visibility: "hidden",
-              }}
-            >
-              Action
-            </label>
 
             <button
               type="submit"
               style={{
-                height: "40px",
-                padding: "0 18px",
-                border: "none",
-                borderRadius: "6px",
-                background: "#14532d",
-                color: "#ffffff",
-                fontWeight: 700,
-                fontSize: "12px",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
+                height:
+                  "40px",
+                padding:
+                  "0 18px",
+                border:
+                  "none",
+                borderRadius:
+                  "6px",
+                background:
+                  "#14532d",
+                color:
+                  "#ffffff",
+                fontWeight:
+                  700,
+                fontSize:
+                  "12px",
+                cursor:
+                  "pointer",
               }}
             >
               💾{" "}
@@ -588,17 +1039,25 @@ export default function ProductForm({
         {editingProduct && (
           <div
             style={{
-              marginTop: "12px",
-              padding: "7px 10px",
-              background: "#fef3c7",
-              color: "#92400e",
-              borderRadius: "5px",
-              fontSize: "12px",
+              marginTop:
+                "12px",
+              padding:
+                "7px 10px",
+              background:
+                "#fef3c7",
+              color:
+                "#92400e",
+              borderRadius:
+                "5px",
+              fontSize:
+                "12px",
               fontWeight: 600,
             }}
           >
             ✏️ Editing Product:{" "}
-            {editingProduct.name}
+            {
+              editingProduct.name
+            }
           </div>
         )}
       </div>

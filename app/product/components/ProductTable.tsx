@@ -1,12 +1,17 @@
 "use client";
 
 import { useState } from "react";
+
 import { Product } from "./ProductTypes";
 
 type ProductTableProps = {
   products: Product[];
-  onEdit: (product: Product) => void;
-  onDelete: (id: string) => void;
+  onEdit: (
+    product: Product
+  ) => void;
+  onDelete: (
+    id: string
+  ) => void;
 };
 
 export default function ProductTable({
@@ -14,105 +19,178 @@ export default function ProductTable({
   onEdit,
   onDelete,
 }: ProductTableProps) {
-  const [search, setSearch] = useState("");
+  const [
+    search,
+    setSearch,
+  ] = useState("");
 
-  const filteredProducts = products.filter(
-    (item) =>
-      item.name
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      item.code
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      item.category
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      item.hsn
-        .toLowerCase()
-        .includes(search.toLowerCase())
-  );
+  const filteredProducts =
+    products.filter(
+      (item) =>
+        item.name
+          .toLowerCase()
+          .includes(
+            search
+              .toLowerCase()
+          ) ||
+        item.code
+          .toLowerCase()
+          .includes(
+            search
+              .toLowerCase()
+          ) ||
+        item.category
+          .toLowerCase()
+          .includes(
+            search
+              .toLowerCase()
+          ) ||
+        item.hsn
+          .toLowerCase()
+          .includes(
+            search
+              .toLowerCase()
+          )
+    );
 
-  const getStockStatus = (item: Product) => {
-    if (item.stock <= 0) {
+  /* =====================================================
+     STOCK STATUS
+  ===================================================== */
+
+  const getStockStatus = (
+    item: Product
+  ) => {
+    if (
+      item.stock <= 0
+    ) {
       return {
         text: "Out of Stock",
-        background: "#fee2e2",
-        color: "#b91c1c",
+        background:
+          "#fee2e2",
+        color:
+          "#b91c1c",
       };
     }
 
-    if (item.stock <= item.minimumStock) {
+    if (
+      item.stock <=
+      item.minimumStock
+    ) {
       return {
         text: "Low Stock",
-        background: "#fef3c7",
-        color: "#b45309",
+        background:
+          "#fef3c7",
+        color:
+          "#b45309",
       };
     }
 
     return {
       text: "In Stock",
-      background: "#dcfce7",
-      color: "#15803d",
+      background:
+        "#dcfce7",
+      color:
+        "#15803d",
     };
   };
 
-  const thStyle: React.CSSProperties = {
-    border: "1px solid #d1d5db",
-    padding: "7px 5px",
-    background: "#14532d",
-    color: "#ffffff",
-    textAlign: "center",
-    fontSize: "10px",
-    fontWeight: 700,
-    whiteSpace: "normal",
-    lineHeight: "13px",
-  };
+  /* =====================================================
+     STYLES
+  ===================================================== */
 
-  const tdStyle: React.CSSProperties = {
-    border: "1px solid #d1d5db",
-    padding: "6px 4px",
-    fontSize: "10px",
-    color: "#1f2937",
-    textAlign: "center",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  };
+  const thStyle: React.CSSProperties =
+    {
+      border:
+        "1px solid #d1d5db",
+      padding:
+        "7px 5px",
+      background:
+        "#14532d",
+      color:
+        "#ffffff",
+      textAlign:
+        "center",
+      fontSize:
+        "10px",
+      fontWeight:
+        700,
+      whiteSpace:
+        "normal",
+      lineHeight:
+        "13px",
+    };
+
+  const tdStyle: React.CSSProperties =
+    {
+      border:
+        "1px solid #d1d5db",
+      padding:
+        "6px 4px",
+      fontSize:
+        "10px",
+      color:
+        "#1f2937",
+      textAlign:
+        "center",
+      overflow:
+        "hidden",
+      textOverflow:
+        "ellipsis",
+      whiteSpace:
+        "nowrap",
+    };
 
   return (
     <div
       style={{
-        marginTop: "20px",
-        width: "100%",
-        maxWidth: "100%",
-        boxSizing: "border-box",
-        background: "#ffffff",
-        padding: "15px",
-        borderRadius: "10px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-        overflow: "hidden",
+        marginTop:
+          "20px",
+        width:
+          "100%",
+        maxWidth:
+          "100%",
+        boxSizing:
+          "border-box",
+        background:
+          "#ffffff",
+        padding:
+          "15px",
+        borderRadius:
+          "10px",
+        boxShadow:
+          "0 2px 8px rgba(0,0,0,0.12)",
+        overflow:
+          "hidden",
       }}
     >
-      {/* ============================
-          REGISTER HEADER
-      ============================= */}
+      {/* REGISTER HEADER */}
 
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: "15px",
-          marginBottom: "12px",
-          width: "100%",
+          display:
+            "flex",
+          justifyContent:
+            "space-between",
+          alignItems:
+            "center",
+          gap:
+            "15px",
+          marginBottom:
+            "12px",
+          width:
+            "100%",
         }}
       >
         <div>
           <h2
             style={{
-              color: "#14532d",
+              color:
+                "#14532d",
               margin: 0,
-              fontSize: "18px",
-              fontWeight: 700,
+              fontSize:
+                "18px",
+              fontWeight:
+                700,
             }}
           >
             📋 Product Register
@@ -120,14 +198,19 @@ export default function ProductTable({
 
           <div
             style={{
-              marginTop: "3px",
-              fontSize: "12px",
-              color: "#6b7280",
+              marginTop:
+                "3px",
+              fontSize:
+                "12px",
+              color:
+                "#6b7280",
             }}
           >
             Total Products:{" "}
             <strong>
-              {filteredProducts.length}
+              {
+                filteredProducts.length
+              }
             </strong>
           </div>
         </div>
@@ -137,110 +220,289 @@ export default function ProductTable({
         <input
           type="text"
           placeholder="🔍 Search Product / Code / HSN"
-          value={search}
+          value={
+            search
+          }
           onChange={(e) =>
-            setSearch(e.target.value)
+            setSearch(
+              e.target.value
+            )
           }
           style={{
-            width: "280px",
-            maxWidth: "35%",
-            height: "36px",
-            padding: "0 10px",
-            border: "1px solid #d1d5db",
-            borderRadius: "6px",
-            fontSize: "12px",
-            outline: "none",
-            boxSizing: "border-box",
+            width:
+              "280px",
+            maxWidth:
+              "35%",
+            height:
+              "36px",
+            padding:
+              "0 10px",
+            border:
+              "1px solid #d1d5db",
+            borderRadius:
+              "6px",
+            fontSize:
+              "12px",
+            outline:
+              "none",
+            boxSizing:
+              "border-box",
           }}
         />
       </div>
 
-      {/* ============================
-          TABLE
-      ============================= */}
+      {/* TABLE */}
 
       <div
         style={{
-          width: "100%",
-          maxWidth: "100%",
-          overflow: "hidden",
-          border: "1px solid #d1d5db",
-          borderRadius: "6px",
+          width:
+            "100%",
+          maxWidth:
+            "100%",
+          overflowX:
+            "auto",
+          border:
+            "1px solid #d1d5db",
+          borderRadius:
+            "6px",
         }}
       >
         <table
           style={{
-            width: "100%",
-            maxWidth: "100%",
-            tableLayout: "fixed",
-            borderCollapse: "collapse",
-            background: "#ffffff",
+            width:
+              "100%",
+            minWidth:
+              "1250px",
+            tableLayout:
+              "fixed",
+            borderCollapse:
+              "collapse",
+            background:
+              "#ffffff",
           }}
         >
           <colgroup>
-            <col style={{ width: "5%" }} />
-            <col style={{ width: "13%" }} />
-            <col style={{ width: "7%" }} />
-            <col style={{ width: "7%" }} />
-            <col style={{ width: "4%" }} />
-            <col style={{ width: "5%" }} />
-            <col style={{ width: "6%" }} />
-            <col style={{ width: "7%" }} />
-            <col style={{ width: "7%" }} />
-            <col style={{ width: "7%" }} />
-            <col style={{ width: "6%" }} />
-            <col style={{ width: "6%" }} />
-            <col style={{ width: "8%" }} />
-            <col style={{ width: "6%" }} />
-            <col style={{ width: "11%" }} />
+            <col
+              style={{
+                width:
+                  "5%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "14%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "7%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "6%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "5%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "5%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "7%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "7%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "7%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "7%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "6%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "6%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "8%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "6%",
+              }}
+            />
+
+            <col
+              style={{
+                width:
+                  "11%",
+              }}
+            />
           </colgroup>
 
           <thead>
             <tr>
-              <th style={thStyle}>Code</th>
+              <th
+                style={thStyle}
+              >
+                Code
+              </th>
 
-              <th style={thStyle}>Product</th>
+              <th
+                style={thStyle}
+              >
+                Product
+              </th>
 
-              <th style={thStyle}>Category</th>
+              <th
+                style={thStyle}
+              >
+                Category
+              </th>
 
-              <th style={thStyle}>HSN</th>
+              <th
+                style={thStyle}
+              >
+                HSN
+              </th>
 
-              <th style={thStyle}>GST</th>
+              <th
+                style={thStyle}
+              >
+                GST
+              </th>
 
-              <th style={thStyle}>UOM</th>
+              <th
+                style={thStyle}
+              >
+                UOM
+              </th>
 
-              <th style={thStyle}>Net Wt.</th>
+              <th
+                style={thStyle}
+              >
+                Net Wt.
+              </th>
 
-              <th style={thStyle}>Purchase</th>
+              <th
+                style={thStyle}
+              >
+                Base Cost
+              </th>
 
-              <th style={thStyle}>Sale</th>
+              <th
+                style={thStyle}
+              >
+                Packing
+              </th>
 
-              <th style={thStyle}>MRP</th>
+              <th
+                style={thStyle}
+              >
+                Other
+              </th>
 
-              <th style={thStyle}>Opening</th>
+              <th
+                style={thStyle}
+              >
+                Total Cost
+              </th>
 
-              <th style={thStyle}>Min Stock</th>
+              <th
+                style={thStyle}
+              >
+                Sale
+              </th>
 
-              <th style={thStyle}>Stock Status</th>
+              <th
+                style={thStyle}
+              >
+                MRP
+              </th>
 
-              <th style={thStyle}>Status</th>
+              <th
+                style={thStyle}
+              >
+                Stock
+              </th>
 
-              <th style={thStyle}>Action</th>
+              <th
+                style={thStyle}
+              >
+                Action
+              </th>
             </tr>
           </thead>
 
           <tbody>
             {filteredProducts.map(
-              (item, index) => {
+              (
+                item,
+                index
+              ) => {
                 const stockStatus =
-                  getStockStatus(item);
+                  getStockStatus(
+                    item
+                  );
 
                 return (
                   <tr
-                    key={item.id}
+                    key={
+                      item.id
+                    }
                     style={{
                       background:
-                        index % 2 === 0
+                        index %
+                          2 ===
+                        0
                           ? "#ffffff"
                           : "#f9fafb",
                     }}
@@ -250,10 +512,11 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
-                        fontWeight: 700,
-                        color: "#14532d",
+                        fontWeight:
+                          700,
+                        color:
+                          "#14532d",
                       }}
-                      title={item.code}
                     >
                       {item.code}
                     </td>
@@ -263,10 +526,14 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
-                        fontWeight: 600,
-                        textAlign: "left",
+                        fontWeight:
+                          600,
+                        textAlign:
+                          "left",
                       }}
-                      title={item.name}
+                      title={
+                        item.name
+                      }
                     >
                       {item.name}
                     </td>
@@ -275,27 +542,44 @@ export default function ProductTable({
 
                     <td
                       style={tdStyle}
-                      title={item.category}
                     >
-                      {item.category}
+                      {
+                        item.category
+                      }
                     </td>
 
                     {/* HSN */}
 
-                    <td style={tdStyle}>
-                      {item.hsn}
+                    <td
+                      style={tdStyle}
+                    >
+                      {
+                        item.hsn
+                      }
                     </td>
 
                     {/* GST */}
 
-                    <td style={tdStyle}>
-                      {item.gst}
+                    <td
+                      style={tdStyle}
+                    >
+                      {
+                        item.gst
+                      }
                     </td>
 
                     {/* UOM */}
 
-                    <td style={tdStyle}>
-                      {item.unit}
+                    <td
+                      style={{
+                        ...tdStyle,
+                        fontWeight:
+                          700,
+                      }}
+                    >
+                      {
+                        item.unit
+                      }
                     </td>
 
                     {/* NET WEIGHT */}
@@ -303,21 +587,93 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
-                        textAlign: "right",
+                        textAlign:
+                          "right",
                       }}
                     >
-                      {item.netWeight}
+                      {
+                        item.netWeight
+                      }
+                      {item.netWeight >
+                        0
+                        ? " g"
+                        : ""}
                     </td>
 
-                    {/* PURCHASE */}
+                    {/* BASE COST */}
 
                     <td
                       style={{
                         ...tdStyle,
-                        textAlign: "right",
+                        textAlign:
+                          "right",
                       }}
                     >
-                      ₹{item.purchase.toFixed(2)}
+                      ₹
+                      {Number(
+                        item.baseCost ||
+                          0
+                      ).toFixed(
+                        2
+                      )}
+                    </td>
+
+                    {/* PACKING */}
+
+                    <td
+                      style={{
+                        ...tdStyle,
+                        textAlign:
+                          "right",
+                      }}
+                    >
+                      ₹
+                      {Number(
+                        item.packingCost ||
+                          0
+                      ).toFixed(
+                        2
+                      )}
+                    </td>
+
+                    {/* OTHER */}
+
+                    <td
+                      style={{
+                        ...tdStyle,
+                        textAlign:
+                          "right",
+                      }}
+                    >
+                      ₹
+                      {Number(
+                        item.otherCharges ||
+                          0
+                      ).toFixed(
+                        2
+                      )}
+                    </td>
+
+                    {/* TOTAL COST */}
+
+                    <td
+                      style={{
+                        ...tdStyle,
+                        textAlign:
+                          "right",
+                        fontWeight:
+                          700,
+                        color:
+                          "#14532d",
+                      }}
+                    >
+                      ₹
+                      {Number(
+                        item.totalCost ||
+                          0
+                      ).toFixed(
+                        2
+                      )}
                     </td>
 
                     {/* SALE */}
@@ -325,10 +681,17 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
-                        textAlign: "right",
+                        textAlign:
+                          "right",
                       }}
                     >
-                      ₹{item.sale.toFixed(2)}
+                      ₹
+                      {Number(
+                        item.sale ||
+                          0
+                      ).toFixed(
+                        2
+                      )}
                     </td>
 
                     {/* MRP */}
@@ -336,69 +699,64 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
-                        textAlign: "right",
-                        fontWeight: 600,
+                        textAlign:
+                          "right",
+                        fontWeight:
+                          600,
                       }}
                     >
-                      ₹{item.mrp.toFixed(2)}
+                      ₹
+                      {Number(
+                        item.mrp ||
+                          0
+                      ).toFixed(
+                        2
+                      )}
                     </td>
 
-                    {/* OPENING */}
+                    {/* STOCK */}
 
-                    <td style={tdStyle}>
-                      {item.stock}
-                    </td>
+                    <td
+                      style={
+                        tdStyle
+                      }
+                    >
+                      <div>
+                        <strong>
+                          {
+                            item.stock
+                          }
+                        </strong>{" "}
+                        {
+                          item.unit
+                        }
+                      </div>
 
-                    {/* MIN STOCK */}
-
-                    <td style={tdStyle}>
-                      {item.minimumStock}
-                    </td>
-
-                    {/* STOCK STATUS */}
-
-                    <td style={tdStyle}>
                       <span
                         style={{
-                          display: "inline-block",
+                          display:
+                            "inline-block",
+                          marginTop:
+                            "3px",
                           background:
                             stockStatus.background,
                           color:
                             stockStatus.color,
-                          padding: "3px 5px",
-                          borderRadius: "12px",
-                          fontSize: "9px",
-                          fontWeight: 700,
-                          whiteSpace: "nowrap",
+                          padding:
+                            "2px 5px",
+                          borderRadius:
+                            "10px",
+                          fontSize:
+                            "8px",
+                          fontWeight:
+                            700,
+                          whiteSpace:
+                            "nowrap",
                         }}
                       >
-                        {stockStatus.text}
-                      </span>
-                    </td>
-
-                    {/* STATUS */}
-
-                    <td style={tdStyle}>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "3px 5px",
-                          borderRadius: "12px",
-                          fontSize: "9px",
-                          fontWeight: 700,
-                          background:
-                            item.active
-                              ? "#dcfce7"
-                              : "#f3f4f6",
-                          color:
-                            item.active
-                              ? "#15803d"
-                              : "#6b7280",
-                        }}
-                      >
-                        {item.active
-                          ? "Active"
-                          : "Inactive"}
+                        {
+                          stockStatus.text
+                        }
                       </span>
                     </td>
 
@@ -407,24 +765,36 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
-                        whiteSpace: "nowrap",
+                        whiteSpace:
+                          "nowrap",
                       }}
                     >
                       <button
                         type="button"
                         onClick={() =>
-                          onEdit(item)
+                          onEdit(
+                            item
+                          )
                         }
                         style={{
-                          background: "#2563eb",
-                          color: "#ffffff",
-                          border: "none",
-                          padding: "4px 6px",
-                          borderRadius: "4px",
-                          cursor: "pointer",
-                          fontSize: "9px",
-                          fontWeight: 600,
-                          marginRight: "3px",
+                          background:
+                            "#2563eb",
+                          color:
+                            "#ffffff",
+                          border:
+                            "none",
+                          padding:
+                            "4px 7px",
+                          borderRadius:
+                            "4px",
+                          cursor:
+                            "pointer",
+                          fontSize:
+                            "9px",
+                          fontWeight:
+                            600,
+                          marginRight:
+                            "3px",
                         }}
                       >
                         ✏️
@@ -438,18 +808,28 @@ export default function ProductTable({
                               `Are you sure you want to delete "${item.name}"?`
                             )
                           ) {
-                            onDelete(item.id);
+                            onDelete(
+                              item.id
+                            );
                           }
                         }}
                         style={{
-                          background: "#dc2626",
-                          color: "#ffffff",
-                          border: "none",
-                          padding: "4px 6px",
-                          borderRadius: "4px",
-                          cursor: "pointer",
-                          fontSize: "9px",
-                          fontWeight: 600,
+                          background:
+                            "#dc2626",
+                          color:
+                            "#ffffff",
+                          border:
+                            "none",
+                          padding:
+                            "4px 7px",
+                          borderRadius:
+                            "4px",
+                          cursor:
+                            "pointer",
+                          fontSize:
+                            "9px",
+                          fontWeight:
+                            600,
                         }}
                       >
                         🗑
@@ -464,14 +844,20 @@ export default function ProductTable({
 
         {/* NO DATA */}
 
-        {filteredProducts.length === 0 && (
+        {filteredProducts.length ===
+          0 && (
           <div
             style={{
-              textAlign: "center",
-              padding: "30px",
-              color: "#6b7280",
-              fontWeight: 600,
-              fontSize: "14px",
+              textAlign:
+                "center",
+              padding:
+                "30px",
+              color:
+                "#6b7280",
+              fontWeight:
+                600,
+              fontSize:
+                "14px",
             }}
           >
             📦 No Products Found
