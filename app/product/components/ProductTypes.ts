@@ -48,7 +48,7 @@ export type Product = {
   */
 
   netWeight: number;
-
+  stockBaseCode?: string;
   /* =========================
      EXISTING PRICING
      KEEPING THESE FIELDS

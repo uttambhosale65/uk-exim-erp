@@ -497,37 +497,10 @@ export default function Home() {
                   }}
                 >
                   ₹
-               {(() => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-
-  return loadPurchases().reduce(
-    (total, purchase) => {
-      const date = new Date(
-        purchase.purchaseDate
-      );
-
-      if (
-        date.getFullYear() === year &&
-        date.getMonth() === month
-      ) {
-        return (
-          total +
-          Number(
-            purchase.totalNetAmount ?? 0
-          )
-        );
-      }
-
-      return total;
-    },
-    0
-  ).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-})()}
+ {dashboard.sales.toLocaleString("en-IN", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})}
                 </h1>
               </div>
 
@@ -832,7 +805,7 @@ export default function Home() {
   </div>
 </div>
 
-<StockAlerts />
+
 <div
   style={{
     marginTop: "18px",

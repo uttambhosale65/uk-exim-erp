@@ -65,35 +65,50 @@ export default function ProductPage() {
       Final Total Cost
     */
 
-    const finalProduct: Product = {
-      ...product,
+   const finalProduct: Product = {
+  ...product,
 
-      baseCost:
-        Number(
-          product.baseCost || 0
-        ),
+  baseCost:
+    Number(
+      product.baseCost || 0
+    ),
 
-      packingCost:
-        Number(
-          product.packingCost || 0
-        ),
+  packingCost:
+    Number(
+      product.packingCost || 0
+    ),
 
-      otherCharges:
-        Number(
-          product.otherCharges || 0
-        ),
+  otherCharges:
+    Number(
+      product.otherCharges || 0
+    ),
 
-      totalCost:
-        Number(
-          product.baseCost || 0
-        ) +
-        Number(
-          product.packingCost || 0
-        ) +
-        Number(
-          product.otherCharges || 0
-        ),
-    };
+  totalCost:
+    Number(
+      product.baseCost || 0
+    ) +
+    Number(
+      product.packingCost || 0
+    ) +
+    Number(
+      product.otherCharges || 0
+    ),
+
+  /*
+    STOCK BASE
+
+    Packed Uttam Haldi products
+    are made from Loose Haldi P0006.
+
+    Loose Haldi itself remains
+    its own stock base.
+  */
+
+  stockBaseCode:
+    product.unit === "Pkt"
+      ? "P0006"
+      : product.code,
+};
 
     let updatedProducts: Product[];
 

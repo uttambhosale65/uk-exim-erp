@@ -5,6 +5,7 @@ import {
   Product,
   ProductUnit,
 } from "./ProductTypes";
+import { loadProducts } from "./ProductStorage";
 
 type ProductFormProps = {
   productCode: string;
@@ -39,6 +40,10 @@ export default function ProductForm({
     unit: "Gram",
 
     netWeight: 0,
+
+    /* STOCK BASE PRODUCT */
+
+    stockBaseCode: "",
 
     /* EXISTING PRICING */
 
@@ -100,6 +105,10 @@ export default function ProductForm({
       setProduct({
         ...editingProduct,
 
+        stockBaseCode:
+          editingProduct.stockBaseCode ||
+          "",
+
         baseCost,
 
         packingCost,
@@ -123,6 +132,20 @@ export default function ProductForm({
   ]);
 
   /* =====================================================
+     STOCK BASE PRODUCT OPTIONS
+
+     Packet products can point to one loose/base product.
+     KG / Gram products can keep their own stock code.
+  ===================================================== */
+
+  const availableProducts =
+    loadProducts().filter(
+      (item) =>
+        item.code !== product.code &&
+        item.active !== false
+    );
+
+  /* =====================================================
      HANDLE CHANGE
   ===================================================== */
 
@@ -136,6 +159,21 @@ export default function ProductForm({
       value,
       type,
     } = e.target;
+
+    /* STOCK BASE PRODUCT */
+
+    if (name === "unit") {
+      setProduct((prev) => ({
+        ...prev,
+        unit: value as ProductUnit,
+        stockBaseCode:
+          value === "Pkt"
+            ? prev.stockBaseCode || ""
+            : prev.code,
+      }));
+
+      return;
+    }
 
     /* CHECKBOX */
 
@@ -229,6 +267,13 @@ export default function ProductForm({
       return;
     }
 
+    if (product.unit === "Pkt" && !product.stockBaseCode) {
+      alert(
+        "Please select Loose / Base Product for packet stock."
+      );
+      return;
+    }
+
     if (product.mrp < product.sale) {
       alert(
         "MRP should not be less than Sale Price"
@@ -263,6 +308,11 @@ export default function ProductForm({
 
     const finalProduct: Product = {
       ...product,
+
+      stockBaseCode:
+        product.unit === "Pkt"
+          ? product.stockBaseCode || ""
+          : product.code,
 
       baseCost:
         finalBaseCost,
@@ -550,6 +600,69 @@ gap: "10px",
                 Pkt
               </option>
             </select>
+          </div>
+        </div>
+
+        {/* =================================================
+            STOCK BASE PRODUCT
+        ================================================= */}
+
+        <div
+          style={{
+            marginTop: "14px",
+            padding: "12px",
+            border: "1px solid #d1d5db",
+            borderRadius: "8px",
+            background: "#f8fafc",
+          }}
+        >
+          <div
+            style={{
+              color: "#14532d",
+              fontSize: "13px",
+              fontWeight: 700,
+              marginBottom: "8px",
+            }}
+          >
+            📦 Stock Base Product
+          </div>
+
+          <select
+            name="stockBaseCode"
+            value={product.stockBaseCode || ""}
+            onChange={handleChange}
+            style={inputStyle}
+          >
+            <option value="">
+              {product.unit === "Pkt"
+                ? "Select Loose / Base Product"
+                : "Use Own Product Stock"}
+            </option>
+
+            {product.unit !== "Pkt" && (
+              <option value={product.code}>
+                {product.code} — {product.name || "Current Product"}
+              </option>
+            )}
+
+            {availableProducts.map((item) => (
+              <option
+                key={item.code}
+                value={item.code}
+              >
+                {item.code} — {item.name}
+              </option>
+            ))}
+          </select>
+
+          <div
+            style={{
+              marginTop: "6px",
+              fontSize: "11px",
+              color: "#6b7280",
+            }}
+          >
+            Packet purchases/sales are converted to KG and posted to this base product.
           </div>
         </div>
 

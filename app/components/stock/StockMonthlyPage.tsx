@@ -439,8 +439,6 @@ export default function StockMonthlyPage() {
             marginBottom: "14px",
           }}
         >
-          {/* OPENING */}
-
           <SummaryCard
             title="OPENING STOCK"
             value={summary.opening}
@@ -448,8 +446,6 @@ export default function StockMonthlyPage() {
             background="#f8fafc"
             valueColor="#374151"
           />
-
-          {/* PURCHASE */}
 
           <SummaryCard
             title="MONTHLY PURCHASE"
@@ -459,8 +455,6 @@ export default function StockMonthlyPage() {
             valueColor="#1d4ed8"
           />
 
-          {/* SALES */}
-
           <SummaryCard
             title="MONTHLY SALES"
             value={summary.sales}
@@ -468,8 +462,6 @@ export default function StockMonthlyPage() {
             background="#fff7ed"
             valueColor="#c2410c"
           />
-
-          {/* CLOSING */}
 
           <SummaryCard
             title="CLOSING STOCK"

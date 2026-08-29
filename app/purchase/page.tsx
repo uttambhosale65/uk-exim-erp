@@ -16,7 +16,18 @@ import {
   savePurchases,
   getNextPurchaseNo,
 } from "../components/customer/purchase/PurchaseStorage";
+import {
+  loadProducts,
+} from "../product/components/ProductStorage";
 
+import {
+  convertToStockQty,
+} from "../components/stock/StockStorage";
+import {
+  loadStock,
+  saveStock,
+  reversePurchaseStock,
+} from "../components/stock/StockStorage";
 export default function PurchasePage() {
   const [purchases, setPurchases] =
     useState<Purchase[]>([]);
@@ -43,23 +54,250 @@ export default function PurchasePage() {
 
    setPurchaseNo(getNextPurchaseNo(purchases));
   }, [purchases]);
+/* =====================================================
+   GET PURCHASE STOCK IMPACT
 
-  function addPurchase(
-    purchase: Purchase
-  ) {
-    setPurchases((prev) => {
-      if (editingPurchase) {
-        return prev.map((p) =>
-          p.id === purchase.id ? purchase : p
-        );
-      }
+   Packed Product → Stock Base Product
+   Packet Qty → KG
+===================================================== */
 
-      return [...prev, purchase];
-    });
+function getPurchaseStockImpact(
+  productCode: string,
+  qty: number
+) {
+  const product =
+    loadProducts().find(
+      (p) =>
+        p.code === productCode
+    );
 
-    setEditingPurchase(null);
+  if (!product) {
+    return {
+      stockProductCode:
+        productCode,
+      stockQty:
+        Number(qty) || 0,
+      productName: "",
+      hsn: "",
+    };
   }
 
+  const stockProductCode =
+    product.stockBaseCode ||
+    product.code;
+
+  const stockQty =
+    convertToStockQty(
+      Number(qty),
+      product.unit,
+      product.netWeight
+    );
+
+  return {
+    stockProductCode,
+    stockQty,
+    productName:
+      product.name,
+    hsn:
+      product.hsn,
+  };
+}
+ function addPurchase(
+  purchase: Purchase
+) {
+  /*
+    EDIT PURCHASE
+
+    जुना Purchase सध्या Stock ला
+    लागू केलेला नसल्यामुळे येथे
+    Stock calculation नंतर करू.
+  */
+
+if (editingPurchase) {
+  /*
+    OLD PURCHASE → STOCK REVERSE
+  */
+
+  editingPurchase.items.forEach(
+    (item) => {
+      if (
+        !item.productCode ||
+        Number(item.qty) <= 0
+      ) {
+        return;
+      }
+
+      const impact =
+        getPurchaseStockImpact(
+          item.productCode,
+          Number(item.qty)
+        );
+
+      reversePurchaseStock(
+        impact.stockProductCode,
+        impact.stockQty
+      );
+    }
+  );
+
+  /*
+    NEW PURCHASE → STOCK ADD
+  */
+
+  const stock =
+    loadStock();
+
+  const updatedStock = [
+    ...stock,
+  ];
+
+  purchase.items.forEach(
+    (item) => {
+      if (
+        !item.productCode ||
+        Number(item.qty) <= 0
+      ) {
+        return;
+      }
+
+      const impact =
+        getPurchaseStockImpact(
+          item.productCode,
+          Number(item.qty)
+        );
+
+      const index =
+        updatedStock.findIndex(
+          (stockItem) =>
+            stockItem.productCode ===
+            impact.stockProductCode
+        );
+
+      if (index === -1) {
+        return;
+      }
+
+      updatedStock[index].purchaseQty =
+        Number(
+          updatedStock[index]
+            .purchaseQty || 0
+        ) + impact.stockQty;
+
+      updatedStock[index].currentStock =
+        Number(
+          updatedStock[index]
+            .openingStock || 0
+        ) +
+        Number(
+          updatedStock[index]
+            .purchaseQty || 0
+        ) -
+        Number(
+          updatedStock[index]
+            .salesQty || 0
+        );
+    }
+  );
+
+  saveStock(updatedStock);
+
+  setPurchases((prev) =>
+    prev.map((p) =>
+      p.id === purchase.id
+        ? purchase
+        : p
+    )
+  );
+
+  setEditingPurchase(null);
+
+  return;
+}
+
+  /*
+    NEW PURCHASE
+  */
+
+  const stock =
+    loadStock();
+
+  const updatedStock = [
+    ...stock,
+  ];
+
+  purchase.items.forEach(
+    (item) => {
+      if (
+        !item.productCode ||
+        Number(item.qty) <= 0
+      ) {
+        return;
+      }
+
+      const product =
+        loadProducts().find(
+          (p) =>
+            p.code ===
+            item.productCode
+        );
+
+      if (!product) {
+        return;
+      }
+
+      const stockProductCode =
+        product.stockBaseCode ||
+        product.code;
+
+      const stockQty =
+        convertToStockQty(
+          Number(item.qty),
+          product.unit,
+          product.netWeight
+        );
+
+      const index =
+        updatedStock.findIndex(
+          (stockItem) =>
+            stockItem.productCode ===
+            stockProductCode
+        );
+
+      if (index === -1) {
+        return;
+      }
+
+      updatedStock[index].purchaseQty =
+        Number(
+          updatedStock[index]
+            .purchaseQty || 0
+        ) + stockQty;
+
+      updatedStock[index].currentStock =
+        Number(
+          updatedStock[index]
+            .openingStock || 0
+        ) +
+        Number(
+          updatedStock[index]
+            .purchaseQty || 0
+        ) -
+        Number(
+          updatedStock[index]
+            .salesQty || 0
+        );
+    }
+  );
+
+  saveStock(updatedStock);
+
+  setPurchases((prev) => [
+    ...prev,
+    purchase,
+  ]);
+
+  setEditingPurchase(null);
+}
   function handleEditPurchase(
     purchase: Purchase
   ) {
@@ -70,7 +308,37 @@ export default function PurchasePage() {
     id: string
   ) {
     if (!confirm("Delete this Purchase?")) return;
+    const purchase =
+  purchases.find(
+    (item) =>
+      item.id === id
+  );
 
+if (!purchase) {
+  return;
+}
+
+purchase.items.forEach(
+  (item) => {
+    if (
+      !item.productCode ||
+      Number(item.qty) <= 0
+    ) {
+      return;
+    }
+
+    const impact =
+      getPurchaseStockImpact(
+        item.productCode,
+        Number(item.qty)
+      );
+
+    reversePurchaseStock(
+      impact.stockProductCode,
+      impact.stockQty
+    );
+  }
+);
     setPurchases((prev) =>
       prev.filter(
         (purchase) => purchase.id !== id
@@ -88,11 +356,8 @@ export default function PurchasePage() {
           .includes(text) ||
         purchase.supplierName
           .toLowerCase()
-          .includes(text) ||
-        purchase.productName
-          .toLowerCase()
-          .includes(text)
-    );
+          .includes(text) 
+     );
   }, [purchases, search]);
   return (
     <Layout title="UK EXIM ERP">

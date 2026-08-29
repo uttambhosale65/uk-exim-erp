@@ -1,4 +1,5 @@
 import { Stock } from "./StockTypes";
+import { loadProducts } from "../../product/components/ProductStorage";
 
 const STORAGE_KEY = "uk-exim-stock";
 
@@ -129,6 +130,55 @@ function calculateCurrentStock(
 }
 
 /* =========================================================
+   PRODUCT → STOCK TARGET
+
+   Packet products can point to a loose/base product.
+   Their quantity is converted to the base stock unit.
+========================================================= */
+
+function getProduct(productCode: string): any | undefined {
+  const products = loadProducts();
+
+  return products.find(
+    (product) =>
+      String(product?.code || "").trim() ===
+      String(productCode || "").trim()
+  );
+}
+
+function getStockTargetCode(
+  productCode: string
+): string {
+  const product = getProduct(productCode);
+
+  if (!product) {
+    return productCode;
+  }
+
+  return (
+    String(product.stockBaseCode || "").trim() ||
+    product.code
+  );
+}
+
+function getStockQty(
+  productCode: string,
+  qty: number
+): number {
+  const product = getProduct(productCode);
+
+  if (!product) {
+    return Number(qty) || 0;
+  }
+
+  return convertToStockQty(
+    Number(qty) || 0,
+    product.unit,
+    Number(product.netWeight) || 0
+  );
+}
+
+/* =========================================================
    PURCHASE → STOCK
 ========================================================= */
 
@@ -144,7 +194,10 @@ export function updateStock(
   }
 
   const purchaseQty =
-    Number(qty) || 0;
+    getStockQty(productCode, qty);
+
+  const stockProductCode =
+    getStockTargetCode(productCode);
 
   if (purchaseQty <= 0) {
     return;
@@ -157,7 +210,7 @@ export function updateStock(
     stock.findIndex(
       (item) =>
         item.productCode ===
-        productCode
+        stockProductCode
     );
 
   /* -------------------------------------------------------
@@ -165,13 +218,19 @@ export function updateStock(
   ------------------------------------------------------- */
 
   if (index >= 0) {
+    const targetProduct =
+      getProduct(stockProductCode);
+
     stock[index].productName =
+      targetProduct?.name ||
       productName;
 
     stock[index].hsn =
+      targetProduct?.hsn ||
       hsn;
 
     stock[index].unit =
+      targetProduct?.unit ||
       unit;
 
     stock[index].purchaseQty =
@@ -196,17 +255,27 @@ export function updateStock(
      create it with Opening Stock = 0.
   ------------------------------------------------------- */
 
+  const targetProduct =
+    getProduct(stockProductCode);
+
   const newStock: Stock = {
     id:
       getNextStockId(stock),
 
-    productCode,
+    productCode:
+      stockProductCode,
 
-    productName,
+    productName:
+      targetProduct?.name ||
+      productName,
 
-    hsn,
+    hsn:
+      targetProduct?.hsn ||
+      hsn,
 
-    unit,
+    unit:
+      targetProduct?.unit ||
+      unit,
 
     openingStock: 0,
 
@@ -235,11 +304,14 @@ export function reversePurchaseStock(
   const stock =
     loadStock();
 
+  const stockProductCode =
+    getStockTargetCode(productCode);
+
   const index =
     stock.findIndex(
       (item) =>
         item.productCode ===
-        productCode
+        stockProductCode
     );
 
   if (index === -1) {
@@ -247,7 +319,7 @@ export function reversePurchaseStock(
   }
 
   const reverseQty =
-    Number(qty) || 0;
+    getStockQty(productCode, qty);
 
   if (reverseQty <= 0) {
     return;
@@ -268,7 +340,47 @@ export function reversePurchaseStock(
 
   saveStock(stock);
 }
+/* =========================================================
+   CONVERT PRODUCT QTY → STOCK BASE QTY
 
+   Packet:
+   Qty × Net Weight(g) ÷ 1000 = KG
+
+   KG:
+   Qty = KG
+
+   Gram:
+   Qty ÷ 1000 = KG
+========================================================= */
+
+export function convertToStockQty(
+  qty: number,
+  unit: string,
+  netWeight: number
+): number {
+  const quantity =
+    Number(qty) || 0;
+
+  if (quantity <= 0) {
+    return 0;
+  }
+
+  if (
+    unit === "Pkt" &&
+    Number(netWeight) > 0
+  ) {
+    return (
+      quantity *
+      Number(netWeight)
+    ) / 1000;
+  }
+
+  if (unit === "Gram") {
+    return quantity / 1000;
+  }
+
+  return quantity;
+}
 /* =========================================================
    SALES → STOCK
 ========================================================= */
@@ -280,11 +392,14 @@ export function reduceStock(
   const stock =
     loadStock();
 
+  const stockProductCode =
+    getStockTargetCode(productCode);
+
   const index =
     stock.findIndex(
       (item) =>
         item.productCode ===
-        productCode
+        stockProductCode
     );
 
   if (index === -1) {
@@ -292,7 +407,7 @@ export function reduceStock(
   }
 
   const salesQty =
-    Number(qty) || 0;
+    getStockQty(productCode, qty);
 
   if (salesQty <= 0) {
     return;
@@ -387,11 +502,14 @@ export function getCurrentStock(
   const stock =
     loadStock();
 
+  const stockProductCode =
+    getStockTargetCode(productCode);
+
   const item =
     stock.find(
       (s) =>
         s.productCode ===
-        productCode
+        stockProductCode
     );
 
   return item

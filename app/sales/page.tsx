@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import SalesForm from "../components/customer/sales/SalesForm";
+import { loadProducts } from "../product/components/ProductStorage";
 import SalesTable from "../components/customer/sales/SalesTable";
 import InvoicePrint from "../components/customer/sales/InvoicePrint";
 
@@ -19,6 +20,7 @@ import {
   saveStock,
   reduceStock,
   getCurrentStock,
+  convertToStockQty,
 } from "../components/stock/StockStorage";
 
 /* =====================================================
@@ -30,10 +32,66 @@ import {
 
 const SALES_NUMBER_VERSION =
   "uk-exim-sales-numbering-v2";
+/* =====================================================
+   GET STOCK IMPACT
 
+   Packed product:
+   Packet Qty → KG
+
+   Loose product:
+   KG → KG
+
+   Packed products use their
+   Stock Base Product.
+===================================================== */
+
+function getStockImpact(
+  productCode: string,
+  qty: number
+): {
+  stockProductCode: string;
+  stockQty: number;
+} {
+  const product =
+    loadProducts().find(
+      (p) =>
+        p.code === productCode
+    );
+
+  if (!product) {
+    return {
+      stockProductCode:
+        productCode,
+      stockQty:
+        Number(qty) || 0,
+    };
+  }
+
+  const stockProductCode =
+    product.stockBaseCode ||
+    (
+      product.unit === "Pkt"
+        ? "P0006"
+        : product.code
+    );
+
+  const stockQty =
+    convertToStockQty(
+      qty,
+      product.unit,
+      product.netWeight
+    );
+
+  return {
+    stockProductCode,
+    stockQty,
+  };
+}
 /* =====================================================
    RESTORE SALE STOCK
-   Sale Edit / Delete झाल्यावर Stock परत वाढवण्यासाठी
+
+   Sale Edit / Delete झाल्यावर
+   Stock Base Product मध्ये quantity परत वाढवणे.
 ===================================================== */
 
 function restoreSaleStock(sale: Sales) {
@@ -44,34 +102,48 @@ function restoreSaleStock(sale: Sales) {
     : [];
 
   items.forEach((item) => {
+    if (
+      !item.productCode ||
+      Number(item.qty) <= 0
+    ) {
+      return;
+    }
+
+    const stockImpact =
+      getStockImpact(
+        item.productCode,
+        Number(item.qty)
+      );
+
     const index = stock.findIndex(
       (stockItem) =>
         stockItem.productCode ===
-        item.productCode
+        stockImpact.stockProductCode
     );
 
-    if (index === -1) return;
+    if (index === -1) {
+      return;
+    }
 
     stock[index].salesQty = Math.max(
       0,
       Number(stock[index].salesQty || 0) -
-        Number(item.qty || 0)
+        stockImpact.stockQty
     );
 
     stock[index].currentStock =
-      Math.max(
-        0,
-        Number(stock[index].openingStock || 0) +
-          Number(stock[index].purchaseQty || 0) -
-          Number(stock[index].salesQty || 0)
-      );
+      Number(stock[index].openingStock || 0) +
+      Number(stock[index].purchaseQty || 0) -
+      Number(stock[index].salesQty || 0);
   });
 
   saveStock(stock);
 }
-
 /* =====================================================
    APPLY SALE TO STOCK
+
+   Packed Product → Stock Base Product
+   Packet Qty → KG
 ===================================================== */
 
 function applySaleStock(sale: Sales) {
@@ -87,9 +159,15 @@ function applySaleStock(sale: Sales) {
       return;
     }
 
+    const stockImpact =
+      getStockImpact(
+        item.productCode,
+        Number(item.qty)
+      );
+
     reduceStock(
-      item.productCode,
-      Number(item.qty)
+      stockImpact.stockProductCode,
+      stockImpact.stockQty
     );
   });
 }
@@ -225,13 +303,19 @@ export default function SalesPage() {
         continue;
       }
 
-      const currentStock =
-        getCurrentStock(
-          item.productCode
-        );
+     const stockImpact =
+  getStockImpact(
+    item.productCode,
+    Number(item.qty)
+  );
 
-      let availableStock =
-        currentStock;
+const currentStock =
+  getCurrentStock(
+    stockImpact.stockProductCode
+  );
+
+let availableStock =
+  currentStock;
 
       /*
         EDIT SALE:
@@ -248,13 +332,28 @@ export default function SalesPage() {
           );
 
         if (oldItem) {
-          availableStock +=
-            Number(oldItem.qty) || 0;
+          const oldStockImpact =
+            getStockImpact(
+              oldItem.productCode,
+              Number(oldItem.qty)
+            );
+
+          /*
+            Old sale quantity is restored in
+            the same stock UOM used by StockStorage.
+          */
+          if (
+            oldStockImpact.stockProductCode ===
+            stockImpact.stockProductCode
+          ) {
+            availableStock +=
+              oldStockImpact.stockQty;
+          }
         }
       }
 
       const requiredQty =
-        Number(item.qty) || 0;
+  stockImpact.stockQty;
 
       if (
         requiredQty >
@@ -263,8 +362,9 @@ export default function SalesPage() {
         alert(
           `❌ Insufficient Stock\n\n` +
             `${item.productName}\n` +
-            `Available Stock: ${availableStock} ${item.unit}\n` +
-            `Required Quantity: ${requiredQty} ${item.unit}\n\n` +
+            `Stock Product: ${stockImpact.stockProductCode}\n` +
+            `Available Stock: ${availableStock.toFixed(3)} KG\n` +
+            `Required Quantity: ${requiredQty.toFixed(3)} KG\n\n` +
             `Sale cannot be saved.`
         );
 

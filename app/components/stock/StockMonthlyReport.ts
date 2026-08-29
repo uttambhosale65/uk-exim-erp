@@ -1,4 +1,10 @@
-import { loadStock } from "./StockStorage";
+import {
+  loadStock,
+  convertToStockQty,
+} from "./StockStorage";
+import {
+  loadProducts,
+} from "../../product/components/ProductStorage";
 import { loadPurchases } from "../customer/purchase/PurchaseStorage";
 import { loadSales } from "../customer/sales/SalesStorage";
 
@@ -352,6 +358,25 @@ export function getStockMonthlyReport(
     >();
 
   /* =======================================================
+     PRODUCT MASTER LOOKUP
+  ======================================================= */
+
+  const products =
+    loadProducts();
+
+  const productsMap =
+    new Map(
+      products.map(
+        (product) => [
+          String(
+            product.code || ""
+          ).trim(),
+          product,
+        ]
+      )
+    );
+
+  /* =======================================================
      CURRENT STOCK MASTER PRODUCTS
   ======================================================= */
 
@@ -392,6 +417,65 @@ export function getStockMonthlyReport(
   );
 
   /* =======================================================
+     GET STOCK TARGET CODE
+
+     Packet products point to their loose/base stock product.
+  ======================================================= */
+
+  function getStockTargetCode(
+    productCode: string
+  ): string {
+    const product =
+      productsMap.get(
+        productCode
+      );
+
+    if (!product) {
+      return productCode;
+    }
+
+    return (
+      String(
+        product.stockBaseCode || ""
+      ).trim() ||
+      product.code
+    );
+  }
+
+  /* =======================================================
+     CONVERT TRANSACTION QUANTITY
+
+     Packet:
+       Qty × Net Weight(g) ÷ 1000 = KG
+
+     KG:
+       Qty remains KG
+
+     Gram:
+       Qty ÷ 1000 = KG
+  ======================================================= */
+
+  function getStockQuantity(
+    productCode: string,
+    quantity: unknown
+  ): number {
+    const product =
+      productsMap.get(
+        productCode
+      );
+
+    if (!product) {
+      return 0;
+    }
+
+    return convertToStockQty(
+      num(quantity),
+      product.unit,
+      num(product.netWeight)
+    );
+  }
+
+  /* =======================================================
      PURCHASE HISTORY
   ======================================================= */
 
@@ -425,15 +509,34 @@ export function getStockMonthlyReport(
             return;
           }
 
+          const product =
+            productsMap.get(
+              code
+            );
+
+          if (!product) {
+            return;
+          }
+
           const qty =
-            num(item?.qty);
+            getStockQuantity(
+              code,
+              item?.qty
+            );
 
           if (!qty) {
             return;
           }
 
+          const stockProductCode =
+            getStockTargetCode(
+              code
+            );
+
           const row =
-            rowsMap.get(code);
+            rowsMap.get(
+              stockProductCode
+            );
 
           if (!row) {
             return;
@@ -507,15 +610,34 @@ export function getStockMonthlyReport(
             return;
           }
 
+          const product =
+            productsMap.get(
+              code
+            );
+
+          if (!product) {
+            return;
+          }
+
           const qty =
-            num(item?.qty);
+            getStockQuantity(
+              code,
+              item?.qty
+            );
 
           if (!qty) {
             return;
           }
 
+          const stockProductCode =
+            getStockTargetCode(
+              code
+            );
+
           const row =
-            rowsMap.get(code);
+            rowsMap.get(
+              stockProductCode
+            );
 
           if (!row) {
             return;
