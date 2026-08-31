@@ -468,9 +468,10 @@ export default function Home() {
                     color: "#14532d",
                   }}
                 >
-                  {
-                    dashboard.stock
-                  }
+                 {
+  latestMonthlyReport?.closingTotal ??
+  dashboard.stock
+}
                 </h1>
               </div>
 

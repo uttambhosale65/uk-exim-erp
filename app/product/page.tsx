@@ -16,6 +16,7 @@ import {
 import {
   syncProductToStock,
   deleteStockByProductCode,
+  loadStock,
 } from "../components/stock/StockStorage";
 
 export default function ProductPage() {
@@ -29,6 +30,13 @@ export default function ProductPage() {
     setEditingProduct,
   ] =
     useState<Product | null>(null);
+
+  /*
+    Used only to refresh the Product Register
+    after Product → Stock synchronization.
+  */
+  const [stockRefreshKey, setStockRefreshKey] =
+    useState(0);
 
   /* =====================================================
      PRODUCT → STOCK SYNC
@@ -52,7 +60,91 @@ export default function ProductPage() {
         );
       }
     );
+
+    /*
+      Refresh Product Register so that
+      it reads the latest StockStorage values.
+    */
+    setStockRefreshKey(
+      (value) => value + 1
+    );
   }, [products]);
+
+  /* =====================================================
+     PRODUCT REGISTER DISPLAY STOCK
+
+     IMPORTANT:
+
+     Product Register must NOT use
+     product.stock as the live stock value.
+
+     StockStorage is the source of truth
+     for Current Stock.
+
+     We match by the EXACT product code.
+
+     This is intentionally NOT getCurrentStock()
+     because packet products may point to a
+     loose/base stock product.
+  ===================================================== */
+
+  const stock =
+    loadStock();
+
+  const stockMap =
+    new Map<
+      string,
+      number
+    >();
+
+  stock.forEach(
+    (item) => {
+      const code =
+        String(
+          item?.productCode || ""
+        ).trim();
+
+      if (!code) {
+        return;
+      }
+
+      stockMap.set(
+        code,
+        Number(
+          item?.currentStock || 0
+        )
+      );
+    }
+  );
+
+  /*
+    Create display products.
+
+    All original Product Master data remains unchanged.
+
+    Only the STOCK value shown in Product Register
+    is replaced with the live StockStorage currentStock.
+  */
+
+  const displayProducts =
+    products.map(
+      (product) => ({
+        ...product,
+
+        stock:
+          stockMap.has(
+            product.code
+          )
+            ? Number(
+                stockMap.get(
+                  product.code
+                ) || 0
+              )
+            : Number(
+                product.stock || 0
+              ),
+      })
+    );
 
   /* =====================================================
      SAVE PRODUCT
@@ -65,54 +157,56 @@ export default function ProductPage() {
       Final Total Cost
     */
 
-   const finalProduct: Product = {
-  ...product,
+    const finalProduct: Product = {
+      ...product,
 
-  baseCost:
-    Number(
-      product.baseCost || 0
-    ),
+      baseCost:
+        Number(
+          product.baseCost || 0
+        ),
 
-  packingCost:
-    Number(
-      product.packingCost || 0
-    ),
+      packingCost:
+        Number(
+          product.packingCost || 0
+        ),
 
-  otherCharges:
-    Number(
-      product.otherCharges || 0
-    ),
+      otherCharges:
+        Number(
+          product.otherCharges || 0
+        ),
 
-  totalCost:
-    Number(
-      product.baseCost || 0
-    ) +
-    Number(
-      product.packingCost || 0
-    ) +
-    Number(
-      product.otherCharges || 0
-    ),
+      totalCost:
+        Number(
+          product.baseCost || 0
+        ) +
+        Number(
+          product.packingCost || 0
+        ) +
+        Number(
+          product.otherCharges || 0
+        ),
 
-  /*
-    STOCK BASE
+      /*
+        STOCK BASE
 
-    Packed Uttam Haldi products
-    are made from Loose Haldi P0006.
+        Packed Uttam Haldi products
+        are made from Loose Haldi P0006.
 
-    Loose Haldi itself remains
-    its own stock base.
-  */
+        Loose Haldi itself remains
+        its own stock base.
+      */
 
-  stockBaseCode:
-    product.unit === "Pkt"
-      ? "P0006"
-      : product.code,
-};
+      stockBaseCode:
+        product.unit === "Pkt"
+          ? "P0006"
+          : product.code,
+    };
 
     let updatedProducts: Product[];
 
-    /* EDIT */
+    /* ===================================================
+       EDIT
+    =================================================== */
 
     if (editingProduct) {
       updatedProducts =
@@ -125,7 +219,9 @@ export default function ProductPage() {
         );
     }
 
-    /* NEW */
+    /* ===================================================
+       NEW
+    =================================================== */
 
     else {
       updatedProducts = [
@@ -150,7 +246,18 @@ export default function ProductPage() {
       finalProduct
     );
 
-    setEditingProduct(null);
+    /*
+      Refresh Product Register
+      from StockStorage.
+    */
+
+    setStockRefreshKey(
+      (value) => value + 1
+    );
+
+    setEditingProduct(
+      null
+    );
   };
 
   /* =====================================================
@@ -204,9 +311,9 @@ export default function ProductPage() {
       return;
     }
 
-    /*
-      Remove Product
-    */
+    /* ===================================================
+       REMOVE PRODUCT
+    =================================================== */
 
     const updatedProducts =
       products.filter(
@@ -222,22 +329,32 @@ export default function ProductPage() {
       updatedProducts
     );
 
-    /*
-      Remove Stock record
-    */
+    /* ===================================================
+       REMOVE STOCK RECORD
+    =================================================== */
 
     deleteStockByProductCode(
       product.code
     );
 
     /*
-      Cancel edit if needed
+      Refresh Product Register.
     */
+
+    setStockRefreshKey(
+      (value) => value + 1
+    );
+
+    /* ===================================================
+       CANCEL EDIT IF NEEDED
+    =================================================== */
 
     if (
       editingProduct?.id === id
     ) {
-      setEditingProduct(null);
+      setEditingProduct(
+        null
+      );
     }
   };
 
@@ -255,7 +372,9 @@ export default function ProductPage() {
         boxSizing: "border-box",
       }}
     >
-      {/* PAGE HEADER */}
+      {/* =================================================
+          PAGE HEADER
+      ================================================= */}
 
       <div
         style={{
@@ -285,7 +404,9 @@ export default function ProductPage() {
         </div>
       </div>
 
-      {/* PRODUCT ENTRY */}
+      {/* =================================================
+          PRODUCT ENTRY
+      ================================================= */}
 
       <div
         style={{
@@ -364,11 +485,20 @@ export default function ProductPage() {
         />
       </div>
 
-      {/* PRODUCT REGISTER */}
+      {/* =================================================
+          PRODUCT REGISTER
+
+          IMPORTANT:
+          displayProducts contains the live
+          StockStorage currentStock.
+      ================================================= */}
 
       <ProductTable
+        key={
+          stockRefreshKey
+        }
         products={
-          products
+          displayProducts
         }
         onEdit={
           handleEdit

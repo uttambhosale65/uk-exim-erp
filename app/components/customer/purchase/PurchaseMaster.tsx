@@ -533,7 +533,7 @@ export default function PurchaseMaster() {
         purchases={purchases}
         onEdit={handleEdit}
         onDelete={handleDelete}
-      
+       onPrint={handlePrint}
       />
 
     </div>

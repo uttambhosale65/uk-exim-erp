@@ -614,16 +614,15 @@ export default function PurchaseTable({
 
 <button
   type="button"
-  onClick={() => {
-  alert(`Print GRN: ${purchase.purchaseNo}`);
-  onPrint(purchase);
-}}
+  onClick={() =>
+    onPrint(purchase)
+  }
   title="Print GRN"
   style={{
     padding: "5px 8px",
     border: "none",
     borderRadius: "4px",
-    background: "#15803d",
+    background: "#166534",
     color: "#ffffff",
     fontSize: "11px",
     fontWeight: 600,

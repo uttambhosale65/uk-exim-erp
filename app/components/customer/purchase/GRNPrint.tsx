@@ -69,8 +69,8 @@ export default function GRNPrint({
      UI
   ======================================================= */
 
-  return (
-    <>
+ return (
+    <div id="grn-print-root">
       {/* ===================================================
           PRINT BUTTON
       =================================================== */}
@@ -1133,8 +1133,7 @@ export default function GRNPrint({
     page-break-inside: avoid !important;
   }
 }
-
       `}</style>
-    </>
+    </div>
   );
 }

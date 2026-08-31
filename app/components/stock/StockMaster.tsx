@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
+import { loadProducts } from "../../product/components/ProductStorage";
 import StockTable from "./StockTable";
 import StockMonthlyPage from "./StockMonthlyPage";
 
@@ -10,6 +10,7 @@ import { Stock } from "./StockTypes";
 import {
   loadStock,
   resetStock,
+  setOpeningStockBulk,
 } from "./StockStorage";
 
 export default function StockMaster() {
@@ -78,16 +79,31 @@ export default function StockMaster() {
      TOTAL CURRENT STOCK
   ===================================================== */
 
-  const totalStock =
-    filteredStock.reduce(
-      (total, item) =>
-        total +
-        Number(
-          item.currentStock || 0
-        ),
-      0
-    );
+ const totalStock =
+  filteredStock.reduce(
+    (total, item) => {
+      const product =
+        loadProducts().find(
+          (p) => p.code === item.productCode
+        );
 
+      const qty =
+        Number(item.currentStock || 0);
+
+      if (
+        product?.unit === "Pkt" &&
+        Number(product.netWeight) > 0
+      ) {
+        return (
+          total +
+          (qty * Number(product.netWeight)) / 1000
+        );
+      }
+
+      return total + qty;
+    },
+    0
+  );
   /* =====================================================
      PRINT DATE
   ===================================================== */
@@ -412,7 +428,53 @@ export default function StockMaster() {
             }}
           />
         </div>
+{/* =================================================
+    OPENING STOCK ADJUSTMENT
+================================================== */}
 
+<div
+  className="stock-no-print"
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    marginBottom: "12px",
+    flexWrap: "wrap",
+  }}
+>
+  <button
+    type="button"
+    onClick={() => {
+      const updates: Record<string, number> = {
+        P0001: 5,
+        P0002: 132,
+        P0003: 4,
+        P0004: 16,
+        P0005: 32,
+        P0006: 8,
+        P0007: 2,
+        P0008: 0,
+        P0009: 0,
+      };
+
+      setOpeningStockBulk(updates);
+      setStock(loadStock());
+    }}
+    style={{
+      height: "34px",
+      padding: "0 14px",
+      border: "none",
+      borderRadius: "6px",
+      background: "#14532d",
+      color: "#ffffff",
+      cursor: "pointer",
+      fontWeight: 700,
+      fontSize: "11px",
+    }}
+  >
+    🔧 Set Opening Stock
+  </button>
+</div>
         {/* =================================================
             STOCK VIEW BUTTONS
         ================================================== */}

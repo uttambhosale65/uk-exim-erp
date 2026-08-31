@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Product } from "./ProductTypes";
+import { loadStock } from "../../components/stock/StockStorage";
 
 type ProductTableProps = {
   products: Product[];
+
   onEdit: (
     product: Product
   ) => void;
+
   onDelete: (
     id: string
   ) => void;
@@ -24,44 +27,145 @@ export default function ProductTable({
     setSearch,
   ] = useState("");
 
+  /*
+  =====================================================
+  LIVE STOCK FROM STOCK MASTER
+
+  Product Register मध्ये stock नेहमी
+  Stock Master मधील currentStock मधून दाखवला जाईल.
+  =====================================================
+  */
+
+  const [
+    stockData,
+    setStockData,
+  ] = useState(() =>
+    loadStock()
+  );
+
+  /*
+  =====================================================
+  REFRESH STOCK
+
+  Product Register render झाल्यावर
+  Stock Master मधील currentStock पुन्हा load.
+  =====================================================
+  */
+
+  useEffect(() => {
+    setStockData(
+      loadStock()
+    );
+
+    const handleStockUpdate = () => {
+      setStockData(
+        loadStock()
+      );
+    };
+
+    window.addEventListener(
+      "stock-updated",
+      handleStockUpdate
+    );
+
+    window.addEventListener(
+      "storage",
+      handleStockUpdate
+    );
+
+    return () => {
+      window.removeEventListener(
+        "stock-updated",
+        handleStockUpdate
+      );
+
+      window.removeEventListener(
+        "storage",
+        handleStockUpdate
+      );
+    };
+  }, []);
+
+  /*
+  =====================================================
+  GET LIVE STOCK
+  =====================================================
+  */
+
+  const getLiveStock = (
+    product: Product
+  ) => {
+    const stockItem =
+      stockData.find(
+        (stockRow) =>
+          String(
+            stockRow?.productCode || ""
+          ).trim() ===
+          String(
+            product?.code || ""
+          ).trim()
+      );
+
+    return {
+      quantity:
+        Number(
+          stockItem?.currentStock ?? 0
+        ),
+
+      unit:
+        stockItem?.unit ||
+        product.unit,
+    };
+  };
+
+  /*
+  =====================================================
+  SEARCH
+  =====================================================
+  */
+
   const filteredProducts =
     products.filter(
       (item) =>
         item.name
           .toLowerCase()
           .includes(
-            search
-              .toLowerCase()
+            search.toLowerCase()
           ) ||
         item.code
           .toLowerCase()
           .includes(
-            search
-              .toLowerCase()
+            search.toLowerCase()
           ) ||
         item.category
           .toLowerCase()
           .includes(
-            search
-              .toLowerCase()
+            search.toLowerCase()
           ) ||
         item.hsn
           .toLowerCase()
           .includes(
-            search
-              .toLowerCase()
+            search.toLowerCase()
           )
     );
 
-  /* =====================================================
-     STOCK STATUS
-  ===================================================== */
+  /*
+  =====================================================
+  STOCK STATUS
+  =====================================================
+  */
 
   const getStockStatus = (
     item: Product
   ) => {
+    const liveStock =
+      getLiveStock(item);
+
+    const currentStock =
+      liveStock.quantity;
+
     if (
-      item.stock <= 0
+      currentStock <= 0
     ) {
       return {
         text: "Out of Stock",
@@ -73,8 +177,10 @@ export default function ProductTable({
     }
 
     if (
-      item.stock <=
-      item.minimumStock
+      currentStock <=
+      Number(
+        item.minimumStock || 0
+      )
     ) {
       return {
         text: "Low Stock",
@@ -94,28 +200,38 @@ export default function ProductTable({
     };
   };
 
-  /* =====================================================
-     STYLES
-  ===================================================== */
+  /*
+  =====================================================
+  STYLES
+  =====================================================
+  */
 
   const thStyle: React.CSSProperties =
     {
       border:
         "1px solid #d1d5db",
+
       padding:
         "7px 5px",
+
       background:
         "#14532d",
+
       color:
         "#ffffff",
+
       textAlign:
         "center",
+
       fontSize:
         "10px",
+
       fontWeight:
         700,
+
       whiteSpace:
         "normal",
+
       lineHeight:
         "13px",
     };
@@ -124,41 +240,62 @@ export default function ProductTable({
     {
       border:
         "1px solid #d1d5db",
+
       padding:
         "6px 4px",
+
       fontSize:
         "10px",
+
       color:
         "#1f2937",
+
       textAlign:
         "center",
+
       overflow:
         "hidden",
+
       textOverflow:
         "ellipsis",
+
       whiteSpace:
         "nowrap",
     };
+
+  /*
+  =====================================================
+  PAGE
+  =====================================================
+  */
 
   return (
     <div
       style={{
         marginTop:
           "20px",
+
         width:
           "100%",
+
         maxWidth:
           "100%",
+
         boxSizing:
           "border-box",
+
         background:
           "#ffffff",
+
         padding:
           "15px",
+
         borderRadius:
           "10px",
+
         boxShadow:
           "0 2px 8px rgba(0,0,0,0.12)",
+
         overflow:
           "hidden",
       }}
@@ -169,14 +306,19 @@ export default function ProductTable({
         style={{
           display:
             "flex",
+
           justifyContent:
             "space-between",
+
           alignItems:
             "center",
+
           gap:
             "15px",
+
           marginBottom:
             "12px",
+
           width:
             "100%",
         }}
@@ -186,9 +328,12 @@ export default function ProductTable({
             style={{
               color:
                 "#14532d",
+
               margin: 0,
+
               fontSize:
                 "18px",
+
               fontWeight:
                 700,
             }}
@@ -200,8 +345,10 @@ export default function ProductTable({
             style={{
               marginTop:
                 "3px",
+
               fontSize:
                 "12px",
+
               color:
                 "#6b7280",
             }}
@@ -231,20 +378,28 @@ export default function ProductTable({
           style={{
             width:
               "280px",
+
             maxWidth:
               "35%",
+
             height:
               "36px",
+
             padding:
               "0 10px",
+
             border:
               "1px solid #d1d5db",
+
             borderRadius:
               "6px",
+
             fontSize:
               "12px",
+
             outline:
               "none",
+
             boxSizing:
               "border-box",
           }}
@@ -257,12 +412,16 @@ export default function ProductTable({
         style={{
           width:
             "100%",
+
           maxWidth:
             "100%",
+
           overflowX:
             "auto",
+
           border:
             "1px solid #d1d5db",
+
           borderRadius:
             "6px",
         }}
@@ -271,12 +430,16 @@ export default function ProductTable({
           style={{
             width:
               "100%",
+
             minWidth:
               "1250px",
+
             tableLayout:
               "fixed",
+
             borderCollapse:
               "collapse",
+
             background:
               "#ffffff",
           }}
@@ -355,21 +518,21 @@ export default function ProductTable({
             <col
               style={{
                 width:
-                  "6%",
+                  "7%",
               }}
             />
 
             <col
               style={{
                 width:
-                  "6%",
+                  "7%",
               }}
             />
 
             <col
               style={{
                 width:
-                  "8%",
+                  "7%",
               }}
             />
 
@@ -488,6 +651,22 @@ export default function ProductTable({
                 item,
                 index
               ) => {
+                /*
+                -----------------------------------------
+                IMPORTANT
+
+                Product Register stock आता
+                Product Master item.stock मधून नाही.
+
+                Stock Master → currentStock
+                -----------------------------------------
+                */
+
+                const liveStock =
+                  getLiveStock(
+                    item
+                  );
+
                 const stockStatus =
                   getStockStatus(
                     item
@@ -512,13 +691,17 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
+
                         fontWeight:
                           700,
+
                         color:
                           "#14532d",
                       }}
                     >
-                      {item.code}
+                      {
+                        item.code
+                      }
                     </td>
 
                     {/* PRODUCT */}
@@ -526,8 +709,10 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
+
                         fontWeight:
                           600,
+
                         textAlign:
                           "left",
                       }}
@@ -535,13 +720,17 @@ export default function ProductTable({
                         item.name
                       }
                     >
-                      {item.name}
+                      {
+                        item.name
+                      }
                     </td>
 
                     {/* CATEGORY */}
 
                     <td
-                      style={tdStyle}
+                      style={
+                        tdStyle
+                      }
                     >
                       {
                         item.category
@@ -551,7 +740,9 @@ export default function ProductTable({
                     {/* HSN */}
 
                     <td
-                      style={tdStyle}
+                      style={
+                        tdStyle
+                      }
                     >
                       {
                         item.hsn
@@ -561,7 +752,9 @@ export default function ProductTable({
                     {/* GST */}
 
                     <td
-                      style={tdStyle}
+                      style={
+                        tdStyle
+                      }
                     >
                       {
                         item.gst
@@ -573,6 +766,7 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
+
                         fontWeight:
                           700,
                       }}
@@ -587,6 +781,7 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
+
                         textAlign:
                           "right",
                       }}
@@ -594,8 +789,9 @@ export default function ProductTable({
                       {
                         item.netWeight
                       }
+
                       {item.netWeight >
-                        0
+                      0
                         ? " g"
                         : ""}
                     </td>
@@ -605,6 +801,7 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
+
                         textAlign:
                           "right",
                       }}
@@ -623,6 +820,7 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
+
                         textAlign:
                           "right",
                       }}
@@ -641,6 +839,7 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
+
                         textAlign:
                           "right",
                       }}
@@ -659,10 +858,13 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
+
                         textAlign:
                           "right",
+
                         fontWeight:
                           700,
+
                         color:
                           "#14532d",
                       }}
@@ -681,6 +883,7 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
+
                         textAlign:
                           "right",
                       }}
@@ -699,8 +902,10 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
+
                         textAlign:
                           "right",
+
                         fontWeight:
                           600,
                       }}
@@ -714,7 +919,10 @@ export default function ProductTable({
                       )}
                     </td>
 
-                    {/* STOCK */}
+                    {/* =================================================
+                       LIVE STOCK
+                       Stock Master → currentStock
+                    ================================================= */}
 
                     <td
                       style={
@@ -724,11 +932,11 @@ export default function ProductTable({
                       <div>
                         <strong>
                           {
-                            item.stock
+                            liveStock.quantity
                           }
                         </strong>{" "}
                         {
-                          item.unit
+                          liveStock.unit
                         }
                       </div>
 
@@ -736,20 +944,28 @@ export default function ProductTable({
                         style={{
                           display:
                             "inline-block",
+
                           marginTop:
                             "3px",
+
                           background:
                             stockStatus.background,
+
                           color:
                             stockStatus.color,
+
                           padding:
                             "2px 5px",
+
                           borderRadius:
                             "10px",
+
                           fontSize:
                             "8px",
+
                           fontWeight:
                             700,
+
                           whiteSpace:
                             "nowrap",
                         }}
@@ -765,6 +981,7 @@ export default function ProductTable({
                     <td
                       style={{
                         ...tdStyle,
+
                         whiteSpace:
                           "nowrap",
                       }}
@@ -779,20 +996,28 @@ export default function ProductTable({
                         style={{
                           background:
                             "#2563eb",
+
                           color:
                             "#ffffff",
+
                           border:
                             "none",
+
                           padding:
                             "4px 7px",
+
                           borderRadius:
                             "4px",
+
                           cursor:
                             "pointer",
+
                           fontSize:
                             "9px",
+
                           fontWeight:
                             600,
+
                           marginRight:
                             "3px",
                         }}
@@ -816,18 +1041,25 @@ export default function ProductTable({
                         style={{
                           background:
                             "#dc2626",
+
                           color:
                             "#ffffff",
+
                           border:
                             "none",
+
                           padding:
                             "4px 7px",
+
                           borderRadius:
                             "4px",
+
                           cursor:
                             "pointer",
+
                           fontSize:
                             "9px",
+
                           fontWeight:
                             600,
                         }}
@@ -850,12 +1082,16 @@ export default function ProductTable({
             style={{
               textAlign:
                 "center",
+
               padding:
                 "30px",
+
               color:
                 "#6b7280",
+
               fontWeight:
                 600,
+
               fontSize:
                 "14px",
             }}
