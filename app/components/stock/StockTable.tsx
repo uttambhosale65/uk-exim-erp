@@ -178,7 +178,6 @@ const tdNumber: React.CSSProperties = {
   verticalAlign: "middle",
   boxSizing: "border-box",
 };
-
 const thStyle: React.CSSProperties = {
   border: "1px solid #ddd",
   padding: "12px",

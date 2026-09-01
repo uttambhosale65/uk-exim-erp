@@ -10,6 +10,7 @@ const STORAGE_KEY = "uk-exim-products";
 
    Old Product records may not contain:
    - Pkt UOM
+   - stockBaseCode
    - baseCost
    - packingCost
    - otherCharges
@@ -71,6 +72,26 @@ function normalizeProduct(
 
     netWeight:
       Number(product.netWeight) || 0,
+
+    /* =====================================================
+       STOCK BASE CODE
+
+       IMPORTANT:
+       Preserve existing Product → Stock mapping.
+
+       Example:
+
+       P0001 → P0006
+       P0002 → P0006
+       P0003 → P0006
+    ===================================================== */
+
+    stockBaseCode:
+      product.stockBaseCode
+        ? String(
+            product.stockBaseCode
+          ).trim()
+        : undefined,
 
     /*
       Existing Purchase Price preserved

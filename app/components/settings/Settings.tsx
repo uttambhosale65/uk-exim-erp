@@ -37,9 +37,25 @@ type BankSettings = {
   qrImage: string;
 };
 
+type InternationalSettings = {
+  pan: string;
+  udyam: string;
+  iecIssueDate: string;
+  adCode: string;
+  swiftBic: string;
+  exportAccount: string;
+  defaultCurrency: string;
+  defaultIncoterm: string;
+  defaultPortOfLoading: string;
+  defaultPaymentTerms: string;
+  defaultShipmentMode: string;
+  countryOfOrigin: string;
+};
+
 const COMPANY_KEY = "uk-exim-company-settings";
 const INVOICE_KEY = "uk-exim-invoice-settings";
 const BANK_KEY = "uk-exim-bank-settings";
+const INTERNATIONAL_KEY = "uk-exim-international-settings";
 
 const defaultCompany: CompanySettings = {
   companyName: "UK EXIM ENTERPRISES",
@@ -74,6 +90,21 @@ const defaultBank: BankSettings = {
   qrImage: "/uk-exim-upi-qr.png",
 };
 
+const defaultInternational: InternationalSettings = {
+  pan: "",
+  udyam: "",
+  iecIssueDate: "",
+  adCode: "",
+  swiftBic: "",
+  exportAccount: "",
+  defaultCurrency: "USD",
+  defaultIncoterm: "FOB",
+  defaultPortOfLoading: "",
+  defaultPaymentTerms: "Advance / LC / TT",
+  defaultShipmentMode: "Sea",
+  countryOfOrigin: "India",
+};
+
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("company");
 
@@ -86,6 +117,9 @@ export default function Settings() {
   const [bank, setBank] =
     useState<BankSettings>(defaultBank);
 
+  const [international, setInternational] =
+    useState<InternationalSettings>(defaultInternational);
+
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -93,6 +127,8 @@ export default function Settings() {
       const savedCompany = localStorage.getItem(COMPANY_KEY);
       const savedInvoice = localStorage.getItem(INVOICE_KEY);
       const savedBank = localStorage.getItem(BANK_KEY);
+      const savedInternational =
+        localStorage.getItem(INTERNATIONAL_KEY);
 
       if (savedCompany) {
         setCompany({
@@ -112,6 +148,13 @@ export default function Settings() {
         setBank({
           ...defaultBank,
           ...JSON.parse(savedBank),
+        });
+      }
+
+      if (savedInternational) {
+        setInternational({
+          ...defaultInternational,
+          ...JSON.parse(savedInternational),
         });
       }
     } catch (error) {
@@ -136,6 +179,11 @@ export default function Settings() {
         JSON.stringify(bank)
       );
 
+      localStorage.setItem(
+        INTERNATIONAL_KEY,
+        JSON.stringify(international)
+      );
+
       setSaved(true);
 
       setTimeout(() => {
@@ -158,6 +206,7 @@ export default function Settings() {
     setCompany(defaultCompany);
     setInvoice(defaultInvoice);
     setBank(defaultBank);
+    setInternational(defaultInternational);
 
     localStorage.setItem(
       COMPANY_KEY,
@@ -172,6 +221,11 @@ export default function Settings() {
     localStorage.setItem(
       BANK_KEY,
       JSON.stringify(defaultBank)
+    );
+
+    localStorage.setItem(
+      INTERNATIONAL_KEY,
+      JSON.stringify(defaultInternational)
     );
 
     setSaved(true);
@@ -280,8 +334,16 @@ export default function Settings() {
         >
           🏦 Bank & UPI
         </button>
+
+        <button
+          style={tabStyle(activeTab === "international")}
+          onClick={() => setActiveTab("international")}
+        >
+          🌍 International Business
+        </button>
       </div>
-N{/* ERP DATA BACKUP */}
+
+      {/* ERP DATA BACKUP */}
 
 <div
   style={{
@@ -856,6 +918,286 @@ N{/* ERP DATA BACKUP */}
                     })
                   }
                 />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* INTERNATIONAL BUSINESS */}
+
+        {activeTab === "international" && (
+          <>
+            <h3
+              style={{
+                marginTop: 0,
+                color: "#0F4C81",
+              }}
+            >
+              🌍 International Business Profile
+            </h3>
+
+            <p
+              style={{
+                margin: "0 0 18px",
+                color: "#6b7280",
+                fontSize: "13px",
+              }}
+            >
+              Exporter profile, international banking and default export
+              preferences for UK EXIM ENTERPRISES.
+            </p>
+
+            <h4
+              style={{
+                margin: "0 0 12px",
+                color: "#374151",
+              }}
+            >
+              🇮🇳 Exporter & Compliance Details
+            </h4>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(2, minmax(0, 1fr))",
+                gap: "15px",
+              }}
+            >
+              <div style={fieldStyle}>
+                <label style={labelStyle}>PAN</label>
+                <input
+                  style={inputStyle}
+                  value={international.pan}
+                  onChange={(e) =>
+                    setInternational({
+                      ...international,
+                      pan: e.target.value,
+                    })
+                  }
+                  placeholder="Enter PAN"
+                />
+              </div>
+
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Udyam / MSME Number</label>
+                <input
+                  style={inputStyle}
+                  value={international.udyam}
+                  onChange={(e) =>
+                    setInternational({
+                      ...international,
+                      udyam: e.target.value,
+                    })
+                  }
+                  placeholder="Enter Udyam / MSME number"
+                />
+              </div>
+
+              <div style={fieldStyle}>
+                <label style={labelStyle}>IEC Issue / Update Date</label>
+                <input
+                  type="date"
+                  style={inputStyle}
+                  value={international.iecIssueDate}
+                  onChange={(e) =>
+                    setInternational({
+                      ...international,
+                      iecIssueDate: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Country of Origin</label>
+                <input
+                  style={inputStyle}
+                  value={international.countryOfOrigin}
+                  onChange={(e) =>
+                    setInternational({
+                      ...international,
+                      countryOfOrigin: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <h4
+              style={{
+                margin: "8px 0 12px",
+                color: "#374151",
+              }}
+            >
+              🏦 International Banking
+            </h4>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(2, minmax(0, 1fr))",
+                gap: "15px",
+              }}
+            >
+              <div style={fieldStyle}>
+                <label style={labelStyle}>AD Code</label>
+                <input
+                  style={inputStyle}
+                  value={international.adCode}
+                  onChange={(e) =>
+                    setInternational({
+                      ...international,
+                      adCode: e.target.value,
+                    })
+                  }
+                  placeholder="Enter AD Code"
+                />
+              </div>
+
+              <div style={fieldStyle}>
+                <label style={labelStyle}>SWIFT / BIC</label>
+                <input
+                  style={inputStyle}
+                  value={international.swiftBic}
+                  onChange={(e) =>
+                    setInternational({
+                      ...international,
+                      swiftBic: e.target.value,
+                    })
+                  }
+                  placeholder="Enter SWIFT / BIC"
+                />
+              </div>
+
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Export Account</label>
+                <input
+                  style={inputStyle}
+                  value={international.exportAccount}
+                  onChange={(e) =>
+                    setInternational({
+                      ...international,
+                      exportAccount: e.target.value,
+                    })
+                  }
+                  placeholder="Bank account used for exports"
+                />
+              </div>
+            </div>
+
+            <h4
+              style={{
+                margin: "8px 0 12px",
+                color: "#374151",
+              }}
+            >
+              🚢 Export Preferences
+            </h4>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(2, minmax(0, 1fr))",
+                gap: "15px",
+              }}
+            >
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Default Currency</label>
+                <select
+                  style={inputStyle}
+                  value={international.defaultCurrency}
+                  onChange={(e) =>
+                    setInternational({
+                      ...international,
+                      defaultCurrency: e.target.value,
+                    })
+                  }
+                >
+                  <option value="USD">USD - US Dollar</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="AED">AED - UAE Dirham</option>
+                  <option value="GBP">GBP - Pound Sterling</option>
+                  <option value="THB">THB - Thai Baht</option>
+                  <option value="RUB">RUB - Russian Ruble</option>
+                  <option value="INR">INR - Indian Rupee</option>
+                </select>
+              </div>
+
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Default Incoterm</label>
+                <select
+                  style={inputStyle}
+                  value={international.defaultIncoterm}
+                  onChange={(e) =>
+                    setInternational({
+                      ...international,
+                      defaultIncoterm: e.target.value,
+                    })
+                  }
+                >
+                  <option value="EXW">EXW</option>
+                  <option value="FCA">FCA</option>
+                  <option value="FOB">FOB</option>
+                  <option value="CFR">CFR</option>
+                  <option value="CIF">CIF</option>
+                  <option value="CPT">CPT</option>
+                  <option value="CIP">CIP</option>
+                  <option value="DAP">DAP</option>
+                  <option value="DPU">DPU</option>
+                  <option value="DDP">DDP</option>
+                </select>
+              </div>
+
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Default Port of Loading</label>
+                <input
+                  style={inputStyle}
+                  value={international.defaultPortOfLoading}
+                  onChange={(e) =>
+                    setInternational({
+                      ...international,
+                      defaultPortOfLoading: e.target.value,
+                    })
+                  }
+                  placeholder="e.g. JNPT / Nhava Sheva"
+                />
+              </div>
+
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Default Payment Terms</label>
+                <input
+                  style={inputStyle}
+                  value={international.defaultPaymentTerms}
+                  onChange={(e) =>
+                    setInternational({
+                      ...international,
+                      defaultPaymentTerms: e.target.value,
+                    })
+                  }
+                  placeholder="e.g. Advance / LC / TT"
+                />
+              </div>
+
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Default Shipment Mode</label>
+                <select
+                  style={inputStyle}
+                  value={international.defaultShipmentMode}
+                  onChange={(e) =>
+                    setInternational({
+                      ...international,
+                      defaultShipmentMode: e.target.value,
+                    })
+                  }
+                >
+                  <option value="Sea">Sea</option>
+                  <option value="Air">Air</option>
+                  <option value="Road">Road</option>
+                  <option value="Courier">Courier</option>
+                </select>
               </div>
             </div>
           </>
