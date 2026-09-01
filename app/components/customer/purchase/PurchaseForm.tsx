@@ -438,6 +438,34 @@ export default function PurchaseForm({
       return;
     }
 
+    /* =====================================================
+       DUPLICATE PRODUCT PROTECTION
+
+       Different Products in one GRN are allowed.
+
+       Same Product cannot be added twice
+       as separate rows.
+
+       While editing an existing row, that same
+       row is excluded from duplicate checking.
+    ===================================================== */
+
+    const duplicateProduct =
+      purchaseItems.some(
+        (existingItem, index) =>
+          existingItem.productCode ===
+            currentItem.productCode &&
+          index !== editingItemIndex
+      );
+
+    if (duplicateProduct) {
+      alert(
+        "This Product is already added to this GRN. Please edit the existing row instead."
+      );
+
+      return;
+    }
+
     const item: PurchaseItem = {
       ...currentItem,
 
@@ -552,6 +580,7 @@ export default function PurchaseForm({
       resetCurrentItem();
     }
   };
+
   /* =======================================================
      CALCULATE GRN TOTALS
   ======================================================= */
@@ -1006,10 +1035,10 @@ export default function PurchaseForm({
             style={{
               display: "grid",
               width: "100%",
-minWidth: 0,
-boxSizing: "border-box",
-             gridTemplateColumns:
-  "minmax(140px, 2fr) minmax(140px, 2fr) minmax(70px, 1fr) minmax(65px, 1fr) minmax(75px, 1fr) minmax(75px, 1fr) minmax(75px, 1fr) auto",
+              minWidth: 0,
+              boxSizing: "border-box",
+              gridTemplateColumns:
+                "minmax(140px, 2fr) minmax(140px, 2fr) minmax(70px, 1fr) minmax(65px, 1fr) minmax(75px, 1fr) minmax(75px, 1fr) minmax(75px, 1fr) auto",
               gap: "8px",
               alignItems: "end",
             }}
@@ -1344,6 +1373,7 @@ boxSizing: "border-box",
             </div>
           )}
         </div>
+
         {/* =================================================
             ADDED PRODUCTS TABLE
         ================================================== */}

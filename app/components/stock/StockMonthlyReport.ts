@@ -2,36 +2,51 @@ import {
   loadStock,
   convertToStockQty,
 } from "./StockStorage";
+
 import {
   loadProducts,
 } from "../../product/components/ProductStorage";
-import { loadPurchases } from "../customer/purchase/PurchaseStorage";
-import { loadSales } from "../customer/sales/SalesStorage";
+
+import {
+  loadPurchases,
+} from "../customer/purchase/PurchaseStorage";
+
+import {
+  loadSales,
+} from "../customer/sales/SalesStorage";
 
 /* =========================================================
    MONTHLY STOCK REPORT
 
-   IMPORTANT LOGIC
-   ----------------
-   StockStorage is the source of truth for CURRENT STOCK.
+   VERSION 1.1
+   ---------------------------------------------------------
+   IMPORTANT STOCK ACCOUNTING RULE
 
-   For the selected month:
+   For every selected month:
 
      Opening + Purchase - Sales = Closing
 
-   Closing is calculated backward from CURRENT STOCK by
-   reversing all purchases/sales that happened AFTER the
-   selected month.
+   StockStorage remains the source of truth for CURRENT STOCK.
 
-   This keeps Monthly Stock Report connected to Stock Report
-   and prevents historical calculations from double-counting
-   opening / purchase / sales quantities.
+   Purchase / Sales quantities are converted into the same
+   stock-base quantity used by StockStorage.
+
+   For summary totals:
+
+     Closing = actual calculated closing stock
+     Purchase = converted monthly purchase
+     Sales = converted monthly sales
+     Opening = Closing - Purchase + Sales
+
+   This guarantees that the four summary values always
+   reconcile mathematically.
 ========================================================= */
 
 export type MonthlyStockRow = {
   productCode: string;
   productName: string;
   unit: string;
+
   openingStock: number;
   purchaseQty: number;
   salesQty: number;
@@ -40,10 +55,12 @@ export type MonthlyStockRow = {
 
 export type MonthlyStockSummary = {
   month: string;
+
   openingTotal: number;
   purchaseTotal: number;
   salesTotal: number;
   closingTotal: number;
+
   rows: MonthlyStockRow[];
 };
 
@@ -51,8 +68,11 @@ export type MonthlyStockSummary = {
    NUMBER HELPER
 ========================================================= */
 
-function num(value: unknown): number {
-  const result = Number(value);
+function num(
+  value: unknown
+): number {
+  const result =
+    Number(value);
 
   return Number.isFinite(result)
     ? result
@@ -61,26 +81,36 @@ function num(value: unknown): number {
 
 /* =========================================================
    ROUND HELPER
+
+   ERP stock quantities are displayed up to 3 decimals.
+
+   Example:
+   135.49499999999995
+   →
+   135.495
 ========================================================= */
 
-function round3(value: number): number {
-  return Number(num(value).toFixed(3));
+function round3(
+  value: number
+): number {
+  return Number(
+    num(value).toFixed(3)
+  );
 }
 
 /* =========================================================
-   TOTAL QUANTITY → BASE STOCK UNIT
+   STOCK QUANTITY → BASE KG
 
-   Monthly rows may contain packet / gram quantities in
-   Opening and Closing because those values originate from
-   StockStorage / Product Master.
+   Used when a Stock row itself is stored as packet quantity.
 
-   For summary totals we convert every product quantity to
-   the same base stock unit (KG) wherever the Product Master
-   provides a packet net weight or Gram unit.
+   Packet:
+     Qty × Net Weight(g) ÷ 1000
 
-   Purchase / Sales rows are already converted by
-   getStockQuantity(), so this helper is used only for the
-   displayed Opening / Closing stock totals.
+   Gram:
+     Qty ÷ 1000
+
+   KG:
+     Qty as-is
 ========================================================= */
 
 function toBaseStockQty(
@@ -88,21 +118,41 @@ function toBaseStockQty(
   quantity: number,
   productsMap: Map<string, any>
 ): number {
-  const value = num(quantity);
-  const product = productsMap.get(productCode);
+  const value =
+    num(quantity);
+
+  const product =
+    productsMap.get(
+      productCode
+    );
 
   if (!product) {
     return value;
   }
 
-  const unit = String(product.unit || '').trim();
-  const netWeight = num(product.netWeight);
+  const unit =
+    String(
+      product.unit || ""
+    ).trim();
 
-  if (unit === 'Pkt' && netWeight > 0) {
-    return (value * netWeight) / 1000;
+  const netWeight =
+    num(
+      product.netWeight
+    );
+
+  if (
+    unit === "Pkt" &&
+    netWeight > 0
+  ) {
+    return (
+      value *
+      netWeight
+    ) / 1000;
   }
 
-  if (unit === 'Gram') {
+  if (
+    unit === "Gram"
+  ) {
     return value / 1000;
   }
 
@@ -110,10 +160,12 @@ function toBaseStockQty(
 }
 
 /* =========================================================
-   VALID YEAR / MONTH
+   VALID YEAR
 ========================================================= */
 
-function isValidYear(year: number): boolean {
+function isValidYear(
+  year: number
+): boolean {
   return (
     Number.isInteger(year) &&
     year >= 2000 &&
@@ -121,7 +173,13 @@ function isValidYear(year: number): boolean {
   );
 }
 
-function isValidMonth(month: number): boolean {
+/* =========================================================
+   VALID MONTH
+========================================================= */
+
+function isValidMonth(
+  month: number
+): boolean {
   return (
     Number.isInteger(month) &&
     month >= 1 &&
@@ -133,20 +191,22 @@ function isValidMonth(month: number): boolean {
    DATE HELPER
 
    Supports:
+
    YYYY-MM-DD
    DD/MM/YYYY
    DD-MM-YYYY
-   ISO Date / Date String
-
-   Invalid / impossible dates are rejected.
+   Native Date strings
 ========================================================= */
 
-function parseDate(value: unknown): Date | null {
+function parseDate(
+  value: unknown
+): Date | null {
   if (!value) {
     return null;
   }
 
-  const text = String(value).trim();
+  const text =
+    String(value).trim();
 
   if (!text) {
     return null;
@@ -156,14 +216,20 @@ function parseDate(value: unknown): Date | null {
      YYYY-MM-DD
   ------------------------------------------------------- */
 
-  const isoMatch = text.match(
-    /^(\d{4})-(\d{1,2})-(\d{1,2})/
-  );
+  const isoMatch =
+    text.match(
+      /^(\d{4})-(\d{1,2})-(\d{1,2})/
+    );
 
   if (isoMatch) {
-    const year = Number(isoMatch[1]);
-    const month = Number(isoMatch[2]);
-    const day = Number(isoMatch[3]);
+    const year =
+      Number(isoMatch[1]);
+
+    const month =
+      Number(isoMatch[2]);
+
+    const day =
+      Number(isoMatch[3]);
 
     if (
       !isValidYear(year) ||
@@ -175,16 +241,20 @@ function parseDate(value: unknown): Date | null {
       return null;
     }
 
-    const date = new Date(
-      year,
-      month - 1,
-      day
-    );
+    const date =
+      new Date(
+        year,
+        month - 1,
+        day
+      );
 
     if (
-      date.getFullYear() !== year ||
-      date.getMonth() !== month - 1 ||
-      date.getDate() !== day
+      date.getFullYear() !==
+        year ||
+      date.getMonth() !==
+        month - 1 ||
+      date.getDate() !==
+        day
     ) {
       return null;
     }
@@ -196,14 +266,20 @@ function parseDate(value: unknown): Date | null {
      DD/MM/YYYY
   ------------------------------------------------------- */
 
-  const slashMatch = text.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4})/
-  );
+  const slashMatch =
+    text.match(
+      /^(\d{1,2})\/(\d{1,2})\/(\d{4})/
+    );
 
   if (slashMatch) {
-    const day = Number(slashMatch[1]);
-    const month = Number(slashMatch[2]);
-    const year = Number(slashMatch[3]);
+    const day =
+      Number(slashMatch[1]);
+
+    const month =
+      Number(slashMatch[2]);
+
+    const year =
+      Number(slashMatch[3]);
 
     if (
       !isValidYear(year) ||
@@ -215,16 +291,20 @@ function parseDate(value: unknown): Date | null {
       return null;
     }
 
-    const date = new Date(
-      year,
-      month - 1,
-      day
-    );
+    const date =
+      new Date(
+        year,
+        month - 1,
+        day
+      );
 
     if (
-      date.getFullYear() !== year ||
-      date.getMonth() !== month - 1 ||
-      date.getDate() !== day
+      date.getFullYear() !==
+        year ||
+      date.getMonth() !==
+        month - 1 ||
+      date.getDate() !==
+        day
     ) {
       return null;
     }
@@ -236,14 +316,20 @@ function parseDate(value: unknown): Date | null {
      DD-MM-YYYY
   ------------------------------------------------------- */
 
-  const dashMatch = text.match(
-    /^(\d{1,2})-(\d{1,2})-(\d{4})/
-  );
+  const dashMatch =
+    text.match(
+      /^(\d{1,2})-(\d{1,2})-(\d{4})/
+    );
 
   if (dashMatch) {
-    const day = Number(dashMatch[1]);
-    const month = Number(dashMatch[2]);
-    const year = Number(dashMatch[3]);
+    const day =
+      Number(dashMatch[1]);
+
+    const month =
+      Number(dashMatch[2]);
+
+    const year =
+      Number(dashMatch[3]);
 
     if (
       !isValidYear(year) ||
@@ -255,16 +341,20 @@ function parseDate(value: unknown): Date | null {
       return null;
     }
 
-    const date = new Date(
-      year,
-      month - 1,
-      day
-    );
+    const date =
+      new Date(
+        year,
+        month - 1,
+        day
+      );
 
     if (
-      date.getFullYear() !== year ||
-      date.getMonth() !== month - 1 ||
-      date.getDate() !== day
+      date.getFullYear() !==
+        year ||
+      date.getMonth() !==
+        month - 1 ||
+      date.getDate() !==
+        day
     ) {
       return null;
     }
@@ -276,15 +366,25 @@ function parseDate(value: unknown): Date | null {
      Native Date fallback
   ------------------------------------------------------- */
 
-  const parsed = new Date(text);
+  const parsed =
+    new Date(text);
 
-  if (Number.isNaN(parsed.getTime())) {
+  if (
+    Number.isNaN(
+      parsed.getTime()
+    )
+  ) {
     return null;
   }
 
-  const year = parsed.getFullYear();
-  const month = parsed.getMonth() + 1;
-  const day = parsed.getDate();
+  const year =
+    parsed.getFullYear();
+
+  const month =
+    parsed.getMonth() + 1;
+
+  const day =
+    parsed.getDate();
 
   if (
     !isValidYear(year) ||
@@ -303,18 +403,17 @@ function parseDate(value: unknown): Date | null {
 }
 
 /* =========================================================
-   MONTH KEY HELPER
-
-   Always returns:
-   YYYY-MM
-
-   Example:
-   2026-08
+   MONTH KEY
 ========================================================= */
 
-function createMonthKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
+function createMonthKey(
+  date: Date
+): string {
+  const year =
+    date.getFullYear();
+
+  const month =
+    date.getMonth() + 1;
 
   if (
     !isValidYear(year) ||
@@ -323,11 +422,13 @@ function createMonthKey(date: Date): string {
     return "";
   }
 
-  return `${year}-${String(month).padStart(2, "0")}`;
+  return `${year}-${String(
+    month
+  ).padStart(2, "0")}`;
 }
 
 /* =========================================================
-   GET MONTH START
+   MONTH START
 ========================================================= */
 
 function getMonthStart(
@@ -342,7 +443,7 @@ function getMonthStart(
 }
 
 /* =========================================================
-   GET NEXT MONTH START
+   NEXT MONTH START
 ========================================================= */
 
 function getNextMonthStart(
@@ -357,31 +458,63 @@ function getNextMonthStart(
 }
 
 /* =========================================================
-   PRODUCT / STOCK HELPERS
+   PRODUCT → STOCK TARGET
+
+   Packed products can point to a loose/base product.
+
+   Example:
+
+   P0001 → P0006
+   P0002 → P0006
+   P0003 → P0006
+
+   Purchase/Sales quantities are converted to the
+   base stock quantity before aggregation.
 ========================================================= */
 
 function getStockTargetCode(
   productCode: string,
   productsMap: Map<string, any>
 ): string {
-  const product = productsMap.get(productCode);
+  const product =
+    productsMap.get(
+      productCode
+    );
 
   if (!product) {
     return productCode;
   }
 
   return (
-    String(product.stockBaseCode || "").trim() ||
-    String(product.code || productCode).trim()
+    String(
+      product.stockBaseCode || ""
+    ).trim() ||
+    String(
+      product.code ||
+        productCode
+    ).trim()
   );
 }
+
+/* =========================================================
+   PRODUCT QTY → STOCK QTY
+
+   This uses the same conversion function used by
+   StockStorage.
+
+   Therefore Monthly Report and StockStorage use
+   the same packet → KG calculation.
+========================================================= */
 
 function getStockQuantity(
   productCode: string,
   quantity: unknown,
   productsMap: Map<string, any>
 ): number {
-  const product = productsMap.get(productCode);
+  const product =
+    productsMap.get(
+      productCode
+    );
 
   if (!product) {
     return 0;
@@ -389,41 +522,27 @@ function getStockQuantity(
 
   return convertToStockQty(
     num(quantity),
-    String(product.unit || ""),
-    num(product.netWeight)
+    String(
+      product.unit || ""
+    ),
+    num(
+      product.netWeight
+    )
   );
 }
 
 /* =========================================================
    GET MONTHLY REPORT
-
-   The current StockMaster/StockStorage value is the source
-   of truth for current closing stock.
-
-   For an older month:
-
-     Current Stock
-       - Purchases after selected month
-       + Sales after selected month
-     = Selected Month Closing
-
-     Selected Month Closing
-       - Selected Month Purchase
-       + Selected Month Sales
-     = Selected Month Opening
-
-   Therefore:
-
-     Opening + Purchase - Sales = Closing
-
-   exactly for the selected month, while the closing remains
-   connected to the live Stock Report.
 ========================================================= */
 
 export function getStockMonthlyReport(
   year: number,
   month: number
 ): MonthlyStockSummary {
+  /* -------------------------------------------------------
+     INVALID DATE
+  ------------------------------------------------------- */
+
   if (
     !isValidYear(year) ||
     !isValidMonth(month)
@@ -438,330 +557,504 @@ export function getStockMonthlyReport(
     };
   }
 
-  const stock = loadStock();
-  const purchases = loadPurchases();
-  const sales = loadSales();
-  const products = loadProducts();
+  /* -------------------------------------------------------
+     LOAD DATA
+  ------------------------------------------------------- */
 
-  const monthStart = getMonthStart(
-    year,
-    month
-  );
+  const stock =
+    loadStock();
 
-  const nextMonthStart = getNextMonthStart(
-    year,
-    month
-  );
+  const purchases =
+    loadPurchases();
 
-  const productsMap = new Map<string, any>();
+  const sales =
+    loadSales();
 
-  products.forEach((product) => {
-    const code = String(
-      product?.code || ""
-    ).trim();
+  const products =
+    loadProducts();
 
-    if (code) {
-      productsMap.set(code, product);
+  /* -------------------------------------------------------
+     MONTH RANGE
+  ------------------------------------------------------- */
+
+  const monthStart =
+    getMonthStart(
+      year,
+      month
+    );
+
+  const nextMonthStart =
+    getNextMonthStart(
+      year,
+      month
+    );
+
+  /* -------------------------------------------------------
+     PRODUCT MAP
+  ------------------------------------------------------- */
+
+  const productsMap =
+    new Map<string, any>();
+
+  products.forEach(
+    (product) => {
+      const code =
+        String(
+          product?.code || ""
+        ).trim();
+
+      if (code) {
+        productsMap.set(
+          code,
+          product
+        );
+      }
     }
-  });
+  );
 
-  const rowsMap = new Map<
-    string,
-    MonthlyStockRow
-  >();
+  /* -------------------------------------------------------
+     ROW MAP
+  ------------------------------------------------------- */
+
+  const rowsMap =
+    new Map<
+      string,
+      MonthlyStockRow
+    >();
 
   /* =======================================================
      CURRENT STOCK MASTER
 
-     CurrentStock is the live closing stock from StockStorage.
-     We do NOT rebuild current stock from transaction history.
+     StockStorage remains the source of truth.
+
+     Current stock is NOT rebuilt from all historical
+     transactions.
   ======================================================= */
 
-  stock.forEach((item) => {
-    const productCode = String(
-      item?.productCode || ""
-    ).trim();
+  stock.forEach(
+    (item) => {
+      const productCode =
+        String(
+          item?.productCode || ""
+        ).trim();
 
-    if (!productCode) {
-      return;
-    }
+      if (!productCode) {
+        return;
+      }
 
-    rowsMap.set(
-      productCode,
-      {
+      rowsMap.set(
         productCode,
-        productName: String(
-          item?.productName || ""
-        ),
-        unit: String(
-          item?.unit || ""
-        ),
-        openingStock: 0,
-        purchaseQty: 0,
-        salesQty: 0,
-        closingStock: num(
-          item?.currentStock
-        ),
-      }
-    );
-  });
+        {
+          productCode,
+
+          productName:
+            String(
+              item?.productName ||
+                ""
+            ),
+
+          unit:
+            String(
+              item?.unit || ""
+            ),
+
+          openingStock: 0,
+
+          purchaseQty: 0,
+
+          salesQty: 0,
+
+          closingStock:
+            num(
+              item?.currentStock
+            ),
+        }
+      );
+    }
+  );
 
   /* =======================================================
-     TRANSACTION AGGREGATION
-
-     For each transaction we determine its stock-base product.
-     Example:
-       100 packets × 200g = 20 KG
-
-     Packet purchase/sale therefore affects the loose/base
-     stock product, exactly like StockStorage.
+     PURCHASE TRANSACTIONS
   ======================================================= */
 
-  purchases.forEach((purchase) => {
-    const date = parseDate(
-      purchase?.purchaseDate
-    );
-
-    if (!date || !Array.isArray(purchase?.items)) {
-      return;
-    }
-
-    purchase.items.forEach((item) => {
-      const code = String(
-        item?.productCode || ""
-      ).trim();
-
-      if (!code) {
-        return;
-      }
-
-      const stockProductCode =
-        getStockTargetCode(
-          code,
-          productsMap
+  purchases.forEach(
+    (purchase) => {
+      const date =
+        parseDate(
+          purchase?.purchaseDate
         );
 
-      const row = rowsMap.get(
-        stockProductCode
-      );
-
-      if (!row) {
-        return;
-      }
-
-      const qty = getStockQuantity(
-        code,
-        item?.qty,
-        productsMap
-      );
-
-      if (qty <= 0) {
-        return;
-      }
-
-      /* Purchase inside selected month */
       if (
-        date >= monthStart &&
-        date < nextMonthStart
+        !date ||
+        !Array.isArray(
+          purchase?.items
+        )
       ) {
-        row.purchaseQty += qty;
         return;
       }
 
-      /*
-        Purchase after selected month increases current stock.
-        To reconstruct the selected month's closing, remove it.
-      */
-      if (date >= nextMonthStart) {
-        row.closingStock -= qty;
-      }
-    });
-  });
+      purchase.items.forEach(
+        (item) => {
+          const code =
+            String(
+              item?.productCode ||
+                ""
+            ).trim();
 
-  sales.forEach((sale) => {
-    const date = parseDate(
-      sale?.salesDate
-    );
+          if (!code) {
+            return;
+          }
 
-    if (!date || !Array.isArray(sale?.items)) {
-      return;
+          const stockProductCode =
+            getStockTargetCode(
+              code,
+              productsMap
+            );
+
+          const row =
+            rowsMap.get(
+              stockProductCode
+            );
+
+          if (!row) {
+            return;
+          }
+
+          const qty =
+            getStockQuantity(
+              code,
+              item?.qty,
+              productsMap
+            );
+
+          if (qty <= 0) {
+            return;
+          }
+
+          /* ------------------------------------------------
+             PURCHASE INSIDE SELECTED MONTH
+          ------------------------------------------------ */
+
+          if (
+            date >=
+              monthStart &&
+            date <
+              nextMonthStart
+          ) {
+            row.purchaseQty +=
+              qty;
+
+            return;
+          }
+
+          /* ------------------------------------------------
+             PURCHASE AFTER SELECTED MONTH
+
+             Current stock already includes this purchase.
+
+             Remove it to reconstruct the selected month's
+             closing stock.
+          ------------------------------------------------ */
+
+          if (
+            date >=
+            nextMonthStart
+          ) {
+            row.closingStock -=
+              qty;
+          }
+        }
+      );
     }
-
-    sale.items.forEach((item) => {
-      const code = String(
-        item?.productCode || ""
-      ).trim();
-
-      if (!code) {
-        return;
-      }
-
-      const stockProductCode =
-        getStockTargetCode(
-          code,
-          productsMap
-        );
-
-      const row = rowsMap.get(
-        stockProductCode
-      );
-
-      if (!row) {
-        return;
-      }
-
-      const qty = getStockQuantity(
-        code,
-        item?.qty,
-        productsMap
-      );
-
-      if (qty <= 0) {
-        return;
-      }
-
-      /* Sales inside selected month */
-      if (
-        date >= monthStart &&
-        date < nextMonthStart
-      ) {
-        row.salesQty += qty;
-        return;
-      }
-
-      /*
-        Sale after selected month reduced current stock.
-        Add it back to reconstruct selected month's closing.
-      */
-      if (date >= nextMonthStart) {
-        row.closingStock += qty;
-      }
-    });
-  });
+  );
 
   /* =======================================================
-     CALCULATE OPENING
+     SALES TRANSACTIONS
+  ======================================================= */
 
-     Closing = Opening + Purchase - Sales
+  sales.forEach(
+    (sale) => {
+      const date =
+        parseDate(
+          sale?.salesDate
+        );
+
+      if (
+        !date ||
+        !Array.isArray(
+          sale?.items
+        )
+      ) {
+        return;
+      }
+
+      sale.items.forEach(
+        (item) => {
+          const code =
+            String(
+              item?.productCode ||
+                ""
+            ).trim();
+
+          if (!code) {
+            return;
+          }
+
+          const stockProductCode =
+            getStockTargetCode(
+              code,
+              productsMap
+            );
+
+          const row =
+            rowsMap.get(
+              stockProductCode
+            );
+
+          if (!row) {
+            return;
+          }
+
+          const qty =
+            getStockQuantity(
+              code,
+              item?.qty,
+              productsMap
+            );
+
+          if (qty <= 0) {
+            return;
+          }
+
+          /* ------------------------------------------------
+             SALES INSIDE SELECTED MONTH
+          ------------------------------------------------ */
+
+          if (
+            date >=
+              monthStart &&
+            date <
+              nextMonthStart
+          ) {
+            row.salesQty +=
+              qty;
+
+            return;
+          }
+
+          /* ------------------------------------------------
+             SALES AFTER SELECTED MONTH
+
+             Current stock already includes this reduction.
+
+             Add it back to reconstruct the selected month's
+             closing stock.
+          ------------------------------------------------ */
+
+          if (
+            date >=
+            nextMonthStart
+          ) {
+            row.closingStock +=
+              qty;
+          }
+        }
+      );
+    }
+  );
+
+  /* =======================================================
+     ROW-LEVEL ACCOUNTING
+
+     Opening + Purchase - Sales = Closing
 
      Therefore:
-     Opening = Closing - Purchase + Sales
+
+     Opening =
+       Closing - Purchase + Sales
   ======================================================= */
 
-  rowsMap.forEach((row) => {
-    row.closingStock = round3(
-      row.closingStock
-    );
+  rowsMap.forEach(
+    (row) => {
+      row.closingStock =
+        round3(
+          row.closingStock
+        );
 
-    row.purchaseQty = round3(
-      row.purchaseQty
-    );
+      row.purchaseQty =
+        round3(
+          row.purchaseQty
+        );
 
-    row.salesQty = round3(
-      row.salesQty
-    );
+      row.salesQty =
+        round3(
+          row.salesQty
+        );
 
-    row.openingStock = round3(
-      row.closingStock -
-        row.purchaseQty +
-        row.salesQty
-    );
+      row.openingStock =
+        round3(
+          row.closingStock -
+            row.purchaseQty +
+            row.salesQty
+        );
 
-    row.closingStock = round3(
-      row.openingStock +
-        row.purchaseQty -
-        row.salesQty
-    );
-  });
+      /*
+        Recalculate closing once again from the
+        accounting equation.
+
+        This removes floating-point noise.
+      */
+
+      row.closingStock =
+        round3(
+          row.openingStock +
+            row.purchaseQty -
+            row.salesQty
+        );
+    }
+  );
 
   /* =======================================================
-     PRODUCT SORT
+     SORT ROWS
   ======================================================= */
 
-  const rows = Array.from(
-    rowsMap.values()
-  ).sort((a, b) =>
-    a.productCode.localeCompare(
-      b.productCode
-    )
-  );
+  const rows =
+    Array.from(
+      rowsMap.values()
+    ).sort(
+      (a, b) =>
+        a.productCode.localeCompare(
+          b.productCode
+        )
+    );
 
   /* =======================================================
-     TOTALS
+     TRANSACTION TOTALS
   ======================================================= */
 
-  /* -------------------------------------------------------
-     SUMMARY TOTALS
+  const purchaseTotal =
+    round3(
+      rows.reduce(
+        (total, row) =>
+          total +
+          num(
+            row.purchaseQty
+          ),
+        0
+      )
+    );
 
-     Opening / Closing can contain packet quantities because
-     they originate from Product Master / Stock Master.
-     Convert those values to the common base unit for the
-     summary cards.
+  const salesTotal =
+    round3(
+      rows.reduce(
+        (total, row) =>
+          total +
+          num(
+            row.salesQty
+          ),
+        0
+      )
+    );
 
-     Purchase / Sales are already converted to stock-base
-     quantities during transaction aggregation.
-  ------------------------------------------------------- */
+  /* =======================================================
+     CLOSING TOTAL
 
-  const openingTotal = rows.reduce(
-    (total, row) =>
-      total +
-      toBaseStockQty(
-        row.productCode,
-        row.openingStock,
-        productsMap
-      ),
-    0
-  );
+     Important:
 
-  const purchaseTotal = rows.reduce(
-    (total, row) =>
-      total + row.purchaseQty,
-    0
-  );
+     Stock rows can be stored in packet quantities.
 
-  const salesTotal = rows.reduce(
-    (total, row) =>
-      total + row.salesQty,
-    0
-  );
+     Therefore each row's closing stock is converted to
+     the common base KG before calculating the summary.
 
-  const closingTotal = rows.reduce(
-    (total, row) =>
-      total +
-      toBaseStockQty(
-        row.productCode,
-        row.closingStock,
-        productsMap
-      ),
-    0
-  );
+     This follows the same packet → KG conversion used
+     by StockMaster.
+  ======================================================= */
+
+  const closingTotal =
+    round3(
+      rows.reduce(
+        (total, row) =>
+          total +
+          toBaseStockQty(
+            row.productCode,
+            row.closingStock,
+            productsMap
+          ),
+        0
+      )
+    );
+
+  /* =======================================================
+     OPENING TOTAL
+
+     IMPORTANT VERSION 1.1 FIX
+
+     Do NOT independently sum packet opening quantities
+     and then compare them with converted transaction totals.
+
+     Instead use the accounting identity:
+
+       Opening + Purchase - Sales = Closing
+
+     Therefore:
+
+       Opening = Closing - Purchase + Sales
+
+     This guarantees the summary cards always reconcile.
+  ======================================================= */
+
+  const openingTotal =
+    round3(
+      closingTotal -
+        purchaseTotal +
+        salesTotal
+    );
+
+  /* =======================================================
+     FINAL RECONCILIATION
+
+     Final closing is calculated from the four-value
+     accounting relationship.
+
+     This prevents floating point mismatch such as:
+
+       135.49499999999995
+  ======================================================= */
+
+  const reconciledClosingTotal =
+    round3(
+      openingTotal +
+        purchaseTotal -
+        salesTotal
+    );
 
   return {
-    month: `${year}-${String(
-      month
-    ).padStart(2, "0")}`,
-    openingTotal: round3(
-      openingTotal
-    ),
-    purchaseTotal: round3(
-      purchaseTotal
-    ),
-    salesTotal: round3(
-      salesTotal
-    ),
-    closingTotal: round3(
-      closingTotal
-    ),
+    month:
+      `${year}-${String(
+        month
+      ).padStart(2, "0")}`,
+
+    openingTotal,
+
+    purchaseTotal,
+
+    salesTotal,
+
+    closingTotal:
+      reconciledClosingTotal,
+
     rows,
   };
 }
 
 /* =========================================================
-   CURRENT MONTH
+   CURRENT MONTH REPORT
 ========================================================= */
 
-export function getCurrentStockMonthlyReport(): MonthlyStockSummary {
-  const today = new Date();
+export function getCurrentStockMonthlyReport():
+  MonthlyStockSummary {
+  const today =
+    new Date();
 
   return getStockMonthlyReport(
     today.getFullYear(),
@@ -770,100 +1063,161 @@ export function getCurrentStockMonthlyReport(): MonthlyStockSummary {
 }
 
 /* =========================================================
-   MONTH LIST
-
-   Used by Month Dropdown.
-
-   Returns only valid YYYY-MM values and always includes
-   the current month.
+   GET AVAILABLE REPORT MONTHS
 ========================================================= */
 
-export function getStockReportMonths(): string[] {
-  const purchases = loadPurchases();
-  const sales = loadSales();
-  const months = new Set<string>();
+export function getStockReportMonths():
+  string[] {
+  const purchases =
+    loadPurchases();
 
-  purchases.forEach((purchase) => {
-    const date = parseDate(
-      purchase?.purchaseDate
+  const sales =
+    loadSales();
+
+  const months =
+    new Set<string>();
+
+  /* -------------------------------------------------------
+     PURCHASE MONTHS
+  ------------------------------------------------------- */
+
+  purchases.forEach(
+    (purchase) => {
+      const date =
+        parseDate(
+          purchase?.purchaseDate
+        );
+
+      if (!date) {
+        return;
+      }
+
+      const key =
+        createMonthKey(
+          date
+        );
+
+      if (key) {
+        months.add(key);
+      }
+    }
+  );
+
+  /* -------------------------------------------------------
+     SALES MONTHS
+  ------------------------------------------------------- */
+
+  sales.forEach(
+    (sale) => {
+      const date =
+        parseDate(
+          sale?.salesDate
+        );
+
+      if (!date) {
+        return;
+      }
+
+      const key =
+        createMonthKey(
+          date
+        );
+
+      if (key) {
+        months.add(key);
+      }
+    }
+  );
+
+  /* -------------------------------------------------------
+     ALWAYS INCLUDE CURRENT MONTH
+  ------------------------------------------------------- */
+
+  const today =
+    new Date();
+
+  const currentKey =
+    createMonthKey(
+      today
     );
-
-    if (!date) {
-      return;
-    }
-
-    const key = createMonthKey(date);
-
-    if (key) {
-      months.add(key);
-    }
-  });
-
-  sales.forEach((sale) => {
-    const date = parseDate(
-      sale?.salesDate
-    );
-
-    if (!date) {
-      return;
-    }
-
-    const key = createMonthKey(date);
-
-    if (key) {
-      months.add(key);
-    }
-  });
-
-  /* Always include current month */
-  const today = new Date();
-  const currentKey = createMonthKey(today);
 
   if (currentKey) {
-    months.add(currentKey);
+    months.add(
+      currentKey
+    );
   }
 
-  return Array.from(months)
-    .filter((key) =>
-      /^\d{4}-\d{2}$/.test(key)
-    )
-    .filter((key) => {
-      const parts = key.split("-");
-      const year = Number(parts[0]);
-      const month = Number(parts[1]);
+  /* -------------------------------------------------------
+     VALIDATE + SORT
 
-      return (
-        isValidYear(year) &&
-        isValidMonth(month)
-      );
-    })
-    .sort((a, b) =>
-      b.localeCompare(a)
+     Newest month first.
+  ------------------------------------------------------- */
+
+  return Array.from(
+    months
+  )
+    .filter(
+      (key) =>
+        /^\d{4}-\d{2}$/.test(
+          key
+        )
+    )
+    .filter(
+      (key) => {
+        const parts =
+          key.split("-");
+
+        const year =
+          Number(parts[0]);
+
+        const month =
+          Number(parts[1]);
+
+        return (
+          isValidYear(
+            year
+          ) &&
+          isValidMonth(
+            month
+          )
+        );
+      }
+    )
+    .sort(
+      (a, b) =>
+        b.localeCompare(a)
     );
 }
 
 /* =========================================================
    FORMAT MONTH
 
+   Example:
+
    2026-08
-   → August 2026
+   →
+   August 2026
 ========================================================= */
 
 export function formatStockReportMonth(
   monthKey: string
 ): string {
-  const match = String(
-    monthKey || ""
-  ).match(
-    /^(\d{4})-(\d{2})$/
-  );
+  const match =
+    String(
+      monthKey || ""
+    ).match(
+      /^(\d{4})-(\d{2})$/
+    );
 
   if (!match) {
     return "Invalid Month";
   }
 
-  const year = Number(match[1]);
-  const month = Number(match[2]);
+  const year =
+    Number(match[1]);
+
+  const month =
+    Number(match[2]);
 
   if (
     !isValidYear(year) ||
@@ -872,11 +1226,12 @@ export function formatStockReportMonth(
     return "Invalid Month";
   }
 
-  const date = new Date(
-    year,
-    month - 1,
-    1
-  );
+  const date =
+    new Date(
+      year,
+      month - 1,
+      1
+    );
 
   return date.toLocaleDateString(
     "en-IN",
