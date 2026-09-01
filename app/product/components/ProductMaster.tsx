@@ -97,14 +97,42 @@ export default function ProductMaster() {
 
   /* =========================================
      DELETE PRODUCT
+     
+     VERSION 1.1
+     Product is NOT hard-deleted.
+     Product is marked INACTIVE so that
+     existing Stock / Purchase / Sales
+     history remains safe.
   ========================================= */
 
   const handleDelete = (
     id: string
   ) => {
+    const productToDeactivate =
+      products.find(
+        (item) => item.id === id
+      );
+
+    if (!productToDeactivate) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Deactivate product "${productToDeactivate.name}"?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     const updatedProducts =
-      products.filter(
-        (item) => item.id !== id
+      products.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              active: false,
+            }
+          : item
       );
 
     setProducts(updatedProducts);
