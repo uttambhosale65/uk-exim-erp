@@ -15,6 +15,30 @@ type SalesTableProps = {
   onInvoice?: (sale: Sales) => void;
 };
 
+/* =====================================================
+   DATE FORMAT
+===================================================== */
+
+function formatDateDisplay(
+  dateValue: string
+): string {
+  if (!dateValue) {
+    return "-";
+  }
+
+  const parts =
+    dateValue.split("-");
+
+  if (parts.length !== 3) {
+    return dateValue;
+  }
+
+  const [year, month, day] =
+    parts;
+
+  return `${day}/${month}/${year}`;
+}
+
 export default function SalesTable({
   sales = [],
   onEdit,
@@ -29,33 +53,24 @@ export default function SalesTable({
 
   /* =====================================================
      SORT + SEARCH SALES
-     नवीन Sale सर्वात वर
   ===================================================== */
 
   const filteredSales = useMemo(() => {
-    /*
-      sales array ची copy तयार केली आहे.
-      Original array बदलत नाही.
-      
-      नवीन entry → वर
-      जुनी entry → खाली
-    */
-
-    const orderedSales = [
-      ...sales,
-    ].reverse();
+    const orderedSales =
+      [...sales].reverse();
 
     const keyword =
-      search.trim().toLowerCase();
+      search
+        .trim()
+        .toLowerCase();
 
-    /* SEARCH नसल्यास */
     if (!keyword) {
       return orderedSales;
     }
 
-    /* SEARCH असल्यास */
     return orderedSales.filter(
       (sale: Sales) => {
+
         const customerMatch =
           sale.customerCode
             ?.toLowerCase()
@@ -63,6 +78,11 @@ export default function SalesTable({
           sale.customerName
             ?.toLowerCase()
             .includes(keyword);
+
+        const displayDate =
+          formatDateDisplay(
+            sale.salesDate
+          );
 
         const salesMatch =
           sale.salesNo
@@ -73,18 +93,26 @@ export default function SalesTable({
             .includes(keyword) ||
           sale.salesDate
             ?.toLowerCase()
+            .includes(keyword) ||
+          displayDate
+            .toLowerCase()
             .includes(keyword);
 
         const productMatch =
-          Array.isArray(sale.items) &&
-          sale.items.some((item) =>
-            (
-              (item.productCode || "") +
-              " " +
-              (item.productName || "")
-            )
-              .toLowerCase()
-              .includes(keyword)
+          Array.isArray(
+            sale.items
+          ) &&
+          sale.items.some(
+            (item) =>
+              (
+                (item.productCode ||
+                  "") +
+                " " +
+                (item.productName ||
+                  "")
+              )
+                .toLowerCase()
+                .includes(keyword)
           );
 
         return Boolean(
@@ -100,28 +128,46 @@ export default function SalesTable({
     <div
       style={{
         background: "#ffffff",
-        border: "1px solid #d1d5db",
+        border:
+          "1px solid #d1d5db",
         borderRadius: "10px",
         padding: "18px",
         marginTop: "18px",
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
         boxShadow:
           "0 2px 8px rgba(0,0,0,0.08)",
+        boxSizing:
+          "border-box",
+        overflowX: "hidden",
       }}
     >
-      {/* =================================================
-          HEADER
-      ================================================= */}
+
+      {/* HEADER */}
 
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent:
+            "space-between",
           alignItems: "center",
           gap: "15px",
           marginBottom: "15px",
+          width: "100%",
+          minWidth: 0,
+          flexWrap: "wrap",
         }}
       >
-        <div>
+
+        <div
+          style={{
+            minWidth: 0,
+            flex:
+              "1 1 220px",
+          }}
+        >
+
           <h2
             style={{
               margin: 0,
@@ -141,210 +187,235 @@ export default function SalesTable({
             }}
           >
             Total Sales:{" "}
+
             <span
               style={{
-                display: "inline-block",
-                padding: "2px 8px",
-                marginLeft: "4px",
-                borderRadius: "12px",
-                background: "#dcfce7",
-                color: "#166534",
-                fontWeight: 700,
+                display:
+                  "inline-block",
+                padding:
+                  "2px 8px",
+                marginLeft:
+                  "4px",
+                borderRadius:
+                  "12px",
+                background:
+                  "#dcfce7",
+                color:
+                  "#166534",
+                fontWeight:
+                  700,
               }}
             >
               {sales.length}
             </span>
           </div>
+
         </div>
 
-        {/* =================================================
-            SEARCH
-        ================================================= */}
+        {/* SEARCH */}
 
         <input
           type="text"
-          placeholder="🔍 Search Sales / Customer / Product"
+          placeholder=
+            "🔍 Search Sales / Customer / Product"
           value={search}
           onChange={(e) =>
-            setSearch(e.target.value)
+            setSearch(
+              e.target.value
+            )
           }
           style={{
             width: "340px",
             maxWidth: "100%",
+            flex:
+              "0 1 340px",
             height: "40px",
-            padding: "0 12px",
+            padding:
+              "0 12px",
             border:
               "1px solid #d1d5db",
-            borderRadius: "6px",
+            borderRadius:
+              "6px",
             fontSize: "13px",
             outline: "none",
-            boxSizing: "border-box",
+            boxSizing:
+              "border-box",
+            minWidth: 0,
           }}
         />
+
       </div>
 
-      {/* =================================================
-          TABLE
-      ================================================= */}
+      {/* TABLE */}
 
       <div
         style={{
           width: "100%",
-          overflowX: "auto",
+          maxWidth: "100%",
+          minWidth: 0,
+          overflowX: "hidden",
+          overflowY: "auto",
+          maxHeight: "65vh",
           border:
             "1px solid #dbe3ea",
           borderRadius: "7px",
+          boxSizing:
+            "border-box",
         }}
       >
+
         <table
           style={{
             width: "100%",
+            maxWidth: "100%",
             minWidth: 0,
+            tableLayout:
+              "fixed",
             borderCollapse:
               "collapse",
-            fontSize: "13px",
+            fontSize: "11px",
+            boxSizing:
+              "border-box",
           }}
         >
-          {/* =================================================
-              TABLE HEADER
-          ================================================= */}
+
+          <colgroup>
+            <col style={{
+              width: "6%"
+            }} />
+
+            <col style={{
+              width: "7%"
+            }} />
+
+            <col style={{
+              width: "7%"
+            }} />
+
+            <col style={{
+              width: "13%"
+            }} />
+
+            <col style={{
+              width: "15%"
+            }} />
+
+            <col style={{
+              width: "5%"
+            }} />
+
+            <col style={{
+              width: "7%"
+            }} />
+
+            <col style={{
+              width: "5%"
+            }} />
+
+            <col style={{
+              width: "9%"
+            }} />
+
+            <col style={{
+              width: "10%"
+            }} />
+
+            <col style={{
+              width: "16%"
+            }} />
+          </colgroup>
 
           <thead>
+
             <tr
               style={{
-                background: "#14532d",
-                color: "#ffffff",
+                background:
+                  "#14532d",
+                color:
+                  "#ffffff",
               }}
             >
-              <th
-                style={{
-                  ...thStyle,
-                  width: "75px",
-                }}
-              >
+
+              <th style={thStyle}>
                 Sales No
               </th>
 
-              <th
-                style={{
-                  ...thStyle,
-                  width: "85px",
-                }}
-              >
+              <th style={thStyle}>
                 Date
               </th>
 
-              <th
-                style={{
-                  ...thStyle,
-                  width: "90px",
-                }}
-              >
+              <th style={thStyle}>
                 Invoice
               </th>
 
-              <th
-                style={{
-                  ...thStyle,
-                  width: "170px",
-                }}
-              >
+              <th style={thStyle}>
                 Customer
               </th>
 
-              <th
-                style={{
-                  ...thStyle,
-                  width: "180px",
-                }}
-              >
+              <th style={thStyle}>
                 Product
               </th>
 
-              <th
-                style={{
-                  ...thStyle,
-                  width: "55px",
-                }}
-              >
+              <th style={thStyle}>
                 Qty
               </th>
 
-              <th
-                style={{
-                  ...thStyle,
-                  width: "80px",
-                }}
-              >
+              <th style={thStyle}>
                 Rate
               </th>
 
-              <th
-                style={{
-                  ...thStyle,
-                  width: "70px",
-                }}
-              >
+              <th style={thStyle}>
                 GST
               </th>
 
-              <th
-                style={{
-                  ...thStyle,
-                  width: "100px",
-                }}
-              >
+              <th style={thStyle}>
                 Grand Total
               </th>
 
-              <th
-                style={{
-                  ...thStyle,
-                  width: "100px",
-                }}
-              >
+              <th style={thStyle}>
                 Status
               </th>
 
-              <th
-                style={{
-                  ...thStyle,
-                  width: "220px",
-                }}
-              >
+              <th style={thStyle}>
                 Action
               </th>
+
             </tr>
+
           </thead>
 
-          {/* =================================================
-              TABLE BODY
-          ================================================= */}
-
           <tbody>
-            {filteredSales.length === 0 ? (
+
+            {filteredSales.length ===
+            0 ? (
+
               <tr>
+
                 <td
                   colSpan={11}
                   style={{
-                    padding: "30px",
-                    textAlign: "center",
-                    color: "#6b7280",
-                    fontWeight: 600,
+                    padding:
+                      "30px",
+                    textAlign:
+                      "center",
+                    color:
+                      "#6b7280",
+                    fontWeight:
+                      600,
                   }}
                 >
                   📦 No Sales Records Found
                 </td>
+
               </tr>
+
             ) : (
+
               filteredSales.map(
                 (
                   sale: Sales,
                   index: number
                 ) => {
-                  /* =================================================
-                     FIRST PRODUCT
-                  ================================================= */
 
                   const firstItem =
                     Array.isArray(
@@ -353,15 +424,12 @@ export default function SalesTable({
                       ? sale.items[0]
                       : undefined;
 
-                  /* =================================================
-                     PRODUCT DISPLAY
-                  ================================================= */
-
                   const productText =
                     Array.isArray(
                       sale.items
                     ) &&
-                    sale.items.length > 1
+                    sale.items.length >
+                      1
                       ? `${
                           firstItem?.productName ||
                           "-"
@@ -371,10 +439,6 @@ export default function SalesTable({
                         } more`
                       : firstItem?.productName ||
                         "-";
-
-                  /* =================================================
-                     TOTAL QTY
-                  ================================================= */
 
                   const totalQty =
                     Array.isArray(
@@ -387,53 +451,71 @@ export default function SalesTable({
                           ) =>
                             total +
                             Number(
-                              item.qty || 0
+                              item.qty ||
+                                0
                             ),
                           0
                         )
                       : 0;
 
-                  /* =================================================
-                     FIRST RATE
-                  ================================================= */
-
                   const firstRate =
-                    firstItem?.rate || 0;
-
-                  /* =================================================
-                     FIRST GST
-                  ================================================= */
+                    firstItem?.rate ||
+                    0;
 
                   const firstGST =
-                    firstItem?.gst || 0;
+                    firstItem?.gst ||
+                    0;
 
                   return (
                     <tr
-                      key={sale.id}
+                      key={
+                        sale.id
+                      }
                       style={{
                         background:
-                          index % 2 === 0
+                          index %
+                            2 ===
+                          0
                             ? "#ffffff"
                             : "#f8fafc",
                       }}
                     >
+
                       {/* SALES NO */}
 
-                      <td style={tdStyle}>
-                        {sale.salesNo}
+                      <td
+                        style={
+                          tdStyle
+                        }
+                      >
+                        {
+                          sale.salesNo
+                        }
                       </td>
 
                       {/* DATE */}
 
-                      <td style={tdStyle}>
-                        {sale.salesDate}
+                      <td
+                        style={
+                          tdStyle
+                        }
+                      >
+                        {formatDateDisplay(
+                          sale.salesDate
+                        )}
                       </td>
 
                       {/* INVOICE */}
 
-                      <td style={tdStyle}>
-                        {sale.invoiceNo ||
-                          "-"}
+                      <td
+                        style={
+                          tdStyle
+                        }
+                      >
+                        {
+                          sale.invoiceNo ||
+                          "-"
+                        }
                       </td>
 
                       {/* CUSTOMER */}
@@ -441,21 +523,30 @@ export default function SalesTable({
                       <td
                         style={{
                           ...tdStyle,
-                          fontWeight: 600,
+                          fontWeight:
+                            600,
                         }}
                         title={
                           sale.customerName ||
                           ""
                         }
                       >
-                        {sale.customerName ||
-                          "-"}
+                        {
+                          sale.customerName ||
+                          "-"
+                        }
                       </td>
 
                       {/* PRODUCT */}
 
                       <td
-                        style={tdStyle}
+                        style={{
+                          ...tdStyle,
+                          whiteSpace:
+                            "normal",
+                          wordBreak:
+                            "break-word",
+                        }}
                         title={
                           Array.isArray(
                             sale.items
@@ -473,7 +564,9 @@ export default function SalesTable({
                             : ""
                         }
                       >
-                        {productText}
+                        {
+                          productText
+                        }
                       </td>
 
                       {/* QTY */}
@@ -485,7 +578,9 @@ export default function SalesTable({
                             "center",
                         }}
                       >
-                        {totalQty}
+                        {
+                          totalQty
+                        }
                       </td>
 
                       {/* RATE */}
@@ -500,7 +595,9 @@ export default function SalesTable({
                         ₹{" "}
                         {Number(
                           firstRate
-                        ).toFixed(2)}
+                        ).toFixed(
+                          2
+                        )}
                       </td>
 
                       {/* GST */}
@@ -512,7 +609,9 @@ export default function SalesTable({
                             "center",
                         }}
                       >
-                        {firstGST}%
+                        {
+                          firstGST
+                        }%
                       </td>
 
                       {/* GRAND TOTAL */}
@@ -522,7 +621,8 @@ export default function SalesTable({
                           ...tdStyle,
                           textAlign:
                             "right",
-                          fontWeight: 700,
+                          fontWeight:
+                            700,
                           color:
                             "#14532d",
                         }}
@@ -531,23 +631,36 @@ export default function SalesTable({
                         {Number(
                           sale.grandTotal ||
                             0
-                        ).toFixed(2)}
+                        ).toFixed(
+                          2
+                        )}
                       </td>
 
                       {/* STATUS */}
 
-                      <td style={tdStyle}>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          textAlign:
+                            "center",
+                        }}
+                      >
+
                         <span
                           style={{
                             display:
                               "inline-block",
+                            maxWidth:
+                              "100%",
                             padding:
-                              "4px 9px",
+                              "4px 6px",
                             borderRadius:
                               "12px",
                             fontSize:
-                              "11px",
-                            fontWeight: 700,
+                              "10px",
+                            fontWeight:
+                              700,
+
                             background:
                               sale.status ===
                               "Completed"
@@ -556,6 +669,7 @@ export default function SalesTable({
                                   "Pending"
                                 ? "#fef3c7"
                                 : "#fee2e2",
+
                             color:
                               sale.status ===
                               "Completed"
@@ -564,15 +678,25 @@ export default function SalesTable({
                                   "Pending"
                                 ? "#92400e"
                                 : "#991b1b",
+
+                            whiteSpace:
+                              "nowrap",
+                            overflow:
+                              "hidden",
+                            textOverflow:
+                              "ellipsis",
+                            boxSizing:
+                              "border-box",
                           }}
                         >
-                          {sale.status}
+                          {
+                            sale.status
+                          }
                         </span>
+
                       </td>
 
-                      {/* =================================================
-                          ACTION BUTTONS
-                      ================================================= */}
+                      {/* ACTION */}
 
                       <td
                         style={{
@@ -580,140 +704,140 @@ export default function SalesTable({
                           textAlign:
                             "center",
                           whiteSpace:
-                            "nowrap",
+                            "normal",
+                          padding:
+                            "5px 3px",
                         }}
                       >
-                        {/* EDIT */}
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onEdit(sale)
-                          }
+                        <div
                           style={{
-                            padding:
-                              "6px 9px",
-                            marginRight:
-                              "5px",
-                            border:
-                              "none",
-                            borderRadius:
-                              "4px",
-                            background:
-                              "#2563eb",
-                            color:
-                              "#ffffff",
-                            fontSize:
-                              "11px",
-                            fontWeight: 600,
-                            cursor:
-                              "pointer",
+                            display:
+                              "flex",
+                            justifyContent:
+                              "center",
+                            alignItems:
+                              "center",
+                            gap:
+                              "3px",
+                            flexWrap:
+                              "wrap",
+                            width:
+                              "100%",
                           }}
                         >
-                          ✏️ Edit
-                        </button>
 
-                        {/* INVOICE */}
+                          {/* EDIT */}
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedSale(
-                              sale
-                            );
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onEdit(
+                                sale
+                              )
+                            }
+                            title="Edit Sale"
+                            style={
+                              actionButtonStyle(
+                                "#2563eb"
+                              )
+                            }
+                          >
+                            ✏️
+                          </button>
 
-                            if (
-                              onInvoice
-                            ) {
-                              onInvoice(
+                          {/* INVOICE */}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+
+                              setSelectedSale(
                                 sale
                               );
+
+                              if (
+                                onInvoice
+                              ) {
+                                onInvoice(
+                                  sale
+                                );
+                              }
+
+                            }}
+                            title="Open Invoice"
+                            style={
+                              actionButtonStyle(
+                                "#14532d"
+                              )
                             }
-                          }}
-                          style={{
-                            padding:
-                              "6px 9px",
-                            marginRight:
-                              "5px",
-                            border:
-                              "none",
-                            borderRadius:
-                              "4px",
-                            background:
-                              "#14532d",
-                            color:
-                              "#ffffff",
-                            fontSize:
-                              "11px",
-                            fontWeight: 600,
-                            cursor:
-                              "pointer",
-                          }}
-                        >
-                          🧾 Invoice
-                        </button>
+                          >
+                            🧾
+                          </button>
 
-                        {/* DELETE */}
+                          {/* DELETE */}
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onDelete(
-                              sale.id
-                            )
-                          }
-                          style={{
-                            padding:
-                              "6px 9px",
-                            border:
-                              "none",
-                            borderRadius:
-                              "4px",
-                            background:
-                              "#dc2626",
-                            color:
-                              "#ffffff",
-                            fontSize:
-                              "11px",
-                            fontWeight: 600,
-                            cursor:
-                              "pointer",
-                          }}
-                        >
-                          🗑️ Delete
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onDelete(
+                                sale.id
+                              )
+                            }
+                            title="Delete Sale"
+                            style={
+                              actionButtonStyle(
+                                "#dc2626"
+                              )
+                            }
+                          >
+                            🗑️
+                          </button>
+
+                        </div>
+
                       </td>
+
                     </tr>
                   );
                 }
               )
+
             )}
+
           </tbody>
+
         </table>
+
       </div>
 
-      {/* =================================================
-          INVOICE MODAL
-      ================================================= */}
+      {/* INVOICE MODAL */}
 
       {selectedSale && (
+
         <div
           style={{
-            position: "fixed",
+            position:
+              "fixed",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
             background:
               "rgba(0,0,0,0.55)",
-            zIndex: 9999,
-            overflowY: "auto",
+            zIndex:
+              9999,
+            overflowY:
+              "auto",
+            overflowX:
+              "hidden",
             padding:
               "30px 15px",
             boxSizing:
               "border-box",
           }}
         >
+
           <div
             style={{
               background:
@@ -721,6 +845,7 @@ export default function SalesTable({
               width: "100%",
               maxWidth:
                 "950px",
+              minWidth: 0,
               margin:
                 "0 auto",
               borderRadius:
@@ -729,58 +854,164 @@ export default function SalesTable({
                 "20px",
               boxSizing:
                 "border-box",
+              overflowX:
+                "hidden",
               boxShadow:
                 "0 10px 40px rgba(0,0,0,0.3)",
             }}
           >
+
             <InvoicePrint
-              sale={selectedSale}
+              sale={
+                selectedSale
+              }
               onClose={() =>
                 setSelectedSale(
                   null
                 )
               }
             />
+
           </div>
+
         </div>
+
       )}
+
     </div>
   );
 }
 
 /* =====================================================
-   TABLE HEADER STYLE
+   TABLE HEADER
 ===================================================== */
 
-const thStyle: React.CSSProperties = {
-  padding: "9px 7px",
-  textAlign: "left",
-  fontSize: "11px",
-  fontWeight: 700,
+const thStyle:
+  React.CSSProperties = {
+
+  padding:
+    "8px 4px",
+
+  textAlign:
+    "left",
+
+  fontSize:
+    "10px",
+
+  fontWeight:
+    700,
+
   borderRight:
     "1px solid rgba(255,255,255,0.2)",
+
   borderBottom:
     "2px solid #0f3d24",
-  whiteSpace: "nowrap",
+
+  whiteSpace:
+    "normal",
+
+  overflow:
+    "hidden",
+
+  textOverflow:
+    "ellipsis",
+
+  wordBreak:
+    "break-word",
+
+  lineHeight:
+    "12px",
+
+  boxSizing:
+    "border-box",
 };
 
 /* =====================================================
-   TABLE DATA STYLE
+   TABLE DATA
 ===================================================== */
 
-const tdStyle: React.CSSProperties = {
-  padding: "9px 7px",
+const tdStyle:
+  React.CSSProperties = {
+
+  padding:
+    "8px 4px",
+
   borderRight:
     "1px solid #e5e7eb",
+
   borderBottom:
     "1px solid #e5e7eb",
-  fontSize: "11px",
-  color: "#374151",
+
+  fontSize:
+    "10px",
+
+  color:
+    "#374151",
+
   verticalAlign:
     "middle",
-  overflow: "hidden",
+
+  overflow:
+    "hidden",
+
   textOverflow:
     "ellipsis",
+
   whiteSpace:
     "nowrap",
+
+  wordBreak:
+    "break-word",
+
+  boxSizing:
+    "border-box",
 };
+
+/* =====================================================
+   ACTION BUTTON
+===================================================== */
+
+function actionButtonStyle(
+  background: string
+): React.CSSProperties {
+
+  return {
+
+    width:
+      "28px",
+
+    height:
+      "28px",
+
+    padding: 0,
+
+    border:
+      "none",
+
+    borderRadius:
+      "4px",
+
+    background,
+
+    color:
+      "#ffffff",
+
+    fontSize:
+      "11px",
+
+    cursor:
+      "pointer",
+
+    display:
+      "inline-flex",
+
+    alignItems:
+      "center",
+
+    justifyContent:
+      "center",
+
+    flexShrink:
+      0,
+  };
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 import ProductForm from "./components/ProductForm";
 import ProductTable from "./components/ProductTable";
@@ -12,12 +12,6 @@ import {
   saveProducts,
   getNextProductCode,
 } from "./components/ProductStorage";
-
-import {
-  syncProductToStock,
-  deleteStockByProductCode,
-  loadStock,
-} from "../components/stock/StockStorage";
 
 export default function ProductPage() {
   const [products, setProducts] =
@@ -31,132 +25,39 @@ export default function ProductPage() {
   ] =
     useState<Product | null>(null);
 
-  /*
-    Used only to refresh the Product Register
-    after Product → Stock synchronization.
-  */
-  const [stockRefreshKey, setStockRefreshKey] =
-    useState(0);
-
   /* =====================================================
-     PRODUCT → STOCK SYNC
-
-     Product Master changes are reflected
-     in Stock Master.
-
-     Existing purchase/sales quantities
-     remain preserved by StockStorage.
+     PRODUCT CODE
   ===================================================== */
 
-  useEffect(() => {
-    if (!products.length) {
-      return;
+  const productCode = useMemo(() => {
+    if (editingProduct) {
+      return editingProduct.code;
     }
 
-    products.forEach(
-      (product) => {
-        syncProductToStock(
-          product
-        );
-      }
-    );
-
-    /*
-      Refresh Product Register so that
-      it reads the latest StockStorage values.
-    */
-    setStockRefreshKey(
-      (value) => value + 1
-    );
-  }, [products]);
-
-  /* =====================================================
-     PRODUCT REGISTER DISPLAY STOCK
-
-     IMPORTANT:
-
-     Product Register must NOT use
-     product.stock as the live stock value.
-
-     StockStorage is the source of truth
-     for Current Stock.
-
-     We match by the EXACT product code.
-
-     This is intentionally NOT getCurrentStock()
-     because packet products may point to a
-     loose/base stock product.
-  ===================================================== */
-
-  const stock =
-    loadStock();
-
-  const stockMap =
-    new Map<
-      string,
-      number
-    >();
-
-  stock.forEach(
-    (item) => {
-      const code =
-        String(
-          item?.productCode || ""
-        ).trim();
-
-      if (!code) {
-        return;
-      }
-
-      stockMap.set(
-        code,
-        Number(
-          item?.currentStock || 0
-        )
-      );
-    }
-  );
-
-  /*
-    Create display products.
-
-    All original Product Master data remains unchanged.
-
-    Only the STOCK value shown in Product Register
-    is replaced with the live StockStorage currentStock.
-  */
-
-  const displayProducts =
-    products.map(
-      (product) => ({
-        ...product,
-
-        stock:
-          stockMap.has(
-            product.code
-          )
-            ? Number(
-                stockMap.get(
-                  product.code
-                ) || 0
-              )
-            : Number(
-                product.stock || 0
-              ),
-      })
-    );
+    return getNextProductCode(products);
+  }, [products, editingProduct]);
 
   /* =====================================================
      SAVE PRODUCT
+
+     IMPORTANT:
+
+     Product Master is responsible ONLY for
+     Product Master data.
+
+     It does NOT create, update or delete
+     Stock records.
+
+     Stock is controlled separately through:
+
+     1. Opening Stock
+     2. Purchase / GRN
+     3. Sales / Issue
   ===================================================== */
 
   const handleSave = (
     product: Product
   ) => {
-    /*
-      Final Total Cost
-    */
-
     const finalProduct: Product = {
       ...product,
 
@@ -187,13 +88,11 @@ export default function ProductPage() {
         ),
 
       /*
-        STOCK BASE
+        Packed products are linked to
+        the loose/base stock product.
 
-        Packed Uttam Haldi products
-        are made from Loose Haldi P0006.
-
-        Loose Haldi itself remains
-        its own stock base.
+        This is PRODUCT information only.
+        It does NOT create stock.
       */
 
       stockBaseCode:
@@ -205,7 +104,7 @@ export default function ProductPage() {
     let updatedProducts: Product[];
 
     /* ===================================================
-       EDIT
+       EDIT PRODUCT
     =================================================== */
 
     if (editingProduct) {
@@ -220,7 +119,7 @@ export default function ProductPage() {
     }
 
     /* ===================================================
-       NEW
+       NEW PRODUCT
     =================================================== */
 
     else {
@@ -229,6 +128,10 @@ export default function ProductPage() {
         finalProduct,
       ];
     }
+
+    /* ===================================================
+       SAVE PRODUCT MASTER ONLY
+    =================================================== */
 
     setProducts(
       updatedProducts
@@ -239,21 +142,9 @@ export default function ProductPage() {
     );
 
     /*
-      Product → Stock
+      IMPORTANT:
+      No Product → Stock synchronization here.
     */
-
-    syncProductToStock(
-      finalProduct
-    );
-
-    /*
-      Refresh Product Register
-      from StockStorage.
-    */
-
-    setStockRefreshKey(
-      (value) => value + 1
-    );
 
     setEditingProduct(
       null
@@ -280,11 +171,13 @@ export default function ProductPage() {
   /* =====================================================
      DELETE PRODUCT
 
-     Product Master delete
-     → Stock Master delete
+     Product Master deletion only.
 
-     Historical Purchase/Sales records
-     are NOT deleted.
+     Existing Stock / Purchase / Sales
+     history is NOT touched here.
+
+     Product is marked INACTIVE instead
+     of physically deleting it.
   ===================================================== */
 
   const handleDelete = (
@@ -302,23 +195,24 @@ export default function ProductPage() {
 
     const confirmed =
       window.confirm(
-        `Are you sure you want to delete "${product.name}"?\n\n` +
-        `This will remove the product from Product Master and Stock Master.\n\n` +
-        `Existing Purchase and Sales records will NOT be deleted.`
+        `Are you sure you want to deactivate "${product.name}"?\n\n` +
+        `The product will be marked INACTIVE.\n\n` +
+        `Existing Purchase, Sales and Stock history will NOT be deleted.`
       );
 
     if (!confirmed) {
       return;
     }
 
-    /* ===================================================
-       REMOVE PRODUCT
-    =================================================== */
-
     const updatedProducts =
-      products.filter(
+      products.map(
         (item) =>
-          item.id !== id
+          item.id === id
+            ? {
+                ...item,
+                active: false,
+              }
+            : item
       );
 
     setProducts(
@@ -329,26 +223,6 @@ export default function ProductPage() {
       updatedProducts
     );
 
-    /* ===================================================
-       REMOVE STOCK RECORD
-    =================================================== */
-
-    deleteStockByProductCode(
-      product.code
-    );
-
-    /*
-      Refresh Product Register.
-    */
-
-    setStockRefreshKey(
-      (value) => value + 1
-    );
-
-    /* ===================================================
-       CANCEL EDIT IF NEEDED
-    =================================================== */
-
     if (
       editingProduct?.id === id
     ) {
@@ -356,6 +230,16 @@ export default function ProductPage() {
         null
       );
     }
+  };
+
+  /* =====================================================
+     CANCEL EDIT
+  ===================================================== */
+
+  const handleCancelEdit = () => {
+    setEditingProduct(
+      null
+    );
   };
 
   /* =====================================================
@@ -468,37 +352,28 @@ export default function ProductPage() {
         </div>
 
         <ProductForm
-          productCode={getNextProductCode(
-            products
-          )}
+          productCode={
+            productCode
+          }
           editingProduct={
             editingProduct
           }
           onSave={
             handleSave
           }
-          onCancelEdit={() =>
-            setEditingProduct(
-              null
-            )
+          onCancelEdit={
+            handleCancelEdit
           }
         />
       </div>
 
       {/* =================================================
           PRODUCT REGISTER
-
-          IMPORTANT:
-          displayProducts contains the live
-          StockStorage currentStock.
       ================================================= */}
 
       <ProductTable
-        key={
-          stockRefreshKey
-        }
         products={
-          displayProducts
+          products
         }
         onEdit={
           handleEdit

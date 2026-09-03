@@ -46,9 +46,6 @@ export default function ProductTable({
   /*
   =====================================================
   REFRESH STOCK
-
-  Product Register render झाल्यावर
-  Stock Master मधील currentStock पुन्हा load.
   =====================================================
   */
 
@@ -212,7 +209,7 @@ export default function ProductTable({
         "1px solid #d1d5db",
 
       padding:
-        "7px 5px",
+        "6px 3px",
 
       background:
         "#14532d",
@@ -224,7 +221,7 @@ export default function ProductTable({
         "center",
 
       fontSize:
-        "10px",
+        "9px",
 
       fontWeight:
         700,
@@ -233,7 +230,13 @@ export default function ProductTable({
         "normal",
 
       lineHeight:
-        "13px",
+        "12px",
+
+      overflow:
+        "hidden",
+
+      wordBreak:
+        "break-word",
     };
 
   const tdStyle: React.CSSProperties =
@@ -242,10 +245,10 @@ export default function ProductTable({
         "1px solid #d1d5db",
 
       padding:
-        "6px 4px",
+        "5px 3px",
 
       fontSize:
-        "10px",
+        "9px",
 
       color:
         "#1f2937",
@@ -261,6 +264,12 @@ export default function ProductTable({
 
       whiteSpace:
         "nowrap",
+
+      wordBreak:
+        "break-word",
+
+      boxSizing:
+        "border-box",
     };
 
   /*
@@ -281,6 +290,9 @@ export default function ProductTable({
         maxWidth:
           "100%",
 
+        minWidth:
+          0,
+
         boxSizing:
           "border-box",
 
@@ -296,7 +308,7 @@ export default function ProductTable({
         boxShadow:
           "0 2px 8px rgba(0,0,0,0.12)",
 
-        overflow:
+        overflowX:
           "hidden",
       }}
     >
@@ -314,16 +326,29 @@ export default function ProductTable({
             "center",
 
           gap:
-            "15px",
+            "10px",
 
           marginBottom:
             "12px",
 
           width:
             "100%",
+
+          minWidth:
+            0,
+
+          flexWrap:
+            "wrap",
         }}
       >
-        <div>
+        <div
+          style={{
+            minWidth:
+              0,
+            flex:
+              "1 1 220px",
+          }}
+        >
           <h2
             style={{
               color:
@@ -380,7 +405,10 @@ export default function ProductTable({
               "280px",
 
             maxWidth:
-              "35%",
+              "100%",
+
+            flex:
+              "0 1 280px",
 
             height:
               "36px",
@@ -402,6 +430,9 @@ export default function ProductTable({
 
             boxSizing:
               "border-box",
+
+            minWidth:
+              0,
           }}
         />
       </div>
@@ -416,14 +447,20 @@ export default function ProductTable({
           maxWidth:
             "100%",
 
+          minWidth:
+            0,
+
           overflowX:
-            "auto",
+            "hidden",
 
           border:
             "1px solid #d1d5db",
 
           borderRadius:
             "6px",
+
+          boxSizing:
+            "border-box",
         }}
       >
         <table
@@ -431,8 +468,8 @@ export default function ProductTable({
             width:
               "100%",
 
-            minWidth:
-              "1250px",
+            maxWidth:
+              "100%",
 
             tableLayout:
               "fixed",
@@ -442,204 +479,88 @@ export default function ProductTable({
 
             background:
               "#ffffff",
+
+            boxSizing:
+              "border-box",
           }}
         >
           <colgroup>
-            <col
-              style={{
-                width:
-                  "5%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "14%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "7%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "6%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "5%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "5%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "7%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "7%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "7%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "7%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "7%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "7%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "7%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "6%",
-              }}
-            />
-
-            <col
-              style={{
-                width:
-                  "11%",
-              }}
-            />
+            <col style={{ width: "6%" }} />
+            <col style={{ width: "13%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "6%" }} />
+            <col style={{ width: "5%" }} />
+            <col style={{ width: "5%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "6%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "6%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "9%" }} />
           </colgroup>
 
           <thead>
             <tr>
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 Code
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 Product
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 Category
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 HSN
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 GST
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 UOM
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 Net Wt.
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 Base Cost
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 Packing
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 Other
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 Total Cost
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 Sale
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 MRP
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 Stock
               </th>
 
-              <th
-                style={thStyle}
-              >
+              <th style={thStyle}>
                 Action
               </th>
             </tr>
@@ -651,17 +572,6 @@ export default function ProductTable({
                 item,
                 index
               ) => {
-                /*
-                -----------------------------------------
-                IMPORTANT
-
-                Product Register stock आता
-                Product Master item.stock मधून नाही.
-
-                Stock Master → currentStock
-                -----------------------------------------
-                */
-
                 const liveStock =
                   getLiveStock(
                     item
@@ -698,6 +608,9 @@ export default function ProductTable({
                         color:
                           "#14532d",
                       }}
+                      title={
+                        item.code
+                      }
                     >
                       {
                         item.code
@@ -728,8 +641,9 @@ export default function ProductTable({
                     {/* CATEGORY */}
 
                     <td
-                      style={
-                        tdStyle
+                      style={tdStyle}
+                      title={
+                        item.category
                       }
                     >
                       {
@@ -740,9 +654,7 @@ export default function ProductTable({
                     {/* HSN */}
 
                     <td
-                      style={
-                        tdStyle
-                      }
+                      style={tdStyle}
                     >
                       {
                         item.hsn
@@ -752,9 +664,7 @@ export default function ProductTable({
                     {/* GST */}
 
                     <td
-                      style={
-                        tdStyle
-                      }
+                      style={tdStyle}
                     >
                       {
                         item.gst
@@ -919,17 +829,24 @@ export default function ProductTable({
                       )}
                     </td>
 
-                    {/* =================================================
-                       LIVE STOCK
-                       Stock Master → currentStock
-                    ================================================= */}
+                    {/* LIVE STOCK */}
 
                     <td
-                      style={
-                        tdStyle
-                      }
+                      style={tdStyle}
                     >
-                      <div>
+                      <div
+                        style={{
+                          overflow:
+                            "hidden",
+
+                          textOverflow:
+                            "ellipsis",
+
+                          whiteSpace:
+                            "nowrap",
+                        }}
+                        title={`${liveStock.quantity} ${liveStock.unit}`}
+                      >
                         <strong>
                           {
                             liveStock.quantity
@@ -948,6 +865,15 @@ export default function ProductTable({
                           marginTop:
                             "3px",
 
+                          maxWidth:
+                            "100%",
+
+                          overflow:
+                            "hidden",
+
+                          textOverflow:
+                            "ellipsis",
+
                           background:
                             stockStatus.background,
 
@@ -955,19 +881,22 @@ export default function ProductTable({
                             stockStatus.color,
 
                           padding:
-                            "2px 5px",
+                            "2px 4px",
 
                           borderRadius:
                             "10px",
 
                           fontSize:
-                            "8px",
+                            "7px",
 
                           fontWeight:
                             700,
 
                           whiteSpace:
                             "nowrap",
+
+                          boxSizing:
+                            "border-box",
                         }}
                       >
                         {
@@ -1004,7 +933,7 @@ export default function ProductTable({
                             "none",
 
                           padding:
-                            "4px 7px",
+                            "4px 6px",
 
                           borderRadius:
                             "4px",
@@ -1019,7 +948,10 @@ export default function ProductTable({
                             600,
 
                           marginRight:
-                            "3px",
+                            "2px",
+
+                          minWidth:
+                            "24px",
                         }}
                       >
                         ✏️
@@ -1049,7 +981,7 @@ export default function ProductTable({
                             "none",
 
                           padding:
-                            "4px 7px",
+                            "4px 6px",
 
                           borderRadius:
                             "4px",
@@ -1062,6 +994,9 @@ export default function ProductTable({
 
                           fontWeight:
                             600,
+
+                          minWidth:
+                            "24px",
                         }}
                       >
                         🗑

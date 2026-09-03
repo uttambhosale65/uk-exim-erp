@@ -204,10 +204,16 @@ export default function InvoicePrint({
           </div>
 
           <div className="tax-invoice">
-            TAX
-            <br />
-            INVOICE
-          </div>
+  {sale.invoiceType === "GST" ? (
+    <>
+      TAX
+      <br />
+      INVOICE
+    </>
+  ) : (
+    "INVOICE"
+  )}
+</div>
 
         </div>
 
@@ -311,52 +317,70 @@ export default function InvoicePrint({
         {/* =========================
             GST SUMMARY
         ========================= */}
-        sale.invoiceType === "GST" && (
-        <div className="gst-wrapper">
 
-          <table className="gst-table">
+        {sale.invoiceType === "GST" && (
+          <div className="gst-wrapper">
+
+            <table className="gst-table">
+
+              <tbody>
+
+                <tr>
+                  <td>
+                    <b>Taxable Amount</b>
+                  </td>
+
+                  <td className="right">
+                    ₹{taxableAmount.toFixed(2)}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    CGST @ {cgstRate.toFixed(2)}%
+                  </td>
+
+                  <td className="right">
+                    ₹{cgstAmount.toFixed(2)}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    SGST @ {sgstRate.toFixed(2)}%
+                  </td>
+
+                  <td className="right">
+                    ₹{sgstAmount.toFixed(2)}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    <b>Total GST</b>
+                  </td>
+
+                  <td className="right bold">
+                    ₹{totalGST.toFixed(2)}
+                  </td>
+                </tr>
+
+              </tbody>
+
+            </table>
+
+          </div>
+        )}
+
+        {/* =========================
+            GRAND TOTAL
+        ========================= */}
+
+        <div className="grand-total-wrapper">
+
+          <table className="grand-total-table">
 
             <tbody>
-
-              <tr>
-                <td>
-                  <b>Taxable Amount</b>
-                </td>
-
-                <td className="right">
-                  ₹{taxableAmount.toFixed(2)}
-                </td>
-              </tr>
-
-              <tr>
-                <td>
-                  CGST @ {cgstRate.toFixed(2)}%
-                </td>
-
-                <td className="right">
-                  ₹{cgstAmount.toFixed(2)}
-                </td>
-              </tr>
-
-              <tr>
-                <td>
-                  SGST @ {sgstRate.toFixed(2)}%
-                </td>
-
-                <td className="right">
-                  ₹{sgstAmount.toFixed(2)}
-                </td>
-              </tr>
-
-              <tr>
-                <td>
-                  <b>Total GST</b>
-                </td>
-
-                <td className="right bold">
-                  ₹{totalGST.toFixed(2)}
-                </td>
-              </tr>
 
               <tr className="grand-total-row">
                 <td>
@@ -475,14 +499,16 @@ export default function InvoicePrint({
         <div className="invoice-footer">
 
           <div>
-            This is a Computer Generated GST Invoice.
+            {sale.invoiceType === "GST"
+              ? "This is a Computer Generated GST Invoice."
+              : "This is a Computer Generated Invoice."
+            }
           </div>
 
           <div className="developer-credit">
             Designed & Developed by
             <br />
             <b>Uttam Bhosale</b>
-            
           </div>
 
         </div>
@@ -527,14 +553,14 @@ export default function InvoicePrint({
         }
 
         .invoice-page-wrapper {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  background: #f3f4f6;
-  padding: 20px 0;
-  margin: 0 auto;
-}
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          background: #f3f4f6;
+          padding: 20px 0;
+          margin: 0 auto;
+        }
 
         .invoice-print-page {
           width: 190mm;
@@ -612,7 +638,8 @@ export default function InvoicePrint({
 
         .customer-table,
         .product-table,
-        .gst-table {
+        .gst-table,
+        .grand-total-table {
           width: 100%;
           border-collapse: collapse;
         }
@@ -711,8 +738,25 @@ export default function InvoicePrint({
           line-height: 1.15;
         }
 
-        .grand-total-row td {
+        /* =========================
+           GRAND TOTAL
+        ========================= */
+
+        .grand-total-wrapper {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: 0;
+        }
+
+        .grand-total-table {
+          width: 48%;
+        }
+
+        .grand-total-table td {
+          border: 1px solid #000;
+          padding: 4px 6px;
           font-size: 11px;
+          line-height: 1.15;
           font-weight: 800;
           color: #0f4c81;
         }
@@ -860,8 +904,8 @@ export default function InvoicePrint({
             padding: 0 !important;
             margin: 0 !important;
             display: flex !important;
-justify-content: center !important;
-align-items: flex-start !important;
+            justify-content: center !important;
+            align-items: flex-start !important;
             background: #ffffff !important;
           }
 
@@ -876,17 +920,10 @@ align-items: flex-start !important;
             background: #ffffff !important;
             overflow: visible !important;
 
-            /* IMPORTANT:
-               No zoom
-               No transform
-               No absolute positioning
-            */
-           margin: 0 auto !important;
-
-position: absolute !important;
-left: 50% !important;
-top: 10 !important;
-transform: translate(-50%, 10mm) !important;
+            position: absolute !important;
+            left: 50% !important;
+            top: 10mm !important;
+            transform: translate(-50%, 0) !important;
             zoom: 1 !important;
           }
 
@@ -902,6 +939,7 @@ transform: translate(-50%, 10mm) !important;
           .customer-table,
           .product-table,
           .gst-wrapper,
+          .grand-total-wrapper,
           .amount-words,
           .remarks,
           .signature-section,

@@ -592,7 +592,7 @@ export default function StockMaster() {
                 fontWeight: 800,
               }}
             >
-              {totalStock}
+             {totalStock.toFixed(3)} KG
             </div>
           </div>
 
@@ -702,7 +702,7 @@ export default function StockMaster() {
               color: "#14532d",
             }}
           >
-            {totalStock}
+           {totalStock.toFixed(3)} KG
           </span>
         </div>
 

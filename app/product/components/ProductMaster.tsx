@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -15,10 +14,6 @@ import {
   saveProducts,
   getNextProductCode,
 } from "./ProductStorage";
-
-import {
-  syncProductToStock,
-} from "../../components/stock/StockStorage";
 
 export default function ProductMaster() {
   const [products, setProducts] =
@@ -40,19 +35,19 @@ export default function ProductMaster() {
   }, [products, editingProduct]);
 
   /* =========================================
-     PRODUCT → STOCK SYNC
-     Existing Products
-  ========================================= */
-
-  useEffect(() => {
-    products.forEach((product) => {
-      syncProductToStock(product);
-    });
-  }, [products]);
-
-  /* =========================================
      SAVE PRODUCT
-     PRODUCT → STOCK
+
+     IMPORTANT:
+     Product Master only manages
+     Product Master data.
+
+     It does NOT create or modify
+     Stock records.
+
+     Stock is managed separately through:
+     1. Opening Stock
+     2. Purchase / GRN
+     3. Sales / Issue
   ========================================= */
 
   const handleSave = (product: Product) => {
@@ -76,10 +71,6 @@ export default function ProductMaster() {
     setProducts(updatedProducts);
     saveProducts(updatedProducts);
 
-    /* PRODUCT → STOCK */
-
-    syncProductToStock(product);
-
     /* EXIT EDIT MODE */
 
     setEditingProduct(null);
@@ -97,8 +88,7 @@ export default function ProductMaster() {
 
   /* =========================================
      DELETE PRODUCT
-     
-     VERSION 1.1
+
      Product is NOT hard-deleted.
      Product is marked INACTIVE so that
      existing Stock / Purchase / Sales

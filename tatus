@@ -1,0 +1,49 @@
+[1mdiff --git a/app/product/components/ProductMaster.tsx b/app/product/components/ProductMaster.tsx[m
+[1mindex bfb4fc1..7ef6932 100644[m
+[1m--- a/app/product/components/ProductMaster.tsx[m
+[1m+++ b/app/product/components/ProductMaster.tsx[m
+[36m@@ -97,14 +97,42 @@[m [mexport default function ProductMaster() {[m
+ [m
+   /* =========================================[m
+      DELETE PRODUCT[m
+[32m+[m[41m     [m
+[32m+[m[32m     VERSION 1.1[m
+[32m+[m[32m     Product is NOT hard-deleted.[m
+[32m+[m[32m     Product is marked INACTIVE so that[m
+[32m+[m[32m     existing Stock / Purchase / Sales[m
+[32m+[m[32m     history remains safe.[m
+   ========================================= */[m
+ [m
+   const handleDelete = ([m
+     id: string[m
+   ) => {[m
+[32m+[m[32m    const productToDeactivate =[m
+[32m+[m[32m      products.find([m
+[32m+[m[32m        (item) => item.id === id[m
+[32m+[m[32m      );[m
+[32m+[m
+[32m+[m[32m    if (!productToDeactivate) {[m
+[32m+[m[32m      return;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const confirmed = window.confirm([m
+[32m+[m[32m      `Deactivate product "${productToDeactivate.name}"?`[m
+[32m+[m[32m    );[m
+[32m+[m
+[32m+[m[32m    if (!confirmed) {[m
+[32m+[m[32m      return;[m
+[32m+[m[32m    }[m
+[32m+[m
+     const updatedProducts =[m
+[31m-      products.filter([m
+[31m-        (item) => item.id !== id[m
+[32m+[m[32m      products.map((item) =>[m
+[32m+[m[32m        item.id === id[m
+[32m+[m[32m          ? {[m
+[32m+[m[32m              ...item,[m
+[32m+[m[32m              active: false,[m
+[32m+[m[32m            }[m
+[32m+[m[32m          : item[m
+       );[m
+ [m
+     setProducts(updatedProducts);[m

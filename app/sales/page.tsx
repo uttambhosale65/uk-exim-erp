@@ -25,6 +25,7 @@ import {
 
 /* =====================================================
    SALES NUMBER MIGRATION
+
    Existing old Sales records ला एकदाच
    SAL-0001, SAL-0002, SAL-0003...
    unique numbering देण्यासाठी
@@ -32,6 +33,7 @@ import {
 
 const SALES_NUMBER_VERSION =
   "uk-exim-sales-numbering-v2";
+
 /* =====================================================
    GET STOCK IMPACT
 
@@ -87,6 +89,7 @@ function getStockImpact(
     stockQty,
   };
 }
+
 /* =====================================================
    RESTORE SALE STOCK
 
@@ -94,10 +97,14 @@ function getStockImpact(
    Stock Base Product मध्ये quantity परत वाढवणे.
 ===================================================== */
 
-function restoreSaleStock(sale: Sales) {
+function restoreSaleStock(
+  sale: Sales
+) {
   const stock = loadStock();
 
-  const items = Array.isArray(sale.items)
+  const items = Array.isArray(
+    sale.items
+  )
     ? sale.items
     : [];
 
@@ -115,30 +122,41 @@ function restoreSaleStock(sale: Sales) {
         Number(item.qty)
       );
 
-    const index = stock.findIndex(
-      (stockItem) =>
-        stockItem.productCode ===
-        stockImpact.stockProductCode
-    );
+    const index =
+      stock.findIndex(
+        (stockItem) =>
+          stockItem.productCode ===
+          stockImpact.stockProductCode
+      );
 
     if (index === -1) {
       return;
     }
 
-    stock[index].salesQty = Math.max(
-      0,
-      Number(stock[index].salesQty || 0) -
-        stockImpact.stockQty
-    );
+    stock[index].salesQty =
+      Math.max(
+        0,
+        Number(
+          stock[index].salesQty || 0
+        ) -
+          stockImpact.stockQty
+      );
 
     stock[index].currentStock =
-      Number(stock[index].openingStock || 0) +
-      Number(stock[index].purchaseQty || 0) -
-      Number(stock[index].salesQty || 0);
+      Number(
+        stock[index].openingStock || 0
+      ) +
+      Number(
+        stock[index].purchaseQty || 0
+      ) -
+      Number(
+        stock[index].salesQty || 0
+      );
   });
 
   saveStock(stock);
 }
+
 /* =====================================================
    APPLY SALE TO STOCK
 
@@ -146,8 +164,12 @@ function restoreSaleStock(sale: Sales) {
    Packet Qty → KG
 ===================================================== */
 
-function applySaleStock(sale: Sales) {
-  const items = Array.isArray(sale.items)
+function applySaleStock(
+  sale: Sales
+) {
+  const items = Array.isArray(
+    sale.items
+  )
     ? sale.items
     : [];
 
@@ -174,6 +196,7 @@ function applySaleStock(sale: Sales) {
 
 /* =====================================================
    REPAIR OLD SALES NUMBERS
+
    हे फक्त एकदाच चालेल.
 ===================================================== */
 
@@ -192,38 +215,26 @@ function migrateSalesNumbers(
       SALES_NUMBER_VERSION
     );
 
-  /*
-    Migration आधीच झाली असेल तर
-    पुन्हा numbering करू नका.
-  */
-
-  if (alreadyMigrated === "done") {
+  if (
+    alreadyMigrated === "done"
+  ) {
     return sales;
   }
 
-  /*
-    Existing records ज्या क्रमाने आहेत
-    त्याच क्रमाने SAL-0001 पासून numbering.
-  */
+  const correctedSales =
+    sales.map(
+      (sale, index) => ({
+        ...sale,
+        salesNo:
+          `SAL-${String(
+            index + 1
+          ).padStart(4, "0")}`,
+      })
+    );
 
-  const correctedSales = sales.map(
-    (sale, index) => ({
-      ...sale,
-      salesNo: `SAL-${String(
-        index + 1
-      ).padStart(4, "0")}`,
-    })
+  saveSales(
+    correctedSales
   );
-
-  /*
-    Corrected data save करा.
-  */
-
-  saveSales(correctedSales);
-
-  /*
-    Migration complete mark करा.
-  */
 
   localStorage.setItem(
     SALES_NUMBER_VERSION,
@@ -242,36 +253,36 @@ export default function SalesPage() {
     useState<Sales[]>([]);
 
   const [salesNo, setSalesNo] =
-    useState("SAL-0001");
+    useState(
+      "SAL-0001"
+    );
 
   const [editingSale, setEditingSale] =
-    useState<Sales | null>(null);
+    useState<Sales | null>(
+      null
+    );
 
   const [selectedSale, setSelectedSale] =
-    useState<Sales | null>(null);
+    useState<Sales | null>(
+      null
+    );
 
   /* =====================================================
      LOAD SALES
 ===================================================== */
 
   useEffect(() => {
-    const loadedSales = loadSales();
-
-    /*
-      जुने duplicate / wrong Sales No.
-      एकदाच correct करा.
-    */
+    const loadedSales =
+      loadSales();
 
     const correctedSales =
       migrateSalesNumbers(
         loadedSales
       );
 
-    setSales(correctedSales);
-
-    /*
-      पुढचा Sales No.
-    */
+    setSales(
+      correctedSales
+    );
 
     setSalesNo(
       getNextSalesNo(
@@ -284,18 +295,23 @@ export default function SalesPage() {
      SAVE SALE
 ===================================================== */
 
-  const handleSave = (sale: Sales) => {
+  const handleSave = (
+    sale: Sales
+  ) => {
     /* =================================================
        STOCK VALIDATION
-       New Sale / Edit Sale
     ================================================= */
 
     const stockItems =
-      Array.isArray(sale.items)
+      Array.isArray(
+        sale.items
+      )
         ? sale.items
         : [];
 
-    for (const item of stockItems) {
+    for (
+      const item of stockItems
+    ) {
       if (
         !item.productCode ||
         Number(item.qty) <= 0
@@ -303,27 +319,30 @@ export default function SalesPage() {
         continue;
       }
 
-     const stockImpact =
-  getStockImpact(
-    item.productCode,
-    Number(item.qty)
-  );
+      const stockImpact =
+        getStockImpact(
+          item.productCode,
+          Number(item.qty)
+        );
 
-const currentStock =
-  getCurrentStock(
-    stockImpact.stockProductCode
-  );
+      const currentStock =
+        getCurrentStock(
+          stockImpact.stockProductCode
+        );
 
-let availableStock =
-  currentStock;
+      let availableStock =
+        currentStock;
 
-      /*
-        EDIT SALE:
-        जुन्या invoice ची quantity
-        temporarily add back करा.
-      */
+      /* -----------------------------------------------
+         EDIT SALE
 
-      if (editingSale) {
+         जुन्या sale ची quantity
+         temporarily add back.
+      ----------------------------------------------- */
+
+      if (
+        editingSale
+      ) {
         const oldItem =
           editingSale.items?.find(
             (old) =>
@@ -338,10 +357,6 @@ let availableStock =
               Number(oldItem.qty)
             );
 
-          /*
-            Old sale quantity is restored in
-            the same stock UOM used by StockStorage.
-          */
           if (
             oldStockImpact.stockProductCode ===
             stockImpact.stockProductCode
@@ -353,7 +368,7 @@ let availableStock =
       }
 
       const requiredQty =
-  stockImpact.stockQty;
+        stockImpact.stockQty;
 
       if (
         requiredQty >
@@ -376,38 +391,36 @@ let availableStock =
        EDIT EXISTING SALE
     ================================================= */
 
-    if (editingSale) {
-      /*
-        Old quantity restore करा.
-      */
-
+    if (
+      editingSale
+    ) {
       restoreSaleStock(
         editingSale
       );
 
-      /*
-        New quantity apply करा.
-      */
-
-      applySaleStock(sale);
+      applySaleStock(
+        sale
+      );
 
       /*
-        IMPORTANT:
         Edit करताना जुना Sales No.
         कायम ठेवायचा.
       */
 
-      const finalEditedSale: Sales = {
-        ...sale,
-        salesNo:
-          editingSale.salesNo,
-      };
+      const finalEditedSale: Sales =
+        {
+          ...sale,
+          salesNo:
+            editingSale.salesNo,
+        };
 
       const updatedSales =
-        sales.map((item) =>
-          item.id === sale.id
-            ? finalEditedSale
-            : item
+        sales.map(
+          (item) =>
+            item.id ===
+            sale.id
+              ? finalEditedSale
+              : item
         );
 
       setSales(
@@ -418,17 +431,15 @@ let availableStock =
         updatedSales
       );
 
-      /*
-        पुढचा Sales No.
-      */
-
       setSalesNo(
         getNextSalesNo(
           updatedSales
         )
       );
 
-      setEditingSale(null);
+      setEditingSale(
+        null
+      );
 
       return;
     }
@@ -437,36 +448,22 @@ let availableStock =
        NEW SALE
     ================================================= */
 
-    /*
-      नवीन Sales No. फक्त
-      नवीन record साठी.
-    */
-
     const newSalesNo =
       getNextSalesNo(
         sales
       );
 
-    const finalSale: Sales = {
-      ...sale,
-      salesNo:
-        newSalesNo,
-    };
-
-    /*
-      New sale array च्या शेवटी save.
-      SalesTable मध्ये reverse करून
-      नवीन entry वर दाखवू.
-    */
+    const finalSale: Sales =
+      {
+        ...sale,
+        salesNo:
+          newSalesNo,
+      };
 
     const updatedSales = [
       ...sales,
       finalSale,
     ];
-
-    /*
-      Sales Register save
-    */
 
     setSales(
       updatedSales
@@ -476,16 +473,13 @@ let availableStock =
       updatedSales
     );
 
-    /*
-      Sale → Stock
-    */
-
     applySaleStock(
       finalSale
     );
 
     /*
-      Next Sales Number
+      नवीन Sale save झाल्यानंतर
+      पुढचा Sales Number तयार करा.
     */
 
     setSalesNo(
@@ -494,7 +488,9 @@ let availableStock =
       )
     );
 
-    setEditingSale(null);
+    setEditingSale(
+      null
+    );
   };
 
   /* =====================================================
@@ -540,21 +536,15 @@ let availableStock =
           sale.id === id
       );
 
-    if (!saleToDelete) {
+    if (
+      !saleToDelete
+    ) {
       return;
     }
-
-    /*
-      Restore stock first.
-    */
 
     restoreSaleStock(
       saleToDelete
     );
-
-    /*
-      Sale remove करा.
-    */
 
     const updatedSales =
       sales.filter(
@@ -571,9 +561,8 @@ let availableStock =
     );
 
     /*
-      IMPORTANT:
-      Delete झाल्यानंतर existing
-      Sales Numbers बदलायचे नाहीत.
+      Existing Sales Numbers
+      बदलायचे नाहीत.
     */
 
     setSalesNo(
@@ -603,17 +592,18 @@ let availableStock =
      CANCEL EDIT
 ===================================================== */
 
-  const handleCancelEdit = () => {
-    setEditingSale(
-      null
-    );
+  const handleCancelEdit =
+    () => {
+      setEditingSale(
+        null
+      );
 
-    setSalesNo(
-      getNextSalesNo(
-        sales
-      )
-    );
-  };
+      setSalesNo(
+        getNextSalesNo(
+          sales
+        )
+      );
+    };
 
   /* =====================================================
      OPEN INVOICE
@@ -651,7 +641,9 @@ let availableStock =
      INVOICE VIEW
 ===================================================== */
 
-  if (selectedSale) {
+  if (
+    selectedSale
+  ) {
     return (
       <div
         className="invoice-page-wrapper"
@@ -660,7 +652,8 @@ let availableStock =
             "100vh",
           background:
             "#f3f4f6",
-          padding: "20px",
+          padding:
+            "20px",
         }}
       >
         <InvoicePrint
@@ -682,19 +675,22 @@ let availableStock =
   return (
     <div
       style={{
-        padding: "10px",
+        padding:
+          "10px",
       }}
     >
       {/* PAGE TITLE */}
 
       <h2
         style={{
-          color: "#14532d",
+          color:
+            "#14532d",
           marginBottom:
             "15px",
           fontSize:
             "20px",
-          fontWeight: 700,
+          fontWeight:
+            700,
         }}
       >
         📤 Sales / Issue Master
@@ -703,6 +699,12 @@ let availableStock =
       {/* SALES FORM */}
 
       <SalesForm
+        key={
+          `${salesNo}-${
+            editingSale?.id ||
+            "new"
+          }`
+        }
         salesNo={
           salesNo
         }

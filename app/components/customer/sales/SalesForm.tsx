@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import { Sales, SalesItem } from "./SalesTypes";
 
@@ -10,7 +10,10 @@ import { loadCustomers } from "../CustomerStorage";
 import { Product } from "../../../product/components/ProductTypes";
 import { loadProducts } from "../../../product/components/ProductStorage";
 
-import { loadSales } from "./SalesStorage";
+import {
+  loadSales,
+  getNextSalesNo,
+} from "./SalesStorage";
 
 type SalesFormProps = {
   salesNo: string;
@@ -32,14 +35,86 @@ export default function SalesForm({
 
   const [customers, setCustomers] =
     useState<Customer[]>([]);
-const [customerSearch, setCustomerSearch] =
+
+  const [customerSearch, setCustomerSearch] =
     useState("");
+
   const [products, setProducts] =
     useState<Product[]>([]);
 
   /* =========================
-     DATE
+     DATE HELPERS
   ========================= */
+
+  const formatDateDisplay = (
+    dateValue: string
+  ): string => {
+    if (!dateValue) {
+      return "";
+    }
+
+    const parts = dateValue.split("-");
+
+    if (parts.length !== 3) {
+      return "";
+    }
+
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  };
+
+  const parseDisplayDate = (
+    value: string
+  ): string => {
+    const digits = value
+      .replace(/\D/g, "")
+      .slice(0, 8);
+
+    if (digits.length !== 8) {
+      return "";
+    }
+
+    const day = digits.slice(0, 2);
+    const month = digits.slice(2, 4);
+    const year = digits.slice(4, 8);
+
+    const parsedDate = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day)
+    );
+
+    const isValidDate =
+      parsedDate.getFullYear() === Number(year) &&
+      parsedDate.getMonth() === Number(month) - 1 &&
+      parsedDate.getDate() === Number(day);
+
+    if (!isValidDate) {
+      return "";
+    }
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatTypedDate = (
+    value: string
+  ): string => {
+    const digits = value
+      .replace(/\D/g, "")
+      .slice(0, 8);
+
+    if (digits.length <= 2) {
+      return digits;
+    }
+
+    if (digits.length <= 4) {
+      return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    }
+
+    return `${digits.slice(0, 2)}/${digits.slice(
+      2,
+      4
+    )}/${digits.slice(4)}`;
+  };
 
   const getToday = (): string => {
     return new Date()
@@ -48,48 +123,72 @@ const [customerSearch, setCustomerSearch] =
   };
 
   /* =========================
+     DATE STATE
+  ========================= */
+
+  const dateInputRef =
+    useRef<HTMLInputElement>(null);
+
+  const [dateDisplay, setDateDisplay] =
+    useState(
+      formatDateDisplay(getToday())
+    );
+
+  /* =========================
      AUTO INVOICE NUMBER
   ========================= */
 
- const getNextInvoiceNo = (
-  invoiceType: "GST" | "NON_GST"
-): string => {
-  const sales = loadSales();
+  const getNextInvoiceNo = (
+    invoiceType: "GST" | "NON_GST"
+  ): string => {
+    const sales = loadSales();
 
-  const year = new Date().getFullYear().toString().slice(-2);
+    const year =
+      new Date()
+        .getFullYear()
+        .toString()
+        .slice(-2);
 
-  const prefix =
-    invoiceType === "GST"
-      ? `UK${year}`
-      : `UKN${year}`;
+    const prefix =
+      invoiceType === "GST"
+        ? `UK${year}`
+        : `UKN${year}`;
 
-  let maxNumber = 0;
+    let maxNumber = 0;
 
-  sales.forEach((sale) => {
-    if (sale.invoiceType !== invoiceType) {
-      return;
-    }
-
-    const match =
-      sale.invoiceNo?.match(
-        invoiceType === "GST"
-          ? new RegExp(`^UK${year}(\\d+)$`)
-          : new RegExp(`^UKN${year}(\\d+)$`)
-      );
-
-    if (match) {
-      const number = Number(match[1]);
-
-      if (number > maxNumber) {
-        maxNumber = number;
+    sales.forEach((sale) => {
+      if (
+        sale.invoiceType !==
+        invoiceType
+      ) {
+        return;
       }
-    }
-  });
 
-  return `${prefix}${String(
-    maxNumber + 1
-  ).padStart(4, "0")}`;
-};
+      const match =
+        sale.invoiceNo?.match(
+          invoiceType === "GST"
+            ? new RegExp(
+                `^UK${year}(\\d+)$`
+              )
+            : new RegExp(
+                `^UKN${year}(\\d+)$`
+              )
+        );
+
+      if (match) {
+        const number =
+          Number(match[1]);
+
+        if (number > maxNumber) {
+          maxNumber = number;
+        }
+      }
+    });
+
+    return `${prefix}${String(
+      maxNumber + 1
+    ).padStart(4, "0")}`;
+  };
 
   /* =========================
      EMPTY ITEM
@@ -123,12 +222,18 @@ const [customerSearch, setCustomerSearch] =
   const createEmptySale = (): Sales => ({
     id: crypto.randomUUID(),
 
-    salesNo,
+    salesNo:
+      getNextSalesNo(loadSales()),
 
-    salesDate: getToday(),
+    salesDate:
+      getToday(),
 
-    invoiceNo: getNextInvoiceNo("NON_GST"),
-    invoiceType: "NON_GST",
+    invoiceNo:
+      getNextInvoiceNo("NON_GST"),
+
+    invoiceType:
+      "NON_GST",
+
     customerCode: "",
     customerName: "",
 
@@ -172,7 +277,6 @@ const [customerSearch, setCustomerSearch] =
   ========================= */
 
   useEffect(() => {
-
     setCustomers(
       loadCustomers()
     );
@@ -180,7 +284,6 @@ const [customerSearch, setCustomerSearch] =
     setProducts(
       loadProducts()
     );
-
   }, []);
 
   /* =========================
@@ -188,21 +291,35 @@ const [customerSearch, setCustomerSearch] =
   ========================= */
 
   useEffect(() => {
-
     if (editingSale) {
+      setSale(editingSale);
 
-      setSale(
-        editingSale
+      setDateDisplay(
+        formatDateDisplay(
+          editingSale.salesDate
+        )
       );
 
+      setCustomerSearch(
+        editingSale.customerCode &&
+        editingSale.customerName
+          ? `${editingSale.customerCode} - ${editingSale.customerName}`
+          : ""
+      );
     } else {
+      const newSale =
+        createEmptySale();
 
-      setSale(
-        createEmptySale()
+      setSale(newSale);
+
+      setDateDisplay(
+        formatDateDisplay(
+          newSale.salesDate
+        )
       );
 
+      setCustomerSearch("");
     }
-
   }, [
     salesNo,
     editingSale,
@@ -211,160 +328,131 @@ const [customerSearch, setCustomerSearch] =
   /* =========================
      ITEM CALCULATION
   ========================= */
-const calculateItem = (
-  item: SalesItem,
-  invoiceType: "GST" | "NON_GST" = sale.invoiceType
-): SalesItem => {
 
-  const qty =
-    Number(item.qty) || 0;
+  const calculateItem = (
+    item: SalesItem,
+    invoiceType:
+      | "GST"
+      | "NON_GST" = sale.invoiceType
+  ): SalesItem => {
 
-  const rate =
-    Number(item.rate) || 0;
+    const qty =
+      Number(item.qty) || 0;
 
-  const amount =
-    qty * rate;
+    const rate =
+      Number(item.rate) || 0;
 
-  // =========================
-  // GST / NON-GST CALCULATION
-  // =========================
+    const amount =
+      qty * rate;
 
-  const gst =
-    invoiceType === "GST"
-      ? Number(item.gst) || 0
-      : 0;
+    const gst =
+      invoiceType === "GST"
+        ? Number(item.gst) || 0
+        : 0;
 
-  const gstAmount =
-    invoiceType === "GST"
-      ? (amount * gst) / 100
-      : 0;
+    const gstAmount =
+      invoiceType === "GST"
+        ? (amount * gst) / 100
+        : 0;
 
-  const cgst =
-    invoiceType === "GST"
-      ? gstAmount / 2
-      : 0;
+    const cgst =
+      invoiceType === "GST"
+        ? gstAmount / 2
+        : 0;
 
-  const sgst =
-    invoiceType === "GST"
-      ? gstAmount / 2
-      : 0;
+    const sgst =
+      invoiceType === "GST"
+        ? gstAmount / 2
+        : 0;
 
-  const grandTotal =
-    amount + gstAmount;
+    const grandTotal =
+      amount + gstAmount;
 
-  return {
-    ...item,
+    return {
+      ...item,
 
-    qty,
-    rate,
+      qty,
+      rate,
 
-    gst,
+      gst,
 
-    amount,
-
-    taxableAmount:
       amount,
 
-    gstAmount,
+      taxableAmount:
+        amount,
 
-    cgst,
-    sgst,
+      gstAmount,
 
-    igst: 0,
+      cgst,
+      sgst,
 
-    grandTotal,
+      igst: 0,
+
+      grandTotal,
+    };
   };
-};
+
   /* =========================
-     UPDATE ITEM
-  ========================= */
-
-  const updateItem = (
-    field: keyof SalesItem,
-    value: string | number
-  ) => {
-
-    setSale((prev) => {
-
-      const currentItem =
-        prev.items[0] ||
-        createEmptyItem();
-
-      const updatedItem =
-        calculateItem({
-          ...currentItem,
-          [field]: value,
-        });
-
-      return {
-        ...prev,
-
-        items: [
-          updatedItem,
-        ],
-
-        taxableAmount:
-          updatedItem.taxableAmount,
-
-        gstAmount:
-          updatedItem.gstAmount,
-
-        cgst:
-          updatedItem.cgst,
-
-        sgst:
-          updatedItem.sgst,
-
-        igst:
-          updatedItem.igst,
-
-        grandTotal:
-          updatedItem.grandTotal,
-      };
-    });
-  };
-/* =========================
-     MULTI PRODUCT HELPERS
+     MULTI PRODUCT RECALCULATION
   ========================= */
 
   const recalculateSale = (
     items: SalesItem[]
   ) => {
-    const taxableAmount = items.reduce(
-      (total, item) =>
-        total + Number(item.taxableAmount || 0),
-      0
-    );
 
-    const gstAmount = items.reduce(
-      (total, item) =>
-        total + Number(item.gstAmount || 0),
-      0
-    );
+    const taxableAmount =
+      items.reduce(
+        (total, item) =>
+          total +
+          Number(
+            item.taxableAmount || 0
+          ),
+        0
+      );
 
-    const cgst = items.reduce(
-      (total, item) =>
-        total + Number(item.cgst || 0),
-      0
-    );
+    const gstAmount =
+      items.reduce(
+        (total, item) =>
+          total +
+          Number(
+            item.gstAmount || 0
+          ),
+        0
+      );
 
-    const sgst = items.reduce(
-      (total, item) =>
-        total + Number(item.sgst || 0),
-      0
-    );
+    const cgst =
+      items.reduce(
+        (total, item) =>
+          total +
+          Number(item.cgst || 0),
+        0
+      );
 
-    const igst = items.reduce(
-      (total, item) =>
-        total + Number(item.igst || 0),
-      0
-    );
+    const sgst =
+      items.reduce(
+        (total, item) =>
+          total +
+          Number(item.sgst || 0),
+        0
+      );
 
-    const grandTotal = items.reduce(
-      (total, item) =>
-        total + Number(item.grandTotal || 0),
-      0
-    );
+    const igst =
+      items.reduce(
+        (total, item) =>
+          total +
+          Number(item.igst || 0),
+        0
+      );
+
+    const grandTotal =
+      items.reduce(
+        (total, item) =>
+          total +
+          Number(
+            item.grandTotal || 0
+          ),
+        0
+      );
 
     return {
       items,
@@ -386,11 +474,16 @@ const calculateItem = (
     field: keyof SalesItem,
     value: string | number
   ) => {
+
     setSale((prev) => {
-      const items = [...prev.items];
+
+      const items = [
+        ...prev.items,
+      ];
 
       const currentItem =
-        items[index] || createEmptyItem();
+        items[index] ||
+        createEmptyItem();
 
       const updatedItem =
         calculateItem({
@@ -398,11 +491,14 @@ const calculateItem = (
           [field]: value,
         });
 
-      items[index] = updatedItem;
+      items[index] =
+        updatedItem;
 
       return {
         ...prev,
-        ...recalculateSale(items),
+        ...recalculateSale(
+          items
+        ),
       };
     });
   };
@@ -415,9 +511,12 @@ const calculateItem = (
     index: number,
     productCode: string
   ) => {
-    const product = products.find(
-      (p) => p.code === productCode
-    );
+
+    const product =
+      products.find(
+        (p) =>
+          p.code === productCode
+      );
 
     if (!product) {
       return;
@@ -431,10 +530,14 @@ const calculateItem = (
       ) || 0;
 
     setSale((prev) => {
-      const items = [...prev.items];
+
+      const items = [
+        ...prev.items,
+      ];
 
       const currentItem =
-        items[index] || createEmptyItem();
+        items[index] ||
+        createEmptyItem();
 
       const updatedItem =
         calculateItem({
@@ -453,17 +556,22 @@ const calculateItem = (
             product.unit,
 
           rate:
-            Number(product.sale) || 0,
+            Number(
+              product.sale
+            ) || 0,
 
           gst:
             gstValue,
         });
 
-      items[index] = updatedItem;
+      items[index] =
+        updatedItem;
 
       return {
         ...prev,
-        ...recalculateSale(items),
+        ...recalculateSale(
+          items
+        ),
       };
     });
   };
@@ -475,6 +583,7 @@ const calculateItem = (
   const handleAddProduct = () => {
     setSale((prev) => ({
       ...prev,
+
       items: [
         ...prev.items,
         createEmptyItem(),
@@ -489,8 +598,12 @@ const calculateItem = (
   const handleRemoveProduct = (
     index: number
   ) => {
+
     setSale((prev) => {
-      if (prev.items.length <= 1) {
+
+      if (
+        prev.items.length <= 1
+      ) {
         return prev;
       }
 
@@ -502,10 +615,13 @@ const calculateItem = (
 
       return {
         ...prev,
-        ...recalculateSale(items),
+        ...recalculateSale(
+          items
+        ),
       };
     });
   };
+
   /* =========================
      CUSTOMER MASTER SELECT
   ========================= */
@@ -517,7 +633,8 @@ const calculateItem = (
     const customer =
       customers.find(
         (c) =>
-          c.code === customerCode
+          c.code ===
+          customerCode
       );
 
     if (!customer) {
@@ -541,245 +658,210 @@ const calculateItem = (
       customerName:
         customer.name,
     }));
+
+    setCustomerSearch(
+      `${customer.code} - ${customer.name}`
+    );
   };
 
-  /* =========================
-     PRODUCT MASTER SELECT
-  ========================= */
-
-  const handleProductChange = (
-    productCode: string
-  ) => {
-
-    const product =
-      products.find(
-        (p) =>
-          p.code === productCode
-      );
-
-    if (!product) {
-      return;
-    }
-
-    const gstValue =
-      Number(
-        String(product.gst)
-          .replace("%", "")
-          .trim()
-      ) || 0;
-
-    setSale((prev) => {
-
-      const currentItem =
-        prev.items[0] ||
-        createEmptyItem();
-
-      const updatedItem =
-        calculateItem({
-
-          ...currentItem,
-
-          productCode:
-            product.code,
-
-          productName:
-            product.name,
-
-          hsn:
-            product.hsn,
-
-          unit:
-            product.unit,
-
-          rate:
-            Number(product.sale) || 0,
-
-          gst:
-            gstValue,
-        });
-
-      return {
-        ...prev,
-
-        items: [
-          updatedItem,
-        ],
-
-        taxableAmount:
-          updatedItem.taxableAmount,
-
-        gstAmount:
-          updatedItem.gstAmount,
-
-        cgst:
-          updatedItem.cgst,
-
-        sgst:
-          updatedItem.sgst,
-
-        igst:
-          updatedItem.igst,
-
-        grandTotal:
-          updatedItem.grandTotal,
-      };
-    });
-  };
- 
   /* =========================
      GENERAL FIELD CHANGE
   ========================= */
-const handleChange = (
-  e: React.ChangeEvent<
-    HTMLInputElement |
-    HTMLSelectElement |
-    HTMLTextAreaElement
-  >
-) => {
 
-  const {
-    name,
-    value,
-  } = e.target;
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement |
+      HTMLSelectElement |
+      HTMLTextAreaElement
+    >
+  ) => {
 
-  if (name === "invoiceType") {
+    const {
+      name,
+      value,
+    } = e.target;
 
-    const invoiceType =
-      value as "GST" | "NON_GST";
+    if (
+      name ===
+      "invoiceType"
+    ) {
 
-    setSale((prev) => {
+      const invoiceType =
+        value as
+          | "GST"
+          | "NON_GST";
 
-      const updatedItems =
-        prev.items.map((item) => {
+      setSale((prev) => {
 
-          // GST Invoice
-          if (invoiceType === "GST") {
+        const updatedItems =
+          prev.items.map(
+            (item) => {
 
-            const gstRate =
-              Number(item.gst) > 0
-                ? Number(item.gst)
-                : 5;
+              if (
+                invoiceType ===
+                "GST"
+              ) {
 
-            return calculateItem(
-              {
-                ...item,
-                gst: gstRate,
-              },
-              "GST"
-            );
-          }
+                const gstRate =
+                  Number(
+                    item.gst
+                  ) > 0
+                    ? Number(
+                        item.gst
+                      )
+                    : 5;
 
-          // NON-GST Invoice
-          return calculateItem(
-            {
-              ...item,
-              gst: 0,
-            },
-            "NON_GST"
+                return calculateItem(
+                  {
+                    ...item,
+                    gst:
+                      gstRate,
+                  },
+                  "GST"
+                );
+              }
+
+              return calculateItem(
+                {
+                  ...item,
+                  gst: 0,
+                },
+                "NON_GST"
+              );
+            }
           );
-        });
 
-      const taxableAmount =
-        updatedItems.reduce(
-          (sum, item) =>
-            sum + item.taxableAmount,
-          0
-        );
+        const totals =
+          recalculateSale(
+            updatedItems
+          );
 
-      const gstAmount =
-        updatedItems.reduce(
-          (sum, item) =>
-            sum + item.gstAmount,
-          0
-        );
+        return {
+          ...prev,
 
-      const cgst =
-        updatedItems.reduce(
-          (sum, item) =>
-            sum + item.cgst,
-          0
-        );
+          invoiceType,
 
-      const sgst =
-        updatedItems.reduce(
-          (sum, item) =>
-            sum + item.sgst,
-          0
-        );
+          invoiceNo:
+            getNextInvoiceNo(
+              invoiceType
+            ),
 
-      const grandTotal =
-        updatedItems.reduce(
-          (sum, item) =>
-            sum + item.grandTotal,
-          0
-        );
+          ...totals,
+        };
+      });
 
-      return {
-        ...prev,
+      return;
+    }
 
-        invoiceType,
+    setSale((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-        invoiceNo:
-          getNextInvoiceNo(invoiceType),
-
-        items:
-          updatedItems,
-
-        taxableAmount,
-
-        gstAmount,
-
-        cgst,
-
-        sgst,
-
-        igst: 0,
-
-        grandTotal,
-      };
-    });
-
-    return;
-  }
-
-  setSale((prev) => ({
-    ...prev,
-    [name]: value,
-  }));
-};
   /* =========================
-     SUBMIT
+     MANUAL DATE CHANGE
   ========================= */
 
+  const handleManualDateChange = (
+    value: string
+  ) => {
+
+    const formatted =
+      formatTypedDate(value);
+
+    setDateDisplay(
+      formatted
+    );
+
+    const parsedDate =
+      parseDisplayDate(
+        formatted
+      );
+
+    if (parsedDate) {
+      setSale((prev) => ({
+        ...prev,
+        salesDate:
+          parsedDate,
+      }));
+    }
+  };
+
   /* =========================
-     SUBMIT - MULTI PRODUCT
+     CALENDAR DATE CHANGE
+  ========================= */
+
+  const handleCalendarDateChange = (
+    value: string
+  ) => {
+
+    if (!value) {
+      return;
+    }
+
+    setSale((prev) => ({
+      ...prev,
+      salesDate:
+        value,
+    }));
+
+    setDateDisplay(
+      formatDateDisplay(
+        value
+      )
+    );
+  };
+
+  /* =========================
+     SUBMIT
   ========================= */
 
   const handleSubmit = (
     e: React.FormEvent
   ) => {
+
     e.preventDefault();
 
     if (
       !sale.customerCode ||
       !sale.customerName.trim()
     ) {
+
       alert(
         "Please select Customer from Customer Master"
       );
+
+      return;
+    }
+
+    const finalSalesDate =
+      parseDisplayDate(
+        dateDisplay
+      );
+
+    if (!finalSalesDate) {
+
+      alert(
+        "Please enter a valid date in DD/MM/YYYY format"
+      );
+
       return;
     }
 
     if (!sale.items.length) {
+
       alert(
         "Please add at least one product"
       );
+
       return;
     }
 
     const finalItems =
-      sale.items.map((item) =>
-        calculateItem(item)
+      sale.items.map(
+        (item) =>
+          calculateItem(item)
       );
 
     const invalidItem =
@@ -792,14 +874,18 @@ const handleChange = (
       );
 
     if (invalidItem) {
+
       alert(
         "Please complete Product, Quantity and Rate for all products"
       );
+
       return;
     }
 
     const totals =
-      recalculateSale(finalItems);
+      recalculateSale(
+        finalItems
+      );
 
     const now =
       new Date().toISOString();
@@ -809,10 +895,17 @@ const handleChange = (
 
       salesNo,
 
+      salesDate:
+        finalSalesDate,
+
       invoiceNo:
         sale.invoiceNo ||
-       getNextInvoiceNo("NON_GST"),
-      updatedAt: now,
+        getNextInvoiceNo(
+          "NON_GST"
+        ),
+
+      updatedAt:
+        now,
 
       items:
         finalItems,
@@ -838,9 +931,20 @@ const handleChange = (
 
     onSave(finalSale);
 
+    const newSale =
+      createEmptySale();
+
     setSale(
-      createEmptySale()
+      newSale
     );
+
+    setDateDisplay(
+      formatDateDisplay(
+        newSale.salesDate
+      )
+    );
+
+    setCustomerSearch("");
 
     onCancelEdit?.();
   };
@@ -851,9 +955,20 @@ const handleChange = (
 
   const handleReset = () => {
 
+    const newSale =
+      createEmptySale();
+
     setSale(
-      createEmptySale()
+      newSale
     );
+
+    setDateDisplay(
+      formatDateDisplay(
+        newSale.salesDate
+      )
+    );
+
+    setCustomerSearch("");
 
     onCancelEdit?.();
   };
@@ -973,7 +1088,8 @@ const handleChange = (
               "grid",
 
             gridTemplateColumns:
-  "repeat(5, minmax(0, 1fr))",
+              "repeat(5, minmax(0, 1fr))",
+
             gap:
               "8px",
 
@@ -1035,23 +1151,156 @@ const handleChange = (
               Sales Date *
             </label>
 
-            <input
-              type="date"
+            <div
+              style={{
+                position:
+                  "relative",
 
-              name="salesDate"
+                width:
+                  "100%",
+              }}
+            >
 
-              value={
-                sale.salesDate
-              }
+              {/* MANUAL DATE */}
 
-              onChange={
-                handleChange
-              }
+              <input
+                type="text"
+                name="salesDate"
+                value={
+                  dateDisplay
+                }
+                onChange={(e) =>
+                  handleManualDateChange(
+                    e.target.value
+                  )
+                }
+                placeholder="DD/MM/YYYY"
+                inputMode="numeric"
+                maxLength={10}
+                style={{
+                  ...inputStyle,
 
-              style={
-                inputStyle
-              }
-            />
+                  paddingRight:
+                    "42px",
+                }}
+              />
+
+              {/* HIDDEN NATIVE CALENDAR */}
+
+              <input
+                ref={
+                  dateInputRef
+                }
+
+                type="date"
+
+                value={
+                  sale.salesDate
+                }
+
+                onChange={(e) =>
+                  handleCalendarDateChange(
+                    e.target.value
+                  )
+                }
+
+                tabIndex={-1}
+
+                aria-hidden="true"
+
+                style={{
+                  position:
+                    "absolute",
+
+                  right:
+                    "8px",
+
+                  top:
+                    "8px",
+
+                  width:
+                    "24px",
+
+                  height:
+                    "24px",
+
+                  opacity: 0,
+
+                  cursor:
+                    "pointer",
+                }}
+              />
+
+              {/* CALENDAR BUTTON */}
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    dateInputRef
+                      .current
+                  ) {
+                    if (
+                      typeof dateInputRef
+                        .current
+                        .showPicker ===
+                      "function"
+                    ) {
+                      dateInputRef
+                        .current
+                        .showPicker();
+                    } else {
+                      dateInputRef
+                        .current
+                        .click();
+                    }
+                  }
+                }}
+                title="Select Date"
+                style={{
+                  position:
+                    "absolute",
+
+                  right:
+                    "7px",
+
+                  top:
+                    "7px",
+
+                  width:
+                    "26px",
+
+                  height:
+                    "26px",
+
+                  border:
+                    "none",
+
+                  background:
+                    "transparent",
+
+                  cursor:
+                    "pointer",
+
+                  fontSize:
+                    "16px",
+
+                  padding: 0,
+
+                  display:
+                    "flex",
+
+                  alignItems:
+                    "center",
+
+                  justifyContent:
+                    "center",
+                }}
+              >
+                📅
+              </button>
+
+            </div>
 
           </div>
 
@@ -1086,28 +1335,44 @@ const handleChange = (
             />
 
           </div>
-{/* INVOICE TYPE */}
 
-<div style={fieldStyle}>
-  <label style={labelStyle}>
-    Invoice Type
-  </label>
+          {/* INVOICE TYPE */}
 
-  <select
-    name="invoiceType"
-    value={sale.invoiceType}
-    onChange={handleChange}
-    style={inputStyle}
-  >
-    <option value="GST">
-      GST Invoice
-    </option>
+          <div
+            style={fieldStyle}
+          >
 
-    <option value="NON_GST">
-      Without GST
-    </option>
-  </select>
-</div>
+            <label
+              style={labelStyle}
+            >
+              Invoice Type
+            </label>
+
+            <select
+              name="invoiceType"
+              value={
+                sale.invoiceType
+              }
+              onChange={
+                handleChange
+              }
+              style={
+                inputStyle
+              }
+            >
+
+              <option value="GST">
+                GST Invoice
+              </option>
+
+              <option value="NON_GST">
+                Without GST
+              </option>
+
+            </select>
+
+          </div>
+
           {/* CUSTOMER */}
 
           <div
@@ -1120,376 +1385,663 @@ const handleChange = (
               Customer
             </label>
 
-  <input
-  list="customer-list"
-  value={customerSearch}
-  onChange={(e) => {
-    const value = e.target.value;
-
-    setCustomerSearch(value);
-
-    const selectedCustomer =
-      customers.find(
-        (customer) =>
-          `${customer.code} - ${customer.name}` ===
-          value
-      );
-
-    if (selectedCustomer) {
-      handleCustomerChange(
-        selectedCustomer.code
-      );
-    }
-  }}
-  placeholder="Type customer name..."
-  style={inputStyle}
-/>
-
-<datalist id="customer-list">
-  {customers.map((customer) => (
-    <option
-      key={customer.id}
-      value={`${customer.code} - ${customer.name}`}
-    />
-  ))}
-</datalist>
-
-          </div>
-
-          {/* CUSTOMER NAME */}
-
-          <div
-            style={fieldStyle}
-          >
-
-            <label
-              style={labelStyle}
-            >
-              Customer Name
-            </label>
-
             <input
+              list="customer-list"
+
               value={
-                sale.customerName
+                customerSearch
               }
 
-              readOnly
+              onChange={(e) => {
 
-              placeholder="Select Customer"
+                const value =
+                  e.target.value;
 
-              style={{
-                ...inputStyle,
+                setCustomerSearch(
+                  value
+                );
 
-                background:
-                  "#f3f4f6",
+                const selectedCustomer =
+                  customers.find(
+                    (customer) =>
+                      `${customer.code} - ${customer.name}` ===
+                      value
+                  );
+
+                if (
+                  selectedCustomer
+                ) {
+
+                  handleCustomerChange(
+                    selectedCustomer.code
+                  );
+                }
               }}
+
+              placeholder=
+                "Type customer name..."
+
+              style={
+                inputStyle
+              }
             />
+
+            <datalist
+              id="customer-list"
+            >
+              {customers.map(
+                (customer) => (
+                  <option
+                    key={
+                      customer.id
+                    }
+                    value={`${customer.code} - ${customer.name}`}
+                  />
+                )
+              )}
+            </datalist>
 
           </div>
 
         </div>
 
-    {/* =====================
-    ROW 2 - MULTI PRODUCTS
-====================== */}
+        {/* =====================
+            CUSTOMER NAME
+        ====================== */}
 
-<div
-  style={{
-    marginTop: "14px",
-    width: "100%",
-  }}
->
-  {sale.items.map((item, index) => (
-    <div
-      key={index}
-      style={{
-        display: "grid",
-       gridTemplateColumns:
-  "70px minmax(0,1.6fr) 80px 65px 65px 80px 40px",
-        gap: "6px",
-        alignItems: "end",
-        marginBottom: "10px",
-        width: "100%",
-      }}
-    >
-
-      {/* PRODUCT CODE */}
-
-      <div style={fieldStyle}>
-        <label style={labelStyle}>
-          Product Code
-        </label>
-
-        <input
-          value={item.productCode}
-          readOnly
-          placeholder="AUTO"
+        <div
           style={{
-            ...inputStyle,
-            background: "#f3f4f6",
-            fontWeight: 700,
+            width:
+              "20%",
+
+            minWidth:
+              "180px",
+
+            marginTop:
+              "8px",
           }}
-        />
-      </div>
-
-      {/* PRODUCT NAME */}
-
-      <div style={fieldStyle}>
-        <label style={labelStyle}>
-          Product Name *
-        </label>
-
-        <select
-          value={item.productCode}
-          onChange={(e) =>
-            handleProductChangeAt(
-              index,
-              e.target.value
-            )
-          }
-          style={inputStyle}
         >
-          <option value="">
-            Select Product
-          </option>
 
-          {products
-            .filter(
-              (product) =>
-                product.active !== false
-            )
-            .map((product) => (
-              <option
-                key={product.id}
-                value={product.code}
+          <label
+            style={labelStyle}
+          >
+            Customer Name
+          </label>
+
+          <input
+            value={
+              sale.customerName
+            }
+
+            readOnly
+
+            placeholder=
+              "Select Customer"
+
+            style={{
+              ...inputStyle,
+
+              background:
+                "#f3f4f6",
+            }}
+          />
+
+        </div>
+
+        {/* =====================
+            ROW 2 - MULTI PRODUCTS
+        ====================== */}
+
+        <div
+          style={{
+            marginTop:
+              "14px",
+
+            width:
+              "100%",
+          }}
+        >
+
+          {sale.items.map(
+            (item, index) => (
+
+              <div
+                key={index}
+                style={{
+                  display:
+                    "grid",
+
+                  gridTemplateColumns:
+                    "70px minmax(0,1.6fr) 80px 65px 65px 80px 40px",
+
+                  gap:
+                    "6px",
+
+                  alignItems:
+                    "end",
+
+                  marginBottom:
+                    "10px",
+
+                  width:
+                    "100%",
+                }}
               >
-                {product.name}
-              </option>
-            ))}
-        </select>
-      </div>
 
-      {/* HSN */}
+                {/* PRODUCT CODE */}
 
-      <div style={fieldStyle}>
-        <label style={labelStyle}>
-          HSN Code
-        </label>
+                <div
+                  style={
+                    fieldStyle
+                  }
+                >
 
-        <input
-          value={item.hsn}
-          readOnly
-          style={{
-            ...inputStyle,
-            background: "#f3f4f6",
-          }}
-        />
-      </div>
+                  <label
+                    style={
+                      labelStyle
+                    }
+                  >
+                    Product Code
+                  </label>
 
-      {/* UNIT */}
+                  <input
+                    value={
+                      item.productCode
+                    }
 
-      <div style={fieldStyle}>
-        <label style={labelStyle}>
-          Unit
-        </label>
+                    readOnly
 
-        <input
-          value={item.unit}
-          readOnly
-          style={{
-            ...inputStyle,
-            background: "#f3f4f6",
-          }}
-        />
-      </div>
+                    placeholder=
+                      "AUTO"
 
-      {/* QUANTITY */}
+                    style={{
+                      ...inputStyle,
 
-      <div style={fieldStyle}>
-        <label style={labelStyle}>
-          Qty *
-        </label>
+                      background:
+                        "#f3f4f6",
 
-        <input
-          type="number"
-          value={item.qty}
-          min="0"
-          step="0.01"
-          onChange={(e) =>
-            updateItemAt(
-              index,
-              "qty",
-              Number(e.target.value)
+                      fontWeight:
+                        700,
+                    }}
+                  />
+
+                </div>
+
+                {/* PRODUCT NAME */}
+
+                <div
+                  style={
+                    fieldStyle
+                  }
+                >
+
+                  <label
+                    style={
+                      labelStyle
+                    }
+                  >
+                    Product Name *
+                  </label>
+
+                  <select
+                    value={
+                      item.productCode
+                    }
+
+                    onChange={(e) =>
+                      handleProductChangeAt(
+                        index,
+                        e.target.value
+                      )
+                    }
+
+                    style={
+                      inputStyle
+                    }
+                  >
+
+                    <option value="">
+                      Select Product
+                    </option>
+
+                    {products
+                      .filter(
+                        (product) =>
+                          product.active !==
+                          false
+                      )
+                      .map(
+                        (product) => (
+                          <option
+                            key={
+                              product.id
+                            }
+                            value={
+                              product.code
+                            }
+                          >
+                            {
+                              product.name
+                            }
+                          </option>
+                        )
+                      )}
+
+                  </select>
+
+                </div>
+
+                {/* HSN */}
+
+                <div
+                  style={
+                    fieldStyle
+                  }
+                >
+
+                  <label
+                    style={
+                      labelStyle
+                    }
+                  >
+                    HSN Code
+                  </label>
+
+                  <input
+                    value={
+                      item.hsn
+                    }
+
+                    readOnly
+
+                    style={{
+                      ...inputStyle,
+
+                      background:
+                        "#f3f4f6",
+                    }}
+                  />
+
+                </div>
+
+                {/* UNIT */}
+
+                <div
+                  style={
+                    fieldStyle
+                  }
+                >
+
+                  <label
+                    style={
+                      labelStyle
+                    }
+                  >
+                    Unit
+                  </label>
+
+                  <input
+                    value={
+                      item.unit
+                    }
+
+                    readOnly
+
+                    style={{
+                      ...inputStyle,
+
+                      background:
+                        "#f3f4f6",
+                    }}
+                  />
+
+                </div>
+
+                {/* QUANTITY */}
+
+                <div
+                  style={
+                    fieldStyle
+                  }
+                >
+
+                  <label
+                    style={
+                      labelStyle
+                    }
+                  >
+                    Qty *
+                  </label>
+
+                  <input
+                    type="number"
+
+                    value={
+                      item.qty
+                    }
+
+                    min="0"
+
+                    step="0.01"
+
+                    onChange={(e) =>
+                      updateItemAt(
+                        index,
+                        "qty",
+                        Number(
+                          e.target.value
+                        )
+                      )
+                    }
+
+                    style={
+                      inputStyle
+                    }
+                  />
+
+                </div>
+
+                {/* RATE */}
+
+                <div
+                  style={
+                    fieldStyle
+                  }
+                >
+
+                  <label
+                    style={
+                      labelStyle
+                    }
+                  >
+                    Rate *
+                  </label>
+
+                  <input
+                    type="number"
+
+                    value={
+                      item.rate
+                    }
+
+                    min="0"
+
+                    step="0.01"
+
+                    onChange={(e) =>
+                      updateItemAt(
+                        index,
+                        "rate",
+                        Number(
+                          e.target.value
+                        )
+                      )
+                    }
+
+                    style={
+                      inputStyle
+                    }
+                  />
+
+                </div>
+
+                {/* DELETE */}
+
+                <button
+                  type="button"
+
+                  onClick={() =>
+                    handleRemoveProduct(
+                      index
+                    )
+                  }
+
+                  disabled={
+                    sale.items.length <=
+                    1
+                  }
+
+                  title="Remove Product"
+
+                  style={{
+                    height:
+                      "40px",
+
+                    width:
+                      "40px",
+
+                    border:
+                      "none",
+
+                    borderRadius:
+                      "6px",
+
+                    background:
+                      sale.items.length <=
+                      1
+                        ? "#d1d5db"
+                        : "#dc2626",
+
+                    color:
+                      "#ffffff",
+
+                    fontWeight:
+                      700,
+
+                    cursor:
+                      sale.items.length <=
+                      1
+                        ? "not-allowed"
+                        : "pointer",
+                  }}
+                >
+                  🗑️
+                </button>
+
+              </div>
             )
-          }
-          style={inputStyle}
-        />
-      </div>
+          )}
 
-      {/* RATE */}
+          {/* ADD PRODUCT */}
 
-      <div style={fieldStyle}>
-        <label style={labelStyle}>
-          Rate *
-        </label>
+          <button
+            type="button"
 
-        <input
-          type="number"
-          value={item.rate}
-          min="0"
-          step="0.01"
-          onChange={(e) =>
-            updateItemAt(
-              index,
-              "rate",
-              Number(e.target.value)
-            )
-          }
-          style={inputStyle}
-        />
-      </div>
+            onClick={
+              handleAddProduct
+            }
 
-      {/* DELETE */}
+            style={{
+              marginTop:
+                "4px",
 
-      <button
-        type="button"
-        onClick={() =>
-          handleRemoveProduct(index)
-        }
-        disabled={sale.items.length <= 1}
-        title="Remove Product"
-        style={{
-          height: "40px",
-          width: "40px",
-          border: "none",
-          borderRadius: "6px",
-          background:
-            sale.items.length <= 1
-              ? "#d1d5db"
-              : "#dc2626",
-          color: "#ffffff",
-          fontWeight: 700,
-          cursor:
-            sale.items.length <= 1
-              ? "not-allowed"
-              : "pointer",
-        }}
-      >
-        🗑️
-      </button>
-    </div>
-  ))}
+              height:
+                "38px",
 
-  {/* ADD PRODUCT */}
+              padding:
+                "0 16px",
 
-  <button
-    type="button"
-    onClick={handleAddProduct}
-    style={{
-      marginTop: "4px",
-      height: "38px",
-      padding: "0 16px",
-      border: "none",
-      borderRadius: "6px",
-      background: "#2563eb",
-      color: "#ffffff",
-      fontWeight: 700,
-      fontSize: "12px",
-      cursor: "pointer",
-    }}
-  >
-    ➕ Add Product
-  </button>
-</div>
+              border:
+                "none",
+
+              borderRadius:
+                "6px",
+
+              background:
+                "#2563eb",
+
+              color:
+                "#ffffff",
+
+              fontWeight:
+                700,
+
+              fontSize:
+                "12px",
+
+              cursor:
+                "pointer",
+            }}
+          >
+            ➕ Add Product
+          </button>
+
+        </div>
+
         {/* =====================
             ROW 3
         ====================== */}
 
         <div
           style={{
-            display: "grid",
-           gridTemplateColumns:
-  "minmax(0,1fr) minmax(0,1fr) 70px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto auto",
-            gap: "6px",
-            alignItems: "end",
-            marginTop: "14px",
+            display:
+              "grid",
+
+            gridTemplateColumns:
+              "minmax(0,1fr) minmax(0,1fr) 70px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto auto",
+
+            gap:
+              "6px",
+
+            alignItems:
+              "end",
+
+            marginTop:
+              "14px",
           }}
         >
 
           {/* AMOUNT */}
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          <div
+            style={
+              fieldStyle
+            }
+          >
+
+            <label
+              style={
+                labelStyle
+              }
+            >
               Amount
             </label>
 
             <input
               value={
-                item.amount.toFixed(2)
+                item.amount.toFixed(
+                  2
+                )
               }
+
               readOnly
+
               style={{
                 ...inputStyle,
+
                 background:
                   "#f3f4f6",
               }}
             />
+
           </div>
 
           {/* GST */}
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          <div
+            style={
+              fieldStyle
+            }
+          >
+
+            <label
+              style={
+                labelStyle
+              }
+            >
               GST
             </label>
 
             <input
               value={`${item.gst}%`}
+
               readOnly
+
               style={{
                 ...inputStyle,
+
                 background:
                   "#f3f4f6",
               }}
             />
+
           </div>
 
           {/* GST AMOUNT */}
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          <div
+            style={
+              fieldStyle
+            }
+          >
+
+            <label
+              style={
+                labelStyle
+              }
+            >
               GST Amt.
             </label>
 
             <input
               value={
-                item.gstAmount.toFixed(2)
+                item.gstAmount.toFixed(
+                  2
+                )
               }
+
               readOnly
+
               style={{
                 ...inputStyle,
+
                 background:
                   "#f3f4f6",
               }}
             />
+
           </div>
 
           {/* PAYMENT */}
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          <div
+            style={
+              fieldStyle
+            }
+          >
+
+            <label
+              style={
+                labelStyle
+              }
+            >
               Payment
             </label>
 
             <select
               name="paymentMode"
+
               value={
                 sale.paymentMode
               }
+
               onChange={
                 handleChange
               }
-              style={inputStyle}
+
+              style={
+                inputStyle
+              }
             >
 
               <option value="Cash">
@@ -1513,24 +2065,39 @@ const handleChange = (
               </option>
 
             </select>
+
           </div>
 
           {/* STATUS */}
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          <div
+            style={
+              fieldStyle
+            }
+          >
+
+            <label
+              style={
+                labelStyle
+              }
+            >
               Status
             </label>
 
             <select
               name="status"
+
               value={
                 sale.status
               }
+
               onChange={
                 handleChange
               }
-              style={inputStyle}
+
+              style={
+                inputStyle
+              }
             >
 
               <option value="Completed">
@@ -1546,85 +2113,159 @@ const handleChange = (
               </option>
 
             </select>
+
           </div>
 
           {/* CGST */}
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          <div
+            style={
+              fieldStyle
+            }
+          >
+
+            <label
+              style={
+                labelStyle
+              }
+            >
               CGST
             </label>
 
             <input
               value={
-                item.cgst.toFixed(2)
+                item.cgst.toFixed(
+                  2
+                )
               }
+
               readOnly
+
               style={{
                 ...inputStyle,
+
                 background:
                   "#f3f4f6",
               }}
             />
+
           </div>
 
           {/* SGST */}
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          <div
+            style={
+              fieldStyle
+            }
+          >
+
+            <label
+              style={
+                labelStyle
+              }
+            >
               SGST
             </label>
 
             <input
               value={
-                item.sgst.toFixed(2)
+                item.sgst.toFixed(
+                  2
+                )
               }
+
               readOnly
+
               style={{
                 ...inputStyle,
+
                 background:
                   "#f3f4f6",
               }}
             />
+
           </div>
 
           {/* NET AMOUNT */}
 
-          <div style={fieldStyle}>
-            <label style={labelStyle}>
+          <div
+            style={
+              fieldStyle
+            }
+          >
+
+            <label
+              style={
+                labelStyle
+              }
+            >
               Net Amount
             </label>
 
             <input
               value={
-                sale.grandTotal.toFixed(2)
+                sale.grandTotal.toFixed(
+                  2
+                )
               }
+
               readOnly
+
               style={{
                 ...inputStyle,
+
                 background:
                   "#f0fdf4",
-                fontWeight: 700,
-                color: "#14532d",
+
+                fontWeight:
+                  700,
+
+                color:
+                  "#14532d",
               }}
             />
+
           </div>
+
           {/* RESET */}
 
           <button
             type="button"
-            onClick={handleReset}
+
+            onClick={
+              handleReset
+            }
+
             style={{
-              height: "40px",
-              padding: "0 14px",
-              border: "none",
-              borderRadius: "6px",
-              background: "#6b7280",
-              color: "#ffffff",
-              fontWeight: 700,
-              fontSize: "12px",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
+              height:
+                "40px",
+
+              padding:
+                "0 14px",
+
+              border:
+                "none",
+
+              borderRadius:
+                "6px",
+
+              background:
+                "#6b7280",
+
+              color:
+                "#ffffff",
+
+              fontWeight:
+                700,
+
+              fontSize:
+                "12px",
+
+              cursor:
+                "pointer",
+
+              whiteSpace:
+                "nowrap",
             }}
           >
             🔄 Reset
@@ -1634,23 +2275,45 @@ const handleChange = (
 
           <button
             type="submit"
+
             style={{
-              height: "40px",
-              padding: "0 16px",
-              border: "none",
-              borderRadius: "6px",
-              background: "#14532d",
-              color: "#ffffff",
-              fontWeight: 700,
-              fontSize: "12px",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
+              height:
+                "40px",
+
+              padding:
+                "0 16px",
+
+              border:
+                "none",
+
+              borderRadius:
+                "6px",
+
+              background:
+                "#14532d",
+
+              color:
+                "#ffffff",
+
+              fontWeight:
+                700,
+
+              fontSize:
+                "12px",
+
+              cursor:
+                "pointer",
+
+              whiteSpace:
+                "nowrap",
             }}
           >
             💾{" "}
-            {editingSale
-              ? "Update Sale"
-              : "Save Sale"}
+            {
+              editingSale
+                ? "Update Sale"
+                : "Save Sale"
+            }
           </button>
 
         </div>
@@ -1661,22 +2324,43 @@ const handleChange = (
 
         <div
           style={{
-            marginTop: "14px",
-            maxWidth: "500px",
+            marginTop:
+              "14px",
+
+            maxWidth:
+              "500px",
           }}
         >
-          <label style={labelStyle}>
+
+          <label
+            style={
+              labelStyle
+            }
+          >
             Remarks
           </label>
 
           <input
             type="text"
+
             name="remarks"
-            value={sale.remarks}
-            onChange={handleChange}
-            placeholder="Remarks"
-            style={inputStyle}
+
+            value={
+              sale.remarks
+            }
+
+            onChange={
+              handleChange
+            }
+
+            placeholder=
+              "Remarks"
+
+            style={
+              inputStyle
+            }
           />
+
         </div>
 
         {/* =====================
@@ -1686,21 +2370,37 @@ const handleChange = (
         {editingSale && (
           <div
             style={{
-              marginTop: "12px",
-              padding: "7px 10px",
-              background: "#fef3c7",
-              color: "#92400e",
-              borderRadius: "5px",
-              fontSize: "12px",
-              fontWeight: 600,
+              marginTop:
+                "12px",
+
+              padding:
+                "7px 10px",
+
+              background:
+                "#fef3c7",
+
+              color:
+                "#92400e",
+
+              borderRadius:
+                "5px",
+
+              fontSize:
+                "12px",
+
+              fontWeight:
+                600,
             }}
           >
             ✏️ Editing Sale:{" "}
-            {editingSale.salesNo}
+            {
+              editingSale.salesNo
+            }
           </div>
         )}
 
       </div>
+
     </form>
   );
 }

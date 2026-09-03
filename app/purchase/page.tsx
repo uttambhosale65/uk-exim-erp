@@ -8,6 +8,7 @@ import PageTitle from "../components/ui/PageTitle";
 
 import PurchaseForm from "../components/customer/purchase/PurchaseForm";
 import PurchaseTable from "../components/customer/purchase/PurchaseTable";
+import GRNPrint from "../components/customer/purchase/GRNPrint";
 
 import { Purchase } from "../components/customer/purchase/PurchaseTypes";
 
@@ -16,18 +17,18 @@ import {
   savePurchases,
   getNextPurchaseNo,
 } from "../components/customer/purchase/PurchaseStorage";
+
 import {
   loadProducts,
-} from "../product/components/ProductStorage";
+  } from "../product/components/ProductStorage";
 
 import {
   convertToStockQty,
-} from "../components/stock/StockStorage";
-import {
   loadStock,
   saveStock,
   reversePurchaseStock,
 } from "../components/stock/StockStorage";
+
 export default function PurchasePage() {
   const [purchases, setPurchases] =
     useState<Purchase[]>([]);
@@ -41,313 +42,402 @@ export default function PurchasePage() {
   const [editingPurchase, setEditingPurchase] =
     useState<Purchase | null>(null);
 
+  const [printPurchase, setPrintPurchase] =
+    useState<Purchase | null>(null);
+
+  /* =====================================================
+     LOAD PURCHASES
+  ===================================================== */
+
   useEffect(() => {
     const data = loadPurchases();
 
     setPurchases(data);
 
-   setPurchaseNo(getNextPurchaseNo(data));
+    setPurchaseNo(
+      getNextPurchaseNo(data)
+    );
   }, []);
+
+  /* =====================================================
+     SAVE PURCHASES
+  ===================================================== */
 
   useEffect(() => {
     savePurchases(purchases);
 
-   setPurchaseNo(getNextPurchaseNo(purchases));
-  }, [purchases]);
-/* =====================================================
-   GET PURCHASE STOCK IMPACT
-
-   Packed Product → Stock Base Product
-   Packet Qty → KG
-===================================================== */
-
-function getPurchaseStockImpact(
-  productCode: string,
-  qty: number
-) {
-  const product =
-    loadProducts().find(
-      (p) =>
-        p.code === productCode
+    setPurchaseNo(
+      getNextPurchaseNo(purchases)
     );
+  }, [purchases]);
 
-  if (!product) {
+  /* =====================================================
+     GET PURCHASE STOCK IMPACT
+
+     Packed Product → Stock Base Product
+     Packet Qty → KG
+  ===================================================== */
+
+  function getPurchaseStockImpact(
+    productCode: string,
+    qty: number
+  ) {
+    const product =
+      loadProducts().find(
+        (p) =>
+          p.code === productCode
+      );
+
+    if (!product) {
+      return {
+        stockProductCode:
+          productCode,
+        stockQty:
+          Number(qty) || 0,
+        productName: "",
+        hsn: "",
+      };
+    }
+
+    const stockProductCode =
+      product.stockBaseCode ||
+      product.code;
+
+    const stockQty =
+      convertToStockQty(
+        Number(qty),
+        product.unit,
+        product.netWeight
+      );
+
     return {
-      stockProductCode:
-        productCode,
-      stockQty:
-        Number(qty) || 0,
-      productName: "",
-      hsn: "",
+      stockProductCode,
+      stockQty,
+      productName:
+        product.name,
+      hsn:
+        product.hsn,
     };
   }
 
-  const stockProductCode =
-    product.stockBaseCode ||
-    product.code;
+  /* =====================================================
+     ADD / UPDATE PURCHASE
+  ===================================================== */
 
-  const stockQty =
-    convertToStockQty(
-      Number(qty),
-      product.unit,
-      product.netWeight
+  function addPurchase(
+    purchase: Purchase
+  ) {
+    /* ===================================================
+       EDIT EXISTING PURCHASE
+    =================================================== */
+
+    if (editingPurchase) {
+      /* -----------------------------------------------
+         OLD PURCHASE → STOCK REVERSE
+      ------------------------------------------------ */
+
+      editingPurchase.items.forEach(
+        (item) => {
+          if (
+            !item.productCode ||
+            Number(item.qty) <= 0
+          ) {
+            return;
+          }
+
+          const impact =
+            getPurchaseStockImpact(
+              item.productCode,
+              Number(item.qty)
+            );
+
+          reversePurchaseStock(
+            impact.stockProductCode,
+            impact.stockQty
+          );
+        }
+      );
+
+      /* -----------------------------------------------
+         NEW PURCHASE → STOCK ADD
+      ------------------------------------------------ */
+
+      const stock =
+        loadStock();
+
+      const updatedStock = [
+        ...stock,
+      ];
+
+      purchase.items.forEach(
+        (item) => {
+          if (
+            !item.productCode ||
+            Number(item.qty) <= 0
+          ) {
+            return;
+          }
+
+          const impact =
+            getPurchaseStockImpact(
+              item.productCode,
+              Number(item.qty)
+            );
+
+          const index =
+            updatedStock.findIndex(
+              (stockItem) =>
+                stockItem.productCode ===
+                impact.stockProductCode
+            );
+
+          if (index === -1) {
+            return;
+          }
+
+          updatedStock[index].purchaseQty =
+            Number(
+              updatedStock[index]
+                .purchaseQty || 0
+            ) + impact.stockQty;
+
+          updatedStock[index].currentStock =
+            Number(
+              updatedStock[index]
+                .openingStock || 0
+            ) +
+            Number(
+              updatedStock[index]
+                .purchaseQty || 0
+            ) -
+            Number(
+              updatedStock[index]
+                .salesQty || 0
+            );
+        }
+      );
+
+      saveStock(updatedStock);
+
+      setPurchases((prev) =>
+        prev.map((p) =>
+          p.id === purchase.id
+            ? purchase
+            : p
+        )
+      );
+
+      setEditingPurchase(null);
+
+      return;
+    }
+
+    /* ===================================================
+       NEW PURCHASE
+    =================================================== */
+
+    const stock =
+      loadStock();
+
+    const updatedStock = [
+      ...stock,
+    ];
+
+    purchase.items.forEach(
+      (item) => {
+        if (
+          !item.productCode ||
+          Number(item.qty) <= 0
+        ) {
+          return;
+        }
+
+        const product =
+          loadProducts().find(
+            (p) =>
+              p.code ===
+              item.productCode
+          );
+
+        if (!product) {
+          return;
+        }
+
+        const stockProductCode =
+          product.stockBaseCode ||
+          product.code;
+
+        const stockQty =
+          convertToStockQty(
+            Number(item.qty),
+            product.unit,
+            product.netWeight
+          );
+
+        const index =
+          updatedStock.findIndex(
+            (stockItem) =>
+              stockItem.productCode ===
+              stockProductCode
+          );
+
+        if (index === -1) {
+          return;
+        }
+
+        updatedStock[index].purchaseQty =
+          Number(
+            updatedStock[index]
+              .purchaseQty || 0
+          ) + stockQty;
+
+        updatedStock[index].currentStock =
+          Number(
+            updatedStock[index]
+              .openingStock || 0
+          ) +
+          Number(
+            updatedStock[index]
+              .purchaseQty || 0
+          ) -
+          Number(
+            updatedStock[index]
+              .salesQty || 0
+          );
+      }
     );
 
-  return {
-    stockProductCode,
-    stockQty,
-    productName:
-      product.name,
-    hsn:
-      product.hsn,
-  };
-}
- function addPurchase(
-  purchase: Purchase
-) {
-  /*
-    EDIT PURCHASE
+    saveStock(updatedStock);
 
-    जुना Purchase सध्या Stock ला
-    लागू केलेला नसल्यामुळे येथे
-    Stock calculation नंतर करू.
-  */
+    setPurchases((prev) => [
+      ...prev,
+      purchase,
+    ]);
 
-if (editingPurchase) {
-  /*
-    OLD PURCHASE → STOCK REVERSE
-  */
+    setEditingPurchase(null);
+  }
 
-  editingPurchase.items.forEach(
-    (item) => {
-      if (
-        !item.productCode ||
-        Number(item.qty) <= 0
-      ) {
-        return;
-      }
+  /* =====================================================
+     EDIT PURCHASE
+  ===================================================== */
 
-      const impact =
-        getPurchaseStockImpact(
-          item.productCode,
-          Number(item.qty)
-        );
-
-      reversePurchaseStock(
-        impact.stockProductCode,
-        impact.stockQty
-      );
-    }
-  );
-
-  /*
-    NEW PURCHASE → STOCK ADD
-  */
-
-  const stock =
-    loadStock();
-
-  const updatedStock = [
-    ...stock,
-  ];
-
-  purchase.items.forEach(
-    (item) => {
-      if (
-        !item.productCode ||
-        Number(item.qty) <= 0
-      ) {
-        return;
-      }
-
-      const impact =
-        getPurchaseStockImpact(
-          item.productCode,
-          Number(item.qty)
-        );
-
-      const index =
-        updatedStock.findIndex(
-          (stockItem) =>
-            stockItem.productCode ===
-            impact.stockProductCode
-        );
-
-      if (index === -1) {
-        return;
-      }
-
-      updatedStock[index].purchaseQty =
-        Number(
-          updatedStock[index]
-            .purchaseQty || 0
-        ) + impact.stockQty;
-
-      updatedStock[index].currentStock =
-        Number(
-          updatedStock[index]
-            .openingStock || 0
-        ) +
-        Number(
-          updatedStock[index]
-            .purchaseQty || 0
-        ) -
-        Number(
-          updatedStock[index]
-            .salesQty || 0
-        );
-    }
-  );
-
-  saveStock(updatedStock);
-
-  setPurchases((prev) =>
-    prev.map((p) =>
-      p.id === purchase.id
-        ? purchase
-        : p
-    )
-  );
-
-  setEditingPurchase(null);
-
-  return;
-}
-
-  /*
-    NEW PURCHASE
-  */
-
-  const stock =
-    loadStock();
-
-  const updatedStock = [
-    ...stock,
-  ];
-
-  purchase.items.forEach(
-    (item) => {
-      if (
-        !item.productCode ||
-        Number(item.qty) <= 0
-      ) {
-        return;
-      }
-
-      const product =
-        loadProducts().find(
-          (p) =>
-            p.code ===
-            item.productCode
-        );
-
-      if (!product) {
-        return;
-      }
-
-      const stockProductCode =
-        product.stockBaseCode ||
-        product.code;
-
-      const stockQty =
-        convertToStockQty(
-          Number(item.qty),
-          product.unit,
-          product.netWeight
-        );
-
-      const index =
-        updatedStock.findIndex(
-          (stockItem) =>
-            stockItem.productCode ===
-            stockProductCode
-        );
-
-      if (index === -1) {
-        return;
-      }
-
-      updatedStock[index].purchaseQty =
-        Number(
-          updatedStock[index]
-            .purchaseQty || 0
-        ) + stockQty;
-
-      updatedStock[index].currentStock =
-        Number(
-          updatedStock[index]
-            .openingStock || 0
-        ) +
-        Number(
-          updatedStock[index]
-            .purchaseQty || 0
-        ) -
-        Number(
-          updatedStock[index]
-            .salesQty || 0
-        );
-    }
-  );
-
-  saveStock(updatedStock);
-
-  setPurchases((prev) => [
-    ...prev,
-    purchase,
-  ]);
-
-  setEditingPurchase(null);
-}
   function handleEditPurchase(
     purchase: Purchase
   ) {
     setEditingPurchase(purchase);
+    setPrintPurchase(null);
   }
+
+  /* =====================================================
+     DELETE PURCHASE
+  ===================================================== */
 
   function handleDeletePurchase(
     id: string
   ) {
-    if (!confirm("Delete this Purchase?")) return;
-    const purchase =
-  purchases.find(
-    (item) =>
-      item.id === id
-  );
-
-if (!purchase) {
-  return;
-}
-
-purchase.items.forEach(
-  (item) => {
     if (
-      !item.productCode ||
-      Number(item.qty) <= 0
+      !confirm(
+        "Delete this Purchase?"
+      )
     ) {
       return;
     }
 
-    const impact =
-      getPurchaseStockImpact(
-        item.productCode,
-        Number(item.qty)
+    const purchase =
+      purchases.find(
+        (item) =>
+          item.id === id
       );
 
-    reversePurchaseStock(
-      impact.stockProductCode,
-      impact.stockQty
+    if (!purchase) {
+      return;
+    }
+
+    purchase.items.forEach(
+      (item) => {
+        if (
+          !item.productCode ||
+          Number(item.qty) <= 0
+        ) {
+          return;
+        }
+
+        const impact =
+          getPurchaseStockImpact(
+            item.productCode,
+            Number(item.qty)
+          );
+
+        reversePurchaseStock(
+          impact.stockProductCode,
+          impact.stockQty
+        );
+      }
     );
-  }
-);
+
     setPurchases((prev) =>
       prev.filter(
-        (purchase) => purchase.id !== id
+        (item) =>
+          item.id !== id
       )
+    );
+
+    if (
+      editingPurchase?.id === id
+    ) {
+      setEditingPurchase(null);
+    }
+
+    if (
+      printPurchase?.id === id
+    ) {
+      setPrintPurchase(null);
+    }
+  }
+
+  /* =====================================================
+     PRINT GRN
+  ===================================================== */
+
+  function handlePrintPurchase(
+    purchase: Purchase
+  ) {
+    setEditingPurchase(null);
+    setPrintPurchase(purchase);
+  }
+
+  /* =====================================================
+     CLOSE PRINT VIEW
+  ===================================================== */
+
+  function handleClosePrint() {
+    setPrintPurchase(null);
+  }
+
+  /* =====================================================
+     CANCEL EDIT
+  ===================================================== */
+
+  function handleCancelEdit() {
+    setEditingPurchase(null);
+
+    const data =
+      loadPurchases();
+
+    setPurchaseNo(
+      getNextPurchaseNo(data)
     );
   }
 
+  /* =====================================================
+     FILTER PURCHASES
+  ===================================================== */
+
   const filteredPurchases = useMemo(() => {
-    const text = search.toLowerCase();
+    const text =
+      search
+        .toLowerCase()
+        .trim();
 
     return purchases.filter(
       (purchase) =>
@@ -356,9 +446,126 @@ purchase.items.forEach(
           .includes(text) ||
         purchase.supplierName
           .toLowerCase()
-          .includes(text) 
-     );
+          .includes(text) ||
+        purchase.invoiceNo
+          .toLowerCase()
+          .includes(text) ||
+        purchase.purchaseDate
+          .toLowerCase()
+          .includes(text) ||
+        purchase.items?.some(
+          (item) =>
+            item.productCode
+              .toLowerCase()
+              .includes(text) ||
+            item.productName
+              .toLowerCase()
+              .includes(text)
+        )
+    );
   }, [purchases, search]);
+
+  /* =====================================================
+     PRINT PREVIEW
+  ===================================================== */
+
+  if (printPurchase) {
+    return (
+      <div
+        style={{
+          background: "#f3f4f6",
+          padding: "20px",
+          boxSizing: "border-box",
+          minHeight: "100vh",
+        }}
+      >
+        {/* BACK BUTTON */}
+
+        <div
+          className="screen-only"
+          style={{
+            width: "100%",
+            maxWidth: "1120px",
+            margin:
+              "0 auto 12px auto",
+            display: "flex",
+            justifyContent:
+              "space-between",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={
+              handleClosePrint
+            }
+            style={{
+              background: "#374151",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "6px",
+              padding: "9px 16px",
+              fontSize: "12px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            ← Back to Purchase Register
+          </button>
+
+          <div
+            style={{
+              color: "#14532d",
+              fontSize: "13px",
+              fontWeight: 700,
+            }}
+          >
+            GRN Print Preview
+          </div>
+        </div>
+
+        {/* GRN PRINT */}
+
+        <div id="grn-print-root">
+          <GRNPrint
+            purchase={printPurchase}
+          />
+        </div>
+
+        <style jsx>{`
+          @media print {
+            @page {
+              size: A4;
+              margin: 0;
+            }
+
+            :global(body *) {
+              visibility: hidden !important;
+            }
+
+            :global(#grn-print-root),
+            :global(#grn-print-root *) {
+              visibility: visible !important;
+            }
+
+            :global(#grn-print-root) {
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              background: #ffffff !important;
+            }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  /* =====================================================
+     MAIN UI
+  ===================================================== */
+
   return (
     <Layout title="UK EXIM ERP">
       <PageTitle
@@ -366,13 +573,68 @@ purchase.items.forEach(
         subtitle="Purchase Entry & Purchase Register"
       />
 
+      {/* =================================================
+          PURCHASE ENTRY
+      ================================================== */}
+
       <Card title="Purchase Entry">
         <PurchaseForm
           purchaseNo={purchaseNo}
           onSave={addPurchase}
-          editingPurchase={editingPurchase}
+          editingPurchase={
+            editingPurchase
+          }
         />
+
+        {editingPurchase && (
+          <div
+            style={{
+              marginTop: "12px",
+              padding: "9px 12px",
+              background: "#fef3c7",
+              border:
+                "1px solid #fcd34d",
+              borderRadius: "6px",
+              color: "#92400e",
+              fontSize: "12px",
+              fontWeight: 600,
+              display: "flex",
+              justifyContent:
+                "space-between",
+              alignItems: "center",
+              gap: "10px",
+            }}
+          >
+            <span>
+              ✏️ Editing GRN:{" "}
+              {editingPurchase.purchaseNo}
+            </span>
+
+            <button
+              type="button"
+              onClick={
+                handleCancelEdit
+              }
+              style={{
+                border: "none",
+                background: "#92400e",
+                color: "#ffffff",
+                padding: "5px 10px",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "11px",
+                fontWeight: 700,
+              }}
+            >
+              Cancel Edit
+            </button>
+          </div>
+        )}
       </Card>
+
+      {/* =================================================
+          PURCHASE REGISTER
+      ================================================== */}
 
       <Card title="Purchase Register">
         <div
@@ -391,7 +653,8 @@ purchase.items.forEach(
               width: "100%",
               height: "40px",
               padding: "0 12px",
-              border: "1px solid #cbd5e1",
+              border:
+                "1px solid #cbd5e1",
               borderRadius: "6px",
               fontSize: "14px",
               outline: "none",
@@ -401,9 +664,18 @@ purchase.items.forEach(
         </div>
 
         <PurchaseTable
-          purchases={filteredPurchases}
-          onEdit={handleEditPurchase}
-          onDelete={handleDeletePurchase}
+          purchases={
+            filteredPurchases
+          }
+          onEdit={
+            handleEditPurchase
+          }
+          onDelete={
+            handleDeletePurchase
+          }
+          onPrint={
+            handlePrintPurchase
+          }
         />
       </Card>
     </Layout>

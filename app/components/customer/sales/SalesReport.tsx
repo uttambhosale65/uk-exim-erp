@@ -29,11 +29,13 @@ export default function SalesReport() {
   const filteredSales = useMemo(() => {
     const keyword = search.trim().toLowerCase();
 
-    if (!keyword) {
-      return sales;
-    }
+   const orderedSales = [...sales].reverse();
 
-    return sales.filter((sale) => {
+if (!keyword) {
+  return orderedSales;
+}
+
+return orderedSales.filter((sale) => {
       const salesNoMatch =
         sale.salesNo
           ?.toLowerCase()
@@ -213,6 +215,7 @@ export default function SalesReport() {
             .sales-report-table {
               width: 100% !important;
               min-width: 0 !important;
+              max-width: 100% !important;
               table-layout: fixed !important;
               border-collapse: collapse !important;
             }
@@ -360,7 +363,13 @@ export default function SalesReport() {
           style={headerStyle}
         >
 
-          <div style={titleGroupStyle}>
+          <div
+            style={{
+              ...titleGroupStyle,
+              minWidth: 0,
+              flex: "1 1 220px",
+            }}
+          >
 
             <h2 style={titleStyle}>
               📊 Sales Report
@@ -378,7 +387,11 @@ export default function SalesReport() {
           {/* SEARCH + PRINT */}
 
           <div
-            style={headerActionsStyle}
+            style={{
+              ...headerActionsStyle,
+              minWidth: 0,
+              flex: "0 1 auto",
+            }}
           >
 
             <input
@@ -532,6 +545,23 @@ export default function SalesReport() {
             className="sales-report-table"
             style={tableStyle}
           >
+
+            <colgroup>
+              <col style={{ width: "4%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "7%" }} />
+              <col style={{ width: "6%" }} />
+              <col style={{ width: "6%" }} />
+              <col style={{ width: "7%" }} />
+              <col style={{ width: "5%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "7%" }} />
+              <col style={{ width: "8%" }} />
+            </colgroup>
 
             <thead>
 
@@ -694,6 +724,10 @@ export default function SalesReport() {
                                 "center",
                               color:
                                 "#dc2626",
+                              whiteSpace:
+                                "normal",
+                              wordBreak:
+                                "break-word",
                             }}
                           >
                             No Product Data
@@ -793,11 +827,10 @@ export default function SalesReport() {
                             <td
                               style={{
                                 ...tdStyle,
-                                fontWeight:
-                                  itemIndex ===
-                                  0
-                                    ? 600
-                                    : 400,
+                                whiteSpace:
+                                  "normal",
+                                wordBreak:
+                                  "break-word",
                               }}
                             >
                               {itemIndex ===
@@ -809,7 +842,17 @@ export default function SalesReport() {
                             {/* PRODUCT */}
 
                             <td
-                              style={tdStyle}
+                              style={{
+                                ...tdStyle,
+                                whiteSpace:
+                                  "normal",
+                                wordBreak:
+                                  "break-word",
+                              }}
+                              title={
+                                item.productName ||
+                                ""
+                              }
                             >
                               {item.productName ||
                                 "-"}
@@ -1034,7 +1077,10 @@ const containerStyle: CSSProperties = {
   boxShadow:
     "0 2px 8px rgba(0,0,0,0.08)",
   width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
   boxSizing: "border-box",
+  overflowX: "hidden",
 };
 
 // =====================================================
@@ -1049,6 +1095,8 @@ const headerStyle: CSSProperties = {
   gap: "15px",
   marginBottom: "18px",
   flexWrap: "wrap",
+  width: "100%",
+  minWidth: 0,
 };
 
 // =====================================================
@@ -1132,9 +1180,11 @@ const printButtonStyle: CSSProperties = {
 const summaryGridStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns:
-    "repeat(4, minmax(150px, 1fr))",
+    "repeat(4, minmax(0, 1fr))",
   gap: "12px",
   marginBottom: "20px",
+  width: "100%",
+  minWidth: 0,
 };
 
 // =====================================================
@@ -1147,6 +1197,9 @@ const summaryCard: CSSProperties = {
   background: "#f8fafc",
   border:
     "1px solid #e2e8f0",
+  minWidth: 0,
+  boxSizing: "border-box",
+  overflow: "hidden",
 };
 
 // =====================================================
@@ -1158,6 +1211,8 @@ const summaryTitle: CSSProperties = {
   color: "#64748b",
   marginBottom: "6px",
   fontWeight: 600,
+  whiteSpace: "normal",
+  wordBreak: "break-word",
 };
 
 // =====================================================
@@ -1168,6 +1223,9 @@ const summaryValue: CSSProperties = {
   fontSize: "18px",
   fontWeight: 700,
   color: "#1e293b",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 };
 
 // =====================================================
@@ -1176,7 +1234,11 @@ const summaryValue: CSSProperties = {
 
 const tableWrapperStyle: CSSProperties = {
   width: "100%",
-  overflowX: "auto",
+  maxWidth: "100%",
+  minWidth: 0,
+  overflowX: "hidden",
+  overflowY: "auto",
+  maxHeight: "65vh",
   border:
     "1px solid #dbe3ea",
   borderRadius: "7px",
@@ -1189,11 +1251,13 @@ const tableWrapperStyle: CSSProperties = {
 
 const tableStyle: CSSProperties = {
   width: "100%",
+  maxWidth: "100%",
   minWidth: 0,
   borderCollapse:
     "collapse",
-  fontSize: "12px",
-  tableLayout: "auto",
+  fontSize: "11px",
+  tableLayout: "fixed",
+  boxSizing: "border-box",
 };
 
 // =====================================================
@@ -1201,15 +1265,26 @@ const tableStyle: CSSProperties = {
 // =====================================================
 
 const thStyle: CSSProperties = {
-  padding: "10px 8px",
+  padding: "8px 4px",
   textAlign: "left",
-  fontSize: "11px",
+  fontSize: "10px",
   fontWeight: 700,
-  whiteSpace: "nowrap",
   borderRight:
     "1px solid rgba(255,255,255,0.2)",
   borderBottom:
     "2px solid #0f3d24",
+  whiteSpace:
+    "normal",
+  overflow:
+    "hidden",
+  textOverflow:
+    "ellipsis",
+  wordBreak:
+    "break-word",
+  lineHeight:
+    "12px",
+  boxSizing:
+    "border-box",
 };
 
 // =====================================================
@@ -1217,13 +1292,23 @@ const thStyle: CSSProperties = {
 // =====================================================
 
 const tdStyle: CSSProperties = {
-  padding: "9px 8px",
+  padding: "7px 4px",
   borderRight:
     "1px solid #e5e7eb",
   borderBottom:
     "1px solid #e5e7eb",
-  fontSize: "11px",
+  fontSize: "10px",
   color: "#374151",
-  verticalAlign: "middle",
-  whiteSpace: "nowrap",
+  verticalAlign:
+    "middle",
+  whiteSpace:
+    "nowrap",
+  overflow:
+    "hidden",
+  textOverflow:
+    "ellipsis",
+  wordBreak:
+    "break-word",
+  boxSizing:
+    "border-box",
 };

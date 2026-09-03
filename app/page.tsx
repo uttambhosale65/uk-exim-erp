@@ -35,6 +35,7 @@ import Settings from "./components/settings/Settings";
 
 /* =========================================================
    MAIN HOME
+   UK EXIM ERP – VERSION 1.0
 ========================================================= */
 
 export default function Home() {
@@ -79,12 +80,13 @@ export default function Home() {
 
   const card = {
     background: "#ffffff",
-    borderRadius: "10px",
-    padding: "16px",
+    borderRadius: "8px",
+    padding: "10px 12px",
     boxShadow:
-      "0 2px 8px rgba(0,0,0,0.08)",
-    minHeight: "90px",
+      "0 2px 6px rgba(0,0,0,0.07)",
+    minHeight: "76px",
     boxSizing: "border-box" as const,
+    minWidth: 0,
   };
 
   /* =======================================================
@@ -92,67 +94,50 @@ export default function Home() {
   ======================================================= */
 
   useEffect(() => {
-    const products =
-      loadProducts();
-
-    const customers =
-      loadCustomers();
-
-    const suppliers =
-      loadSuppliers();
-
-    const purchases =
-      loadPurchases();
-
-    const sales =
-      loadSales();
-
-    const stock =
-      loadStock();
+    const products = loadProducts();
+    const customers = loadCustomers();
+    const suppliers = loadSuppliers();
+    const purchases = loadPurchases();
+    const sales = loadSales();
+    const stock = loadStock();
 
     /* -----------------------------------------------------
        DASHBOARD TOTALS
     ----------------------------------------------------- */
 
     setDashboard({
-      products:
-        products.length,
+      products: products.length,
 
-      customers:
-        customers.length,
+      customers: customers.length,
 
-      suppliers:
-        suppliers.length,
+      suppliers: suppliers.length,
 
-      stock:
-        stock.reduce(
-          (total, item) =>
-            total +
-            Number(
-              item.currentStock || 0
-            ),
-          0
-        ),
+      stock: stock.reduce(
+        (total, item) =>
+          total +
+          Number(
+            item.currentStock || 0
+          ),
+        0
+      ),
 
-      sales:
-        sales.reduce(
-          (total, sale) =>
-            total +
-            Number(
-              sale.grandTotal ?? 0
-            ),
-          0
-        ),
+      sales: sales.reduce(
+        (total, sale) =>
+          total +
+          Number(
+            sale.grandTotal ?? 0
+          ),
+        0
+      ),
 
-      purchase:
-        purchases.reduce(
-          (total, purchase) =>
-            total +
-            Number(
-              purchase.totalNetAmount ?? 0
-            ),
-          0
-        ),
+      purchase: purchases.reduce(
+        (total, purchase) =>
+          total +
+          Number(
+            purchase.totalNetAmount ?? 0
+          ),
+        0
+      ),
     });
 
     /* -----------------------------------------------------
@@ -168,8 +153,8 @@ export default function Home() {
         .reverse();
 
     const reports =
-      latestMonths.map(
-        (monthKey) => {
+      latestMonths
+        .map((monthKey) => {
           const parts =
             monthKey.split("-");
 
@@ -192,18 +177,16 @@ export default function Home() {
             year,
             month
           );
-        }
-      ).filter(
-        (
-          report
-        ): report is MonthlyStockSummary =>
-          report !== null &&
-          report.month !== ""
-      );
+        })
+        .filter(
+          (
+            report
+          ): report is MonthlyStockSummary =>
+            report !== null &&
+            report.month !== ""
+        );
 
-    setMonthlyReports(
-      reports
-    );
+    setMonthlyReports(reports);
   }, [activePage]);
 
   /* =======================================================
@@ -234,81 +217,63 @@ export default function Home() {
       --------------------------------------------------- */
 
       case "products":
-        return (
-          <ProductMaster />
-        );
+        return <ProductMaster />;
 
       /* ---------------------------------------------------
          CUSTOMER
       --------------------------------------------------- */
 
       case "customers":
-        return (
-          <CustomerMaster />
-        );
+        return <CustomerMaster />;
 
       /* ---------------------------------------------------
          SUPPLIER
       --------------------------------------------------- */
 
       case "suppliers":
-        return (
-          <SupplierMaster />
-        );
+        return <SupplierMaster />;
 
       /* ---------------------------------------------------
          PURCHASE / GRN
       --------------------------------------------------- */
 
       case "grn":
-        return (
-          <PurchaseMaster />
-        );
+        return <PurchaseMaster />;
 
       /* ---------------------------------------------------
          SALES / ISSUE
       --------------------------------------------------- */
 
       case "issue":
-        return (
-          <SalesPage />
-        );
+        return <SalesPage />;
 
       /* ---------------------------------------------------
          STOCK REPORT
       --------------------------------------------------- */
 
       case "stock":
-        return (
-          <StockMaster />
-        );
+        return <StockMaster />;
 
       /* ---------------------------------------------------
          PURCHASE REPORT
       --------------------------------------------------- */
 
       case "purchase":
-        return (
-          <PurchaseReport />
-        );
+        return <PurchaseReport />;
 
       /* ---------------------------------------------------
          SALES REPORT
       --------------------------------------------------- */
 
       case "sales":
-        return (
-          <SalesReport />
-        );
+        return <SalesReport />;
 
       /* ---------------------------------------------------
          SETTINGS
       --------------------------------------------------- */
 
       case "settings":
-        return (
-          <Settings />
-        );
+        return <Settings />;
 
       /* ---------------------------------------------------
          DASHBOARD
@@ -323,15 +288,15 @@ export default function Home() {
 
             <div
               style={{
-                marginBottom: "15px",
+                marginBottom: "10px",
               }}
             >
               <h2
                 style={{
-                  marginTop: 0,
-                  marginBottom: "4px",
+                  margin: 0,
+                  marginBottom: "2px",
                   color: "#14532d",
-                  fontSize: "24px",
+                  fontSize: "22px",
                   fontWeight: 800,
                 }}
               >
@@ -341,202 +306,114 @@ export default function Home() {
               <div
                 style={{
                   color: "#6b7280",
-                  fontSize: "12px",
+                  fontSize: "11px",
                 }}
               >
-                UK EXIM ENTERPRISES ERP
-                Overview
+                UK EXIM ENTERPRISES ERP Overview
               </div>
             </div>
 
             {/* =============================================
-                DASHBOARD CARDS
+                MAIN DASHBOARD CARDS
+                COMPACT – 6 CARDS IN ONE ROW
             ============================================== */}
 
             <div
+              className="dashboard-main-cards"
               style={{
                 display: "grid",
                 gridTemplateColumns:
-                  "repeat(3, minmax(0, 1fr))",
-                gap: "15px",
+                  "repeat(6, minmax(0, 1fr))",
+                gap: "8px",
                 width: "100%",
               }}
             >
               {/* PRODUCTS */}
 
-              <div
-                style={card}
-              >
-                <h3
-                  style={{
-                    marginTop: 0,
-                    marginBottom: "8px",
-                    color: "#374151",
-                    fontSize: "14px",
-                  }}
-                >
-                  📦 Products
-                </h3>
-
-                <h1
-                  style={{
-                    margin: 0,
-                    color: "#14532d",
-                  }}
-                >
-                  {
-                    dashboard.products
-                  }
-                </h1>
-              </div>
+              <DashboardMainCard
+                title="Products"
+                value={String(
+                  dashboard.products
+                )}
+                icon="📦"
+                color="#14532d"
+                cardStyle={card}
+              />
 
               {/* CUSTOMERS */}
 
-              <div
-                style={card}
-              >
-                <h3
-                  style={{
-                    marginTop: 0,
-                    marginBottom: "8px",
-                    color: "#374151",
-                    fontSize: "14px",
-                  }}
-                >
-                  👥 Customers
-                </h3>
-
-                <h1
-                  style={{
-                    margin: 0,
-                    color: "#14532d",
-                  }}
-                >
-                  {
-                    dashboard.customers
-                  }
-                </h1>
-              </div>
+              <DashboardMainCard
+                title="Customers"
+                value={String(
+                  dashboard.customers
+                )}
+                icon="👥"
+                color="#14532d"
+                cardStyle={card}
+              />
 
               {/* SUPPLIERS */}
 
-              <div
-                style={card}
-              >
-                <h3
-                  style={{
-                    marginTop: 0,
-                    marginBottom: "8px",
-                    color: "#374151",
-                    fontSize: "14px",
-                  }}
-                >
-                  🚚 Suppliers
-                </h3>
-
-                <h1
-                  style={{
-                    margin: 0,
-                    color: "#14532d",
-                  }}
-                >
-                  {
-                    dashboard.suppliers
-                  }
-                </h1>
-              </div>
+              <DashboardMainCard
+                title="Suppliers"
+                value={String(
+                  dashboard.suppliers
+                )}
+                icon="🚚"
+                color="#14532d"
+                cardStyle={card}
+              />
 
               {/* CURRENT STOCK */}
 
-              <div
-                style={card}
-              >
-                <h3
-                  style={{
-                    marginTop: 0,
-                    marginBottom: "8px",
-                    color: "#374151",
-                    fontSize: "14px",
-                  }}
-                >
-                  📦 Current Stock
-                </h3>
-
-                <h1
-                  style={{
-                    margin: 0,
-                    color: "#14532d",
-                  }}
-                >
-                 {
-  latestMonthlyReport?.closingTotal ??
-  dashboard.stock
-}
-                </h1>
-              </div>
+              <DashboardMainCard
+                title="Current Stock"
+                value={Number(
+                  latestMonthlyReport?.closingTotal ??
+                    dashboard.stock
+                ).toLocaleString(
+                  "en-IN",
+                  {
+                    maximumFractionDigits: 3,
+                  }
+                )}
+                icon="📦"
+                color="#14532d"
+                cardStyle={card}
+                suffix=" KG"
+              />
 
               {/* SALES */}
 
-              <div
-                style={card}
-              >
-                <h3
-                  style={{
-                    marginTop: 0,
-                    marginBottom: "8px",
-                    color: "#374151",
-                    fontSize: "14px",
-                  }}
-                >
-                  💰 Sales
-                </h3>
-
-                <h1
-                  style={{
-                    margin: 0,
-                    color: "#c2410c",
-                  }}
-                >
-                  ₹
- {dashboard.sales.toLocaleString("en-IN", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-})}
-                </h1>
-              </div>
+              <DashboardMainCard
+                title="Sales"
+                value={`₹${dashboard.sales.toLocaleString(
+                  "en-IN",
+                  {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }
+                )}`}
+                icon="💰"
+                color="#c2410c"
+                cardStyle={card}
+              />
 
               {/* PURCHASE */}
 
-              <div
-                style={card}
-              >
-                <h3
-                  style={{
-                    marginTop: 0,
-                    marginBottom: "8px",
-                    color: "#374151",
-                    fontSize: "14px",
-                  }}
-                >
-                  🛒 Purchase
-                </h3>
-
-                <h1
-                  style={{
-                    margin: 0,
-                    color: "#1d4ed8",
-                  }}
-                >
-                  ₹
-                  {dashboard.purchase.toLocaleString(
-                    "en-IN",
-                    {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    }
-                  )}
-                </h1>
-              </div>
+              <DashboardMainCard
+                title="Purchase"
+                value={`₹${dashboard.purchase.toLocaleString(
+                  "en-IN",
+                  {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }
+                )}`}
+                icon="🛒"
+                color="#1d4ed8"
+                cardStyle={card}
+              />
             </div>
 
             {/* =============================================
@@ -545,13 +422,12 @@ export default function Home() {
 
             <div
               style={{
-                marginTop: "20px",
-                background:
-                  "#ffffff",
-                borderRadius: "10px",
-                padding: "16px",
+                marginTop: "12px",
+                background: "#ffffff",
+                borderRadius: "8px",
+                padding: "12px",
                 boxShadow:
-                  "0 2px 8px rgba(0,0,0,0.08)",
+                  "0 2px 6px rgba(0,0,0,0.07)",
                 border:
                   "1px solid #e5e7eb",
                 boxSizing:
@@ -560,14 +436,16 @@ export default function Home() {
                 minWidth: 0,
               }}
             >
+              {/* SECTION HEADER */}
+
               <div
                 style={{
                   display: "flex",
                   justifyContent:
                     "space-between",
                   alignItems: "center",
-                  gap: "10px",
-                  marginBottom: "14px",
+                  gap: "8px",
+                  marginBottom: "9px",
                   flexWrap: "wrap",
                 }}
               >
@@ -575,49 +453,38 @@ export default function Home() {
                   <h3
                     style={{
                       margin: 0,
-                      color:
-                        "#14532d",
-                      fontSize: "18px",
+                      color: "#14532d",
+                      fontSize: "16px",
+                      fontWeight: 800,
                     }}
                   >
-                    📊 Monthly Stock
-                    Movement
+                    📊 Monthly Stock Movement
                   </h3>
 
                   <div
                     style={{
-                      marginTop: "4px",
-                      color:
-                        "#6b7280",
-                      fontSize: "11px",
+                      marginTop: "2px",
+                      color: "#6b7280",
+                      fontSize: "10px",
                     }}
                   >
-                    Opening, Purchase,
-                    Sales and Closing
-                    stock
+                    Opening, Purchase, Sales and Closing stock
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() =>
-                    setActivePage(
-                      "stock"
-                    )
+                    setActivePage("stock")
                   }
                   style={{
                     border: "none",
                     borderRadius: "6px",
-                    padding:
-                      "8px 12px",
-                    background:
-                      "#14532d",
-                    color:
-                      "#ffffff",
-                    cursor:
-                      "pointer",
-                    fontSize:
-                      "11px",
+                    padding: "7px 10px",
+                    background: "#14532d",
+                    color: "#ffffff",
+                    cursor: "pointer",
+                    fontSize: "10px",
                     fontWeight: 700,
                   }}
                 >
@@ -632,14 +499,13 @@ export default function Home() {
               {latestMonthlyReport ? (
                 <>
                   <div
+                    className="dashboard-monthly-cards"
                     style={{
-                      display:
-                        "grid",
+                      display: "grid",
                       gridTemplateColumns:
                         "repeat(4, minmax(0, 1fr))",
-                      gap: "10px",
-                      marginBottom:
-                        "16px",
+                      gap: "7px",
+                      marginBottom: "10px",
                       width: "100%",
                     }}
                   >
@@ -677,172 +543,225 @@ export default function Home() {
                   </div>
 
                   {/* =========================================
-                      GRAPH
-                  ========================================= */}
-<StockAlerts />
+                      STOCK ALERTS
+                  ========================================== */}
 
-<div
-  style={{
-    marginTop: "18px",
-    paddingTop: "16px",
-    borderTop: "1px solid #e5e7eb",
-  }}
->
-  <div
-    style={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: "12px",
-      gap: "10px",
-      flexWrap: "wrap",
-    }}
-  >
-    <div>
-      <h3
-        style={{
-          margin: 0,
-          color: "#14532d",
-          fontSize: "16px",
-          fontWeight: 800,
-        }}
-      >
-        💰 Monthly Sales vs Purchase
-      </h3>
+                  <StockAlerts />
 
-      <div
-        style={{
-          marginTop: "4px",
-          color: "#6b7280",
-          fontSize: "11px",
-        }}
-      >
-        Month-wise business value
-      </div>
-    </div>
-  </div>
+                  {/* =========================================
+                      MONTHLY SALES VS PURCHASE
+                  ========================================== */}
 
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns:
-        "repeat(2, minmax(0, 1fr))",
-      gap: "10px",
-    }}
-  >
-    <div
-      style={{
-        padding: "12px",
-        border: "1px solid #dbeafe",
-        borderRadius: "8px",
-        background: "#eff6ff",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "10px",
-          fontWeight: 700,
-          color: "#1d4ed8",
-        }}
-      >
-        💰 MONTHLY SALES
-      </div>
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      paddingTop: "9px",
+                      borderTop:
+                        "1px solid #e5e7eb",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent:
+                          "space-between",
+                        alignItems: "center",
+                        marginBottom: "7px",
+                        gap: "8px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div>
+                        <h3
+                          style={{
+                            margin: 0,
+                            color: "#14532d",
+                            fontSize: "14px",
+                            fontWeight: 800,
+                          }}
+                        >
+                          💰 Monthly Sales vs Purchase
+                        </h3>
 
-      <div
-        style={{
-          marginTop: "5px",
-          fontSize: "20px",
-          fontWeight: 900,
-          color: "#1d4ed8",
-        }}
-      >
-        ₹
-       {(() => { const d = new Date(); const y = d.getFullYear(); const m = d.getMonth(); return loadSales().reduce((t, s) => { const x = new Date(s.salesDate); return x.getFullYear() === y && x.getMonth() === m ? t + Number(s.grandTotal ?? 0) : t; }, 0); })().toLocaleString(
-          "en-IN",
-          {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }
-        )}
-      </div>
-    </div>
+                        <div
+                          style={{
+                            marginTop: "2px",
+                            color: "#6b7280",
+                            fontSize: "10px",
+                          }}
+                        >
+                          Month-wise business value
+                        </div>
+                      </div>
+                    </div>
 
-    <div
-      style={{
-        padding: "12px",
-        border: "1px solid #ede9fe",
-        borderRadius: "8px",
-        background: "#f5f3ff",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "10px",
-          fontWeight: 700,
-          color: "#6d28d9",
-        }}
-      >
-        🛒 TOTAL PURCHASE
-      </div>
+                    <div
+                      className="dashboard-business-cards"
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(2, minmax(0, 1fr))",
+                        gap: "7px",
+                      }}
+                    >
+                      {/* MONTHLY SALES */}
 
-      <div
-        style={{
-          marginTop: "5px",
-          fontSize: "20px",
-          fontWeight: 900,
-          color: "#6d28d9",
-        }}
-      >
-        ₹
-        {dashboard.purchase.toLocaleString(
-          "en-IN",
-          {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }
-        )}
-      </div>
-    </div>
-  </div>
-</div>
+                      <div
+                        style={{
+                          padding: "9px 11px",
+                          border:
+                            "1px solid #dbeafe",
+                          borderRadius: "7px",
+                          background: "#eff6ff",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "9px",
+                            fontWeight: 700,
+                            color: "#1d4ed8",
+                          }}
+                        >
+                          💰 MONTHLY SALES
+                        </div>
 
+                        <div
+                          style={{
+                            marginTop: "3px",
+                            fontSize: "18px",
+                            fontWeight: 900,
+                            color: "#1d4ed8",
+                            lineHeight: 1.1,
+                          }}
+                        >
+                          ₹
+                          {(() => {
+                            const d =
+                              new Date();
 
-<div
-  style={{
-    marginTop: "18px",
-    paddingTop: "16px",
-    borderTop: "1px solid #e5e7eb",
-  }}
->
-  <MonthlyStockMovementGraph
-    reports={
-      monthlyReports
-    }
-  />
-</div>
+                            const y =
+                              d.getFullYear();
+
+                            const m =
+                              d.getMonth();
+
+                            return loadSales()
+                              .reduce(
+                                (
+                                  t,
+                                  s
+                                ) => {
+                                  const x =
+                                    new Date(
+                                      s.salesDate
+                                    );
+
+                                  return x.getFullYear() ===
+                                    y &&
+                                    x.getMonth() ===
+                                      m
+                                    ? t +
+                                        Number(
+                                          s.grandTotal ??
+                                            0
+                                        )
+                                    : t;
+                                },
+                                0
+                              )
+                              .toLocaleString(
+                                "en-IN",
+                                {
+                                  minimumFractionDigits:
+                                    2,
+                                  maximumFractionDigits:
+                                    2,
+                                }
+                              );
+                          })()}
+                        </div>
+                      </div>
+
+                      {/* TOTAL PURCHASE */}
+
+                      <div
+                        style={{
+                          padding: "9px 11px",
+                          border:
+                            "1px solid #ede9fe",
+                          borderRadius: "7px",
+                          background: "#f5f3ff",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "9px",
+                            fontWeight: 700,
+                            color: "#6d28d9",
+                          }}
+                        >
+                          🛒 TOTAL PURCHASE
+                        </div>
+
+                        <div
+                          style={{
+                            marginTop: "3px",
+                            fontSize: "18px",
+                            fontWeight: 900,
+                            color: "#6d28d9",
+                            lineHeight: 1.1,
+                          }}
+                        >
+                          ₹
+                          {dashboard.purchase.toLocaleString(
+                            "en-IN",
+                            {
+                              minimumFractionDigits:
+                                2,
+                              maximumFractionDigits:
+                                2,
+                            }
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* =========================================
+                      MONTHLY STOCK MOVEMENT GRAPH
+                  ========================================== */}
+
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      paddingTop: "9px",
+                      borderTop:
+                        "1px solid #e5e7eb",
+                    }}
+                  >
+                    <MonthlyStockMovementGraph
+                      reports={
+                        monthlyReports
+                      }
+                    />
+                  </div>
                 </>
               ) : (
                 <div
                   style={{
-                    padding:
-                      "30px",
-                    textAlign:
-                      "center",
-                    color:
-                      "#6b7280",
+                    padding: "20px",
+                    textAlign: "center",
+                    color: "#6b7280",
                     border:
                       "1px solid #e5e7eb",
-                    borderRadius:
-                      "8px",
-                    fontSize:
-                      "12px",
+                    borderRadius: "7px",
+                    fontSize: "11px",
                   }}
                 >
-                  📦 Monthly stock
-                  data will appear
-                  here after Purchase
-                  or Sales transactions
-                  are recorded.
+                  📦 Monthly stock data will
+                  appear here after Purchase
+                  or Sales transactions are
+                  recorded.
                 </div>
               )}
             </div>
@@ -850,248 +769,287 @@ export default function Home() {
         );
     }
   };
-/* =========================================================
-   STOCK ALERTS
-========================================================= */
-function StockAlerts() {
-  const stock = loadStock();
 
-  const negativeStock = stock.filter(
-    (item) =>
-      Number(item.currentStock || 0) < 0
-  );
+  /* =========================================================
+     STOCK ALERTS
+  ========================================================= */
 
-  const lowStock = stock.filter((item) => {
-    const current = Number(
-      item.currentStock || 0
-    );
+  function StockAlerts() {
+    const stock = loadStock();
 
-    const minimum = Number(
-      (item as any).minimumStock || 0
-    );
+    const negativeStock =
+      stock.filter(
+        (item) =>
+          Number(
+            item.currentStock || 0
+          ) < 0
+      );
+
+    const lowStock =
+      stock.filter((item) => {
+        const current =
+          Number(
+            item.currentStock || 0
+          );
+
+        const minimum =
+          Number(
+            (item as any)
+              .minimumStock || 0
+          );
+
+        return (
+          minimum > 0 &&
+          current >= 0 &&
+          current <= minimum
+        );
+      });
+
+    const hasAlerts =
+      negativeStock.length > 0 ||
+      lowStock.length > 0;
 
     return (
-      minimum > 0 &&
-      current >= 0 &&
-      current <= minimum
-    );
-  });
-
-  const hasAlerts =
-    negativeStock.length > 0 ||
-    lowStock.length > 0;
-
-  return (
-    <div
-      style={{
-        marginTop: "18px",
-        width: "100%",
-        minWidth: 0,
-      }}
-    >
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "10px",
-          gap: "10px",
-          flexWrap: "wrap",
+          marginTop: "8px",
+          width: "100%",
+          minWidth: 0,
         }}
       >
         <div
           style={{
-            fontSize: "16px",
-            fontWeight: 800,
-            color: "#374151",
+            display: "flex",
+            justifyContent:
+              "space-between",
+            alignItems: "center",
+            marginBottom: "6px",
+            gap: "8px",
+            flexWrap: "wrap",
           }}
         >
-          ⚠️ Stock Alerts
-        </div>
-
-        {!hasAlerts && (
-          <span
+          <div
             style={{
-              padding: "5px 9px",
-              borderRadius: "14px",
-              background: "#dcfce7",
-              color: "#15803d",
-              fontSize: "10px",
-              fontWeight: 700,
+              fontSize: "13px",
+              fontWeight: 800,
+              color: "#374151",
             }}
           >
-            ✅ All Stock Normal
-          </span>
+            ⚠️ Stock Alerts
+          </div>
+
+          {!hasAlerts && (
+            <span
+              style={{
+                padding: "4px 8px",
+                borderRadius: "12px",
+                background: "#dcfce7",
+                color: "#15803d",
+                fontSize: "9px",
+                fontWeight: 700,
+              }}
+            >
+              ✅ All Stock Normal
+            </span>
+          )}
+        </div>
+
+        {/* NEGATIVE STOCK */}
+
+        {negativeStock.length > 0 && (
+          <div
+            style={{
+              marginBottom: "7px",
+              padding: "7px 9px",
+              borderRadius: "7px",
+              border:
+                "1px solid #fecaca",
+              background: "#fef2f2",
+            }}
+          >
+            <div
+              style={{
+                color: "#b91c1c",
+                fontSize: "10px",
+                fontWeight: 800,
+                marginBottom: "5px",
+              }}
+            >
+              🔴 NEGATIVE STOCK
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gap: "4px",
+              }}
+            >
+              {negativeStock.map(
+                (item) => (
+                  <div
+                    key={
+                      item.productCode
+                    }
+                    style={{
+                      display: "flex",
+                      justifyContent:
+                        "space-between",
+                      alignItems:
+                        "center",
+                      gap: "8px",
+                      padding:
+                        "5px 7px",
+                      background:
+                        "#ffffff",
+                      borderRadius:
+                        "5px",
+                      border:
+                        "1px solid #fee2e2",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        color: "#374151",
+                      }}
+                    >
+                      {
+                        item.productCode
+                      }{" "}
+                      —{" "}
+                      {
+                        item.productName
+                      }
+                    </span>
+
+                    <span
+                      style={{
+                        fontSize: "9px",
+                        fontWeight: 900,
+                        color: "#b91c1c",
+                        whiteSpace:
+                          "nowrap",
+                      }}
+                    >
+                      Stock:{" "}
+                      {Number(
+                        item.currentStock ||
+                          0
+                      ).toLocaleString(
+                        "en-IN",
+                        {
+                          maximumFractionDigits:
+                            3,
+                        }
+                      )}
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* LOW STOCK */}
+
+        {lowStock.length > 0 && (
+          <div
+            style={{
+              padding: "7px 9px",
+              borderRadius: "7px",
+              border:
+                "1px solid #fde68a",
+              background: "#fffbeb",
+            }}
+          >
+            <div
+              style={{
+                color: "#b45309",
+                fontSize: "10px",
+                fontWeight: 800,
+                marginBottom: "5px",
+              }}
+            >
+              🟡 LOW STOCK
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gap: "4px",
+              }}
+            >
+              {lowStock.map(
+                (item) => (
+                  <div
+                    key={
+                      item.productCode
+                    }
+                    style={{
+                      display: "flex",
+                      justifyContent:
+                        "space-between",
+                      alignItems:
+                        "center",
+                      gap: "8px",
+                      padding:
+                        "5px 7px",
+                      background:
+                        "#ffffff",
+                      borderRadius:
+                        "5px",
+                      border:
+                        "1px solid #fef3c7",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        color: "#374151",
+                      }}
+                    >
+                      {
+                        item.productCode
+                      }{" "}
+                      —{" "}
+                      {
+                        item.productName
+                      }
+                    </span>
+
+                    <span
+                      style={{
+                        fontSize: "9px",
+                        fontWeight: 900,
+                        color: "#b45309",
+                        whiteSpace:
+                          "nowrap",
+                      }}
+                    >
+                      Stock:{" "}
+                      {Number(
+                        item.currentStock ||
+                          0
+                      ).toLocaleString(
+                        "en-IN",
+                        {
+                          maximumFractionDigits:
+                            3,
+                        }
+                      )}
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
         )}
       </div>
+    );
+  }
 
-      {negativeStock.length > 0 && (
-        <div
-          style={{
-            marginBottom: "10px",
-            padding: "10px 12px",
-            borderRadius: "8px",
-            border: "1px solid #fecaca",
-            background: "#fef2f2",
-          }}
-        >
-          <div
-            style={{
-              color: "#b91c1c",
-              fontSize: "11px",
-              fontWeight: 800,
-              marginBottom: "7px",
-            }}
-          >
-            🔴 NEGATIVE STOCK
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gap: "6px",
-            }}
-          >
-            {negativeStock.map(
-              (item) => (
-                <div
-                  key={item.productCode}
-                  style={{
-                    display: "flex",
-                    justifyContent:
-                      "space-between",
-                    alignItems: "center",
-                    gap: "10px",
-                    padding: "7px 9px",
-                    background:
-                      "#ffffff",
-                    borderRadius: "6px",
-                    border:
-                      "1px solid #fee2e2",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      color: "#374151",
-                    }}
-                  >
-                    {item.productCode} —{" "}
-                    {item.productName}
-                  </span>
-
-                  <span
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 900,
-                      color: "#b91c1c",
-                      whiteSpace:
-                        "nowrap",
-                    }}
-                  >
-                    Stock:{" "}
-                    {Number(
-                      item.currentStock || 0
-                    ).toLocaleString(
-                      "en-IN",
-                      {
-                        maximumFractionDigits:
-                          3,
-                      }
-                    )}
-                  </span>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-      )}
-
-      {lowStock.length > 0 && (
-        <div
-          style={{
-            padding: "10px 12px",
-            borderRadius: "8px",
-            border: "1px solid #fde68a",
-            background: "#fffbeb",
-          }}
-        >
-          <div
-            style={{
-              color: "#b45309",
-              fontSize: "11px",
-              fontWeight: 800,
-              marginBottom: "7px",
-            }}
-          >
-            🟡 LOW STOCK
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gap: "6px",
-            }}
-          >
-            {lowStock.map(
-              (item) => (
-                <div
-                  key={item.productCode}
-                  style={{
-                    display: "flex",
-                    justifyContent:
-                      "space-between",
-                    alignItems: "center",
-                    gap: "10px",
-                    padding: "7px 9px",
-                    background:
-                      "#ffffff",
-                    borderRadius: "6px",
-                    border:
-                      "1px solid #fef3c7",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      color: "#374151",
-                    }}
-                  >
-                    {item.productCode} —{" "}
-                    {item.productName}
-                  </span>
-
-                  <span
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 900,
-                      color: "#b45309",
-                      whiteSpace:
-                        "nowrap",
-                    }}
-                  >
-                    Stock:{" "}
-                    {Number(
-                      item.currentStock || 0
-                    ).toLocaleString(
-                      "en-IN",
-                      {
-                        maximumFractionDigits:
-                          3,
-                      }
-                    )}
-                  </span>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
   /* =======================================================
      MAIN LAYOUT
   ======================================================= */
@@ -1105,8 +1063,7 @@ function StockAlerts() {
           width: "100%",
           fontFamily:
             "Arial, Helvetica, sans-serif",
-          background:
-            "#f3f4f6",
+          background: "#f3f4f6",
         }}
       >
         {/* =================================================
@@ -1118,10 +1075,8 @@ function StockAlerts() {
           style={{
             width: "240px",
             flexShrink: 0,
-            boxSizing:
-              "border-box",
-            background:
-              "#111827",
+            boxSizing: "border-box",
+            background: "#111827",
             color: "#ffffff",
             padding: "20px",
           }}
@@ -1129,8 +1084,7 @@ function StockAlerts() {
           <h2
             style={{
               marginTop: 0,
-              marginBottom:
-                "18px",
+              marginBottom: "18px",
               fontSize: "20px",
             }}
           >
@@ -1329,9 +1283,8 @@ function StockAlerts() {
             minWidth: 0,
             width: 0,
             maxWidth: "100%",
-            padding: "25px",
-            boxSizing:
-              "border-box",
+            padding: "16px",
+            boxSizing: "border-box",
             overflowX: "hidden",
           }}
         >
@@ -1345,15 +1298,12 @@ function StockAlerts() {
             "dashboard" && (
             <div
               style={{
-                marginTop: "50px",
-                paddingTop:
-                  "18px",
+                marginTop: "20px",
+                paddingTop: "10px",
                 borderTop:
                   "1px solid #d1d5db",
-                overflow:
-                  "hidden",
-                whiteSpace:
-                  "nowrap",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
                 width: "100%",
                 boxSizing:
                   "border-box",
@@ -1365,25 +1315,21 @@ function StockAlerts() {
                     "inline-flex",
                   alignItems:
                     "center",
-                  gap: "14px",
+                  gap: "10px",
                   paddingLeft:
                     "100%",
                   animation:
                     "ukEximFooterMove 18s linear infinite",
-                  fontSize:
-                    "12px",
-                  color:
-                    "#6b7280",
+                  fontSize: "10px",
+                  color: "#6b7280",
                 }}
               >
                 <img
                   src="/uklogo.png"
                   alt="UK EXIM Logo"
                   style={{
-                    width:
-                      "42px",
-                    height:
-                      "42px",
+                    width: "30px",
+                    height: "30px",
                     objectFit:
                       "contain",
                     flexShrink: 0,
@@ -1391,14 +1337,11 @@ function StockAlerts() {
                 />
 
                 <span>
-                  Designed and
-                  Developed by{" "}
+                  Designed and Developed by{" "}
                   <strong
                     style={{
-                      color:
-                        "#14532d",
-                      fontSize:
-                        "14px",
+                      color: "#14532d",
+                      fontSize: "11px",
                     }}
                   >
                     Uttam Bhosale
@@ -1407,32 +1350,53 @@ function StockAlerts() {
 
                 <span
                   style={{
-                    color:
-                      "#9ca3af",
-                    fontSize:
-                      "14px",
+                    color: "#9ca3af",
+                    fontSize: "11px",
                   }}
                 >
                   •
                 </span>
 
                 <span>
-                  UK EXIM ERP
-                  Version 1.0
+                  UK EXIM ERP Version 1.0
                 </span>
               </div>
 
               <style>{`
-  @keyframes ukEximFooterMove {
-    from {
-      transform: translateX(0);
-    }
+                @keyframes ukEximFooterMove {
+                  from {
+                    transform: translateX(0);
+                  }
 
-    to {
-      transform: translateX(-100%);
-    }
-  }
-`}</style>
+                  to {
+                    transform: translateX(-100%);
+                  }
+                }
+
+                @media (max-width: 1200px) {
+                  .dashboard-main-cards {
+                    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                  }
+                }
+
+                @media (max-width: 800px) {
+                  .dashboard-main-cards {
+                    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                  }
+
+                  .dashboard-monthly-cards {
+                    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                  }
+                }
+
+                @media (max-width: 600px) {
+                  .dashboard-main-cards,
+                  .dashboard-monthly-cards,
+                  .dashboard-business-cards {
+                    grid-template-columns: 1fr !important;
+                  }
+                }
+              `}</style>
             </div>
           )}
         </div>
@@ -1442,7 +1406,7 @@ function StockAlerts() {
           PRINT STYLE
       ===================================================== */}
 
-     <style>{`
+      <style>{`
         @media print {
           @page {
             size: A4 landscape;
@@ -1478,6 +1442,96 @@ function StockAlerts() {
 }
 
 /* =========================================================
+   DASHBOARD MAIN CARD
+========================================================= */
+
+function DashboardMainCard({
+  title,
+  value,
+  icon,
+  color,
+  cardStyle,
+  suffix,
+}: {
+  title: string;
+  value: string;
+  icon: string;
+  color: string;
+  cardStyle: React.CSSProperties;
+  suffix?: string;
+}) {
+  return (
+    <div
+      style={{
+        ...cardStyle,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent:
+          "space-between",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
+          color: "#374151",
+          fontSize: "11px",
+          lineHeight: 1.2,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        <span>{icon}</span>
+
+        <span
+          style={{
+            overflow: "hidden",
+            textOverflow:
+              "ellipsis",
+          }}
+        >
+          {title}
+        </span>
+      </div>
+
+      <div
+        style={{
+          marginTop: "6px",
+          color,
+          fontSize:
+            title === "Sales" ||
+            title === "Purchase"
+              ? "15px"
+              : "20px",
+          fontWeight: 800,
+          lineHeight: 1.1,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow:
+            "ellipsis",
+          fontVariantNumeric:
+            "tabular-nums",
+        }}
+      >
+        {value}
+        {suffix && (
+          <span
+            style={{
+              fontSize: "10px",
+              fontWeight: 800,
+            }}
+          >
+            {suffix}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
    DASHBOARD METRIC
 ========================================================= */
 
@@ -1493,24 +1547,20 @@ function DashboardMetric({
   return (
     <div
       style={{
-        background:
-          "#f8fafc",
+        background: "#f8fafc",
         border:
           "1px solid #d1d5db",
-        borderRadius:
-          "8px",
-        padding:
-          "10px 12px",
+        borderRadius: "7px",
+        padding: "8px 10px",
         minWidth: 0,
       }}
     >
       <div
         style={{
-          fontSize: "10px",
+          fontSize: "9px",
           fontWeight: 700,
           color: "#6b7280",
-          marginBottom:
-            "5px",
+          marginBottom: "3px",
         }}
       >
         {icon} {title}
@@ -1518,11 +1568,12 @@ function DashboardMetric({
 
       <div
         style={{
-          fontSize: "20px",
+          fontSize: "17px",
           fontWeight: 900,
           color: "#14532d",
           fontVariantNumeric:
             "tabular-nums",
+          lineHeight: 1.1,
         }}
       >
         {Number(
@@ -1555,13 +1606,13 @@ function MonthlyStockGraph({
     return (
       <div
         style={{
-          padding: "25px",
+          padding: "20px",
           textAlign: "center",
           color: "#6b7280",
           border:
             "1px solid #e5e7eb",
-          borderRadius: "8px",
-          fontSize: "12px",
+          borderRadius: "7px",
+          fontSize: "11px",
         }}
       >
         No monthly stock data
@@ -1571,12 +1622,12 @@ function MonthlyStockGraph({
   }
 
   const width = 900;
-  const height = 300;
+  const height = 260;
 
   const paddingLeft = 55;
   const paddingRight = 20;
-  const paddingTop = 25;
-  const paddingBottom = 45;
+  const paddingTop = 20;
+  const paddingBottom = 40;
 
   const chartWidth =
     width -
@@ -1667,22 +1718,20 @@ function MonthlyStockGraph({
     <div
       style={{
         width: "100%",
-        overflowX:
-          "auto",
+        overflowX: "auto",
         minWidth: 0,
       }}
     >
       <div
         style={{
-          minWidth:
-            "700px",
+          minWidth: "700px",
           width: "100%",
         }}
       >
         <svg
           viewBox={`0 0 ${width} ${height}`}
           width="100%"
-          height="300"
+          height="260"
           role="img"
           aria-label="Monthly closing stock graph"
         >
@@ -1692,8 +1741,7 @@ function MonthlyStockGraph({
             (line) => {
               const y =
                 paddingTop +
-                (line /
-                  4) *
+                (line / 4) *
                   chartHeight;
 
               return (
@@ -1822,10 +1870,10 @@ function MonthlyStockGraph({
                   cy={
                     point.y
                   }
-                  r="5"
+                  r="4"
                   fill="#ffffff"
                   stroke="#14532d"
-                  strokeWidth="3"
+                  strokeWidth="2"
                 />
 
                 <title>
@@ -1848,7 +1896,7 @@ function MonthlyStockGraph({
                   y={
                     height -
                     paddingBottom +
-                    18
+                    17
                   }
                   textAnchor="middle"
                   fontSize="9"
@@ -1870,8 +1918,8 @@ function MonthlyStockGraph({
             x={
               paddingLeft
             }
-            y="12"
-            fontSize="11"
+            y="11"
+            fontSize="10"
             fontWeight="700"
             fill="#374151"
           >
@@ -1882,6 +1930,7 @@ function MonthlyStockGraph({
     </div>
   );
 }
+
 /* =========================================================
    MONTHLY STOCK MOVEMENT GRAPH
 ========================================================= */
@@ -1895,12 +1944,13 @@ function MonthlyStockMovementGraph({
     return (
       <div
         style={{
-          padding: "20px",
+          padding: "15px",
           textAlign: "center",
           color: "#6b7280",
-          fontSize: "12px",
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px",
+          fontSize: "10px",
+          border:
+            "1px solid #e5e7eb",
+          borderRadius: "7px",
         }}
       >
         No monthly stock data available.
@@ -1909,12 +1959,12 @@ function MonthlyStockMovementGraph({
   }
 
   const width = 900;
-  const height = 320;
+  const height = 250;
 
   const paddingLeft = 60;
   const paddingRight = 20;
-  const paddingTop = 30;
-  const paddingBottom = 50;
+  const paddingTop = 25;
+  const paddingBottom = 40;
 
   const chartWidth =
     width -
@@ -1930,37 +1980,41 @@ function MonthlyStockMovementGraph({
     {
       key: "opening",
       label: "Opening",
-      values: reports.map((report) =>
-        Number(
-          report.openingTotal || 0
-        )
+      values: reports.map(
+        (report) =>
+          Number(
+            report.openingTotal || 0
+          )
       ),
     },
     {
       key: "purchase",
       label: "Purchase",
-      values: reports.map((report) =>
-        Number(
-          report.purchaseTotal || 0
-        )
+      values: reports.map(
+        (report) =>
+          Number(
+            report.purchaseTotal || 0
+          )
       ),
     },
     {
       key: "sales",
       label: "Sales",
-      values: reports.map((report) =>
-        Number(
-          report.salesTotal || 0
-        )
+      values: reports.map(
+        (report) =>
+          Number(
+            report.salesTotal || 0
+          )
       ),
     },
     {
       key: "closing",
       label: "Closing",
-      values: reports.map((report) =>
-        Number(
-          report.closingTotal || 0
-        )
+      values: reports.map(
+        (report) =>
+          Number(
+            report.closingTotal || 0
+          )
       ),
     },
   ];
@@ -2061,12 +2115,13 @@ function MonthlyStockMovementGraph({
               "space-between",
             alignItems:
               "center",
-            marginBottom: "8px",
+            marginBottom: "5px",
+            gap: "10px",
           }}
         >
           <div
             style={{
-              fontSize: "14px",
+              fontSize: "12px",
               fontWeight: 800,
               color: "#374151",
             }}
@@ -2074,99 +2129,43 @@ function MonthlyStockMovementGraph({
             📊 Monthly Stock Movement
           </div>
 
-         <div
+          <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "18px",
+              gap: "12px",
               flexWrap: "wrap",
-              fontSize: "13px",
+              fontSize: "10px",
               fontWeight: 700,
               color: "#374151",
             }}
           >
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <span
-                style={{
-                  width: "13px",
-                  height: "13px",
-                  borderRadius: "50%",
-                  background: "#2563eb",
-                  display: "inline-block",
-                }}
-              />
-              Opening
-            </span>
+            <LegendItem
+              color="#2563eb"
+              label="Opening"
+            />
 
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <span
-                style={{
-                  width: "13px",
-                  height: "13px",
-                  borderRadius: "50%",
-                  background: "#7c3aed",
-                  display: "inline-block",
-                }}
-              />
-              Purchase
-            </span>
+            <LegendItem
+              color="#7c3aed"
+              label="Purchase"
+            />
 
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <span
-                style={{
-                  width: "13px",
-                  height: "13px",
-                  borderRadius: "50%",
-                  background: "#ea580c",
-                  display: "inline-block",
-                }}
-              />
-              Sales
-            </span>
+            <LegendItem
+              color="#ea580c"
+              label="Sales"
+            />
 
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <span
-                style={{
-                  width: "13px",
-                  height: "13px",
-                  borderRadius: "50%",
-                  background: "#14532d",
-                  display: "inline-block",
-                }}
-              />
-              Closing
-            </span>
+            <LegendItem
+              color="#14532d"
+              label="Closing"
+            />
           </div>
         </div>
 
         <svg
           viewBox={`0 0 ${width} ${height}`}
           width="100%"
-          height="320"
+          height="250"
           role="img"
           aria-label="Monthly stock movement graph"
         >
@@ -2238,7 +2237,7 @@ function MonthlyStockMovementGraph({
               paddingTop + 4
             }
             textAnchor="end"
-            fontSize="10"
+            fontSize="9"
             fill="#6b7280"
           >
             {maxValue.toLocaleString(
@@ -2255,7 +2254,7 @@ function MonthlyStockMovementGraph({
               chartHeight
             }
             textAnchor="end"
-            fontSize="10"
+            fontSize="9"
             fill="#6b7280"
           >
             {minValue.toLocaleString(
@@ -2271,7 +2270,7 @@ function MonthlyStockMovementGraph({
             )}
             fill="none"
             stroke="#2563eb"
-            strokeWidth="3"
+            strokeWidth="2.5"
             strokeLinejoin="round"
             strokeLinecap="round"
           />
@@ -2284,7 +2283,7 @@ function MonthlyStockMovementGraph({
             )}
             fill="none"
             stroke="#7c3aed"
-            strokeWidth="3"
+            strokeWidth="2.5"
             strokeLinejoin="round"
             strokeLinecap="round"
           />
@@ -2297,7 +2296,7 @@ function MonthlyStockMovementGraph({
             )}
             fill="none"
             stroke="#ea580c"
-            strokeWidth="3"
+            strokeWidth="2.5"
             strokeLinejoin="round"
             strokeLinecap="round"
           />
@@ -2310,7 +2309,7 @@ function MonthlyStockMovementGraph({
             )}
             fill="none"
             stroke="#14532d"
-            strokeWidth="3"
+            strokeWidth="2.5"
             strokeLinejoin="round"
             strokeLinecap="round"
           />
@@ -2328,10 +2327,10 @@ function MonthlyStockMovementGraph({
                 y={
                   height -
                   paddingBottom +
-                  18
+                  16
                 }
                 textAnchor="middle"
-                fontSize="9"
+                fontSize="8"
                 fill="#6b7280"
               >
                 {shortMonthLabel(
@@ -2354,7 +2353,7 @@ function MonthlyStockMovementGraph({
                     key={`${item.key}-${index}`}
                     cx={getX(index)}
                     cy={getY(value)}
-                    r="4"
+                    r="3"
                     fill="#ffffff"
                     stroke={
                       item.key ===
@@ -2368,7 +2367,7 @@ function MonthlyStockMovementGraph({
                         ? "#ea580c"
                         : "#14532d"
                     }
-                    strokeWidth="2"
+                    strokeWidth="1.5"
                   >
                     <title>
                       {
@@ -2379,8 +2378,7 @@ function MonthlyStockMovementGraph({
                         shortMonthLabel(
                           reports[
                             index
-                          ]
-                            .month
+                          ].month
                         )
                       }{" "}
                       —{" "}
@@ -2401,6 +2399,41 @@ function MonthlyStockMovementGraph({
     </div>
   );
 }
+
+/* =========================================================
+   GRAPH LEGEND ITEM
+========================================================= */
+
+function LegendItem({
+  color,
+  label,
+}: {
+  color: string;
+  label: string;
+}) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "4px",
+      }}
+    >
+      <span
+        style={{
+          width: "10px",
+          height: "10px",
+          borderRadius: "50%",
+          background: color,
+          display: "inline-block",
+        }}
+      />
+
+      {label}
+    </span>
+  );
+}
+
 /* =========================================================
    SHORT MONTH LABEL
 ========================================================= */

@@ -36,56 +36,67 @@ export default function SupplierTable({
         .includes(search.toLowerCase())
   );
 
-  /* ================================
-     TABLE STYLES
-  ================================= */
-
   const thStyle: React.CSSProperties = {
     border: "1px solid #d1d5db",
-    padding: "9px 10px",
+    padding: "7px 4px",
     background: "#14532d",
     color: "#ffffff",
     textAlign: "center",
-    whiteSpace: "nowrap",
-    fontSize: "12px",
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+    fontSize: "10px",
     fontWeight: 700,
+    lineHeight: "13px",
+    overflow: "hidden",
+    boxSizing: "border-box",
   };
 
   const tdStyle: React.CSSProperties = {
     border: "1px solid #d1d5db",
-    padding: "8px 10px",
-    whiteSpace: "nowrap",
-    fontSize: "12px",
+    padding: "6px 4px",
+    fontSize: "10px",
     color: "#1f2937",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    boxSizing: "border-box",
   };
 
   return (
     <div
       style={{
         marginTop: "20px",
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
         background: "#ffffff",
         padding: "15px",
         borderRadius: "10px",
-        boxShadow:
-          "0 2px 8px rgba(0,0,0,0.12)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+        boxSizing: "border-box",
+        overflowX: "hidden",
       }}
     >
-      {/* =================================
-          REGISTER HEADER
-      ================================== */}
+      {/* REGISTER HEADER */}
 
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          gap: "15px",
+          gap: "10px",
           marginBottom: "12px",
+          width: "100%",
+          minWidth: 0,
+          flexWrap: "wrap",
         }}
       >
-        {/* TITLE */}
-
-        <div>
+        <div
+          style={{
+            minWidth: 0,
+            flex: "1 1 220px",
+          }}
+        >
           <h2
             style={{
               color: "#14532d",
@@ -123,42 +134,54 @@ export default function SupplierTable({
           style={{
             width: "320px",
             maxWidth: "100%",
-            height: "38px",
+            flex: "0 1 320px",
+            height: "36px",
             padding: "0 10px",
             border: "1px solid #d1d5db",
             borderRadius: "6px",
-            fontSize: "13px",
+            fontSize: "12px",
             outline: "none",
             boxSizing: "border-box",
+            minWidth: 0,
           }}
         />
       </div>
 
-      {/* =================================
-          TABLE CONTAINER
-      ================================== */}
+      {/* TABLE CONTAINER */}
 
       <div
         style={{
           width: "100%",
-          overflowX: "auto",
+          maxWidth: "100%",
+          minWidth: 0,
+          overflowX: "hidden",
           overflowY: "auto",
           maxHeight: "55vh",
           border: "1px solid #d1d5db",
           borderRadius: "6px",
+          boxSizing: "border-box",
         }}
       >
         <table
           style={{
             width: "100%",
-            minWidth: "900px",
+            maxWidth: "100%",
+            tableLayout: "fixed",
             borderCollapse: "collapse",
             background: "#ffffff",
           }}
         >
-          {/* =================================
-              HEADER
-          ================================== */}
+          <colgroup>
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "15%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "15%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "9%" }} />
+          </colgroup>
 
           <thead
             style={{
@@ -206,203 +229,197 @@ export default function SupplierTable({
             </tr>
           </thead>
 
-          {/* =================================
-              BODY
-          ================================== */}
-
           <tbody>
             {filteredSuppliers.map(
-              (supplier, index) => {
-                return (
-                  <tr
-                    key={supplier.id}
+              (supplier, index) => (
+                <tr
+                  key={supplier.id}
+                  style={{
+                    background:
+                      index % 2 === 0
+                        ? "#ffffff"
+                        : "#f9fafb",
+                  }}
+                >
+                  {/* CODE */}
+
+                  <td
                     style={{
-                      background:
-                        index % 2 === 0
-                          ? "#ffffff"
-                          : "#f9fafb",
+                      ...tdStyle,
+                      fontWeight: 700,
+                      color: "#14532d",
+                      textAlign: "center",
+                    }}
+                    title={supplier.code}
+                  >
+                    {supplier.code}
+                  </td>
+
+                  {/* SUPPLIER NAME */}
+
+                  <td
+                    style={{
+                      ...tdStyle,
+                      fontWeight: 600,
+                    }}
+                    title={supplier.name}
+                  >
+                    {supplier.name}
+                  </td>
+
+                  {/* CONTACT PERSON */}
+
+                  <td
+                    style={tdStyle}
+                    title={supplier.contactPerson}
+                  >
+                    {supplier.contactPerson}
+                  </td>
+
+                  {/* MOBILE */}
+
+                  <td
+                    style={{
+                      ...tdStyle,
+                      textAlign: "center",
                     }}
                   >
-                    {/* CODE */}
+                    {supplier.mobile}
+                  </td>
 
-                    <td
+                  {/* EMAIL */}
+
+                  <td
+                    style={tdStyle}
+                    title={supplier.email || "-"}
+                  >
+                    {supplier.email || "-"}
+                  </td>
+
+                  {/* CITY */}
+
+                  <td
+                    style={tdStyle}
+                    title={supplier.city}
+                  >
+                    {supplier.city}
+                  </td>
+
+                  {/* GST */}
+
+                  <td
+                    style={{
+                      ...tdStyle,
+                      textAlign: "center",
+                    }}
+                    title={supplier.gst || "-"}
+                  >
+                    {supplier.gst || "-"}
+                  </td>
+
+                  {/* STATUS */}
+
+                  <td
+                    style={{
+                      ...tdStyle,
+                      textAlign: "center",
+                    }}
+                  >
+                    <span
                       style={{
-                        ...tdStyle,
+                        display: "inline-block",
+                        maxWidth: "100%",
+                        padding: "3px 6px",
+                        borderRadius: "15px",
+                        fontSize: "9px",
                         fontWeight: 700,
-                        color: "#14532d",
-                        textAlign: "center",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        boxSizing: "border-box",
+                        background:
+                          supplier.status ===
+                          "Active"
+                            ? "#dcfce7"
+                            : "#fee2e2",
+                        color:
+                          supplier.status ===
+                          "Active"
+                            ? "#15803d"
+                            : "#b91c1c",
                       }}
                     >
-                      {supplier.code}
-                    </td>
+                      {supplier.status}
+                    </span>
+                  </td>
 
-                    {/* SUPPLIER NAME */}
+                  {/* ACTION */}
 
-                    <td
+                  <td
+                    style={{
+                      ...tdStyle,
+                      textAlign: "center",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onEdit(supplier)
+                      }
                       style={{
-                        ...tdStyle,
+                        background: "#2563eb",
+                        color: "#ffffff",
+                        border: "none",
+                        padding: "4px 5px",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontSize: "9px",
                         fontWeight: 600,
+                        marginRight: "2px",
+                        minWidth: "24px",
                       }}
+                      title="Edit"
                     >
-                      {supplier.name}
-                    </td>
+                      ✏️
+                    </button>
 
-                    {/* CONTACT PERSON */}
-
-                    <td style={tdStyle}>
-                      {supplier.contactPerson}
-                    </td>
-
-                    {/* MOBILE */}
-
-                    <td
-                      style={{
-                        ...tdStyle,
-                        textAlign: "center",
-                      }}
-                    >
-                      {supplier.mobile}
-                    </td>
-
-                    {/* EMAIL */}
-
-                    <td style={tdStyle}>
-                      {supplier.email || "-"}
-                    </td>
-
-                    {/* CITY */}
-
-                    <td style={tdStyle}>
-                      {supplier.city}
-                    </td>
-
-                    {/* GST */}
-
-                    <td
-                      style={{
-                        ...tdStyle,
-                        textAlign: "center",
-                      }}
-                    >
-                      {supplier.gst || "-"}
-                    </td>
-
-                    {/* STATUS */}
-
-                    <td
-                      style={{
-                        ...tdStyle,
-                        textAlign: "center",
-                      }}
-                    >
-                      <span
-                        style={{
-                          display:
-                            "inline-block",
-                          padding:
-                            "4px 9px",
-                          borderRadius:
-                            "15px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          background:
-                            supplier.status ===
-                            "Active"
-                              ? "#dcfce7"
-                              : "#fee2e2",
-                          color:
-                            supplier.status ===
-                            "Active"
-                              ? "#15803d"
-                              : "#b91c1c",
-                        }}
-                      >
-                        {supplier.status}
-                      </span>
-                    </td>
-
-                    {/* ACTION */}
-
-                    <td
-                      style={{
-                        ...tdStyle,
-                        textAlign: "center",
-                      }}
-                    >
-                      {/* EDIT */}
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onEdit(supplier)
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Are you sure you want to delete "${supplier.name}"?`
+                          )
+                        ) {
+                          onDelete(
+                            supplier.id
+                          );
                         }
-                        style={{
-                          background:
-                            "#2563eb",
-                          color:
-                            "#ffffff",
-                          border: "none",
-                          padding:
-                            "6px 10px",
-                          borderRadius:
-                            "5px",
-                          cursor:
-                            "pointer",
-                          fontSize:
-                            "11px",
-                          fontWeight: 600,
-                          marginRight:
-                            "6px",
-                        }}
-                      >
-                        ✏️ Edit
-                      </button>
-
-                      {/* DELETE */}
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Are you sure you want to delete "${supplier.name}"?`
-                            )
-                          ) {
-                            onDelete(
-                              supplier.id
-                            );
-                          }
-                        }}
-                        style={{
-                          background:
-                            "#dc2626",
-                          color:
-                            "#ffffff",
-                          border: "none",
-                          padding:
-                            "6px 10px",
-                          borderRadius:
-                            "5px",
-                          cursor:
-                            "pointer",
-                          fontSize:
-                            "11px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        🗑 Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              }
+                      }}
+                      style={{
+                        background: "#dc2626",
+                        color: "#ffffff",
+                        border: "none",
+                        padding: "4px 5px",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontSize: "9px",
+                        fontWeight: 600,
+                        minWidth: "24px",
+                      }}
+                      title="Delete"
+                    >
+                      🗑
+                    </button>
+                  </td>
+                </tr>
+              )
             )}
           </tbody>
         </table>
 
-        {/* =================================
-            NO DATA
-        ================================== */}
+        {/* NO DATA */}
 
         {filteredSuppliers.length ===
           0 && (

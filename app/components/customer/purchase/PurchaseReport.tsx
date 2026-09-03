@@ -21,9 +21,12 @@ export default function PurchaseReport() {
   const filteredPurchases = useMemo(() => {
     const keyword = search.trim().toLowerCase();
 
-    if (!keyword) return purchases;
+    // नवीन GRN सर्वात वर
+    const orderedPurchases = [...purchases].reverse();
 
-    return purchases.filter((purchase) => {
+    if (!keyword) return orderedPurchases;
+
+    return orderedPurchases.filter((purchase) => {
       const documentMatch =
         String(purchase.purchaseNo ?? "")
           .toLowerCase()
