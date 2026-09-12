@@ -78,6 +78,9 @@ function normalizePurchase(
       supplierName:
         purchase.supplierName ?? "",
 
+      contactPerson:
+        purchase.contactPerson ?? "",
+
       items,
 
       totalQty:
@@ -181,6 +184,9 @@ function normalizePurchase(
 
     supplierName:
       purchase.supplierName ?? "",
+
+    contactPerson:
+      purchase.contactPerson ?? "",
 
     items:
       oldItem.productCode ||

@@ -236,6 +236,7 @@ export default function SalesForm({
 
     customerCode: "",
     customerName: "",
+    contactPerson: "",
 
     items: [
       createEmptyItem(),
@@ -657,6 +658,8 @@ export default function SalesForm({
 
       customerName:
         customer.name,
+        contactPerson:
+  customer.contactPerson,
     }));
 
     setCustomerSearch(
@@ -813,141 +816,139 @@ export default function SalesForm({
     );
   };
 
-  /* =========================
-     SUBMIT
-  ========================= */
+/* =========================
+   SUBMIT
+========================= */
 
-  const handleSubmit = (
-    e: React.FormEvent
-  ) => {
+const handleSubmit = (
+  e: React.FormEvent
+) => {
 
-    e.preventDefault();
+  e.preventDefault();
 
-    if (
-      !sale.customerCode ||
-      !sale.customerName.trim()
-    ) {
+  if (
+    !sale.customerCode ||
+    !sale.customerName.trim()
+  ) {
 
-      alert(
-        "Please select Customer from Customer Master"
-      );
-
-      return;
-    }
-
-    const finalSalesDate =
-      parseDisplayDate(
-        dateDisplay
-      );
-
-    if (!finalSalesDate) {
-
-      alert(
-        "Please enter a valid date in DD/MM/YYYY format"
-      );
-
-      return;
-    }
-
-    if (!sale.items.length) {
-
-      alert(
-        "Please add at least one product"
-      );
-
-      return;
-    }
-
-    const finalItems =
-      sale.items.map(
-        (item) =>
-          calculateItem(item)
-      );
-
-    const invalidItem =
-      finalItems.find(
-        (item) =>
-          !item.productCode ||
-          !item.productName.trim() ||
-          item.qty <= 0 ||
-          item.rate <= 0
-      );
-
-    if (invalidItem) {
-
-      alert(
-        "Please complete Product, Quantity and Rate for all products"
-      );
-
-      return;
-    }
-
-    const totals =
-      recalculateSale(
-        finalItems
-      );
-
-    const now =
-      new Date().toISOString();
-
-    const finalSale: Sales = {
-      ...sale,
-
-      salesNo,
-
-      salesDate:
-        finalSalesDate,
-
-      invoiceNo:
-        sale.invoiceNo ||
-        getNextInvoiceNo(
-          "NON_GST"
-        ),
-
-      updatedAt:
-        now,
-
-      items:
-        finalItems,
-
-      taxableAmount:
-        totals.taxableAmount,
-
-      gstAmount:
-        totals.gstAmount,
-
-      cgst:
-        totals.cgst,
-
-      sgst:
-        totals.sgst,
-
-      igst:
-        totals.igst,
-
-      grandTotal:
-        totals.grandTotal,
-    };
-
-    onSave(finalSale);
-
-    const newSale =
-      createEmptySale();
-
-    setSale(
-      newSale
+    alert(
+      "Please select Customer from Customer Master"
     );
 
-    setDateDisplay(
-      formatDateDisplay(
-        newSale.salesDate
-      )
+    return;
+  }
+
+  const finalSalesDate =
+    parseDisplayDate(
+      dateDisplay
     );
 
-    setCustomerSearch("");
+  if (!finalSalesDate) {
 
-    onCancelEdit?.();
+    alert(
+      "Please enter a valid date in DD/MM/YYYY format"
+    );
+
+    return;
+  }
+
+  if (!sale.items.length) {
+
+    alert(
+      "Please add at least one product"
+    );
+
+    return;
+  }
+
+  const finalItems =
+    sale.items.map(
+      (item) =>
+        calculateItem(item)
+    );
+
+  const invalidItem =
+    finalItems.find(
+      (item) =>
+        !item.productCode ||
+        !item.productName.trim() ||
+        item.qty <= 0 ||
+        item.rate <= 0
+    );
+
+  if (invalidItem) {
+
+    alert(
+      "Please complete Product, Quantity and Rate for all products"
+    );
+
+    return;
+  }
+
+  const totals =
+    recalculateSale(
+      finalItems
+    );
+
+  const now =
+    new Date().toISOString();
+
+  const finalSale: Sales = {
+    ...sale,
+
+    salesNo,
+
+    salesDate:
+      finalSalesDate,
+
+    invoiceNo:
+      sale.invoiceNo ||
+      getNextInvoiceNo(
+        "NON_GST"
+      ),
+
+    updatedAt:
+      now,
+
+    items:
+      finalItems,
+
+    taxableAmount:
+      totals.taxableAmount,
+
+    gstAmount:
+      totals.gstAmount,
+
+    cgst:
+      totals.cgst,
+
+    sgst:
+      totals.sgst,
+
+    igst:
+      totals.igst,
+
+    grandTotal:
+      totals.grandTotal,
   };
+
+  /*
+     IMPORTANT:
+
+     येथे फक्त parent ला transaction
+     confirmation साठी पाठवली जाते.
+
+     Form येथे RESET करायचा नाही.
+
+     Confirmation:
+       Cancel  → form जसाच्या तसा राहील
+       Confirm → parent actual save करेल
+  */
+
+  onSave(
+    finalSale
+  );
+};
 
   /* =========================
      RESET
@@ -1445,48 +1446,35 @@ export default function SalesForm({
 
         </div>
 
-        {/* =====================
-            CUSTOMER NAME
-        ====================== */}
+       {/* =====================
+    CONTACT PERSON
+====================== */}
 
-        <div
-          style={{
-            width:
-              "20%",
+<div
+  style={{
+    width: "20%",
+    minWidth: "180px",
+    marginTop: "8px",
+  }}
+>
+  <label
+    style={labelStyle}
+  >
+    Contact Person
+  </label>
 
-            minWidth:
-              "180px",
-
-            marginTop:
-              "8px",
-          }}
-        >
-
-          <label
-            style={labelStyle}
-          >
-            Customer Name
-          </label>
-
-          <input
-            value={
-              sale.customerName
-            }
-
-            readOnly
-
-            placeholder=
-              "Select Customer"
-
-            style={{
-              ...inputStyle,
-
-              background:
-                "#f3f4f6",
-            }}
-          />
-
-        </div>
+  <input
+    value={
+      sale.contactPerson
+    }
+    readOnly
+    placeholder="Select Customer"
+    style={{
+      ...inputStyle,
+      background: "#f3f4f6",
+    }}
+  />
+</div>
 
         {/* =====================
             ROW 2 - MULTI PRODUCTS

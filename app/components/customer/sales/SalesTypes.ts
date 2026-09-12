@@ -33,7 +33,7 @@ export type Sales = {
   // Customer
   customerCode: string;
   customerName: string;
-
+  contactPerson: string;
   // Multiple Products
   items: SalesItem[];
 

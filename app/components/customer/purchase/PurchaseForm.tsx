@@ -138,6 +138,27 @@ function getToday(): string {
 }
 
 /* =========================================================
+   EMPTY ITEM
+========================================================= */
+
+function createEmptyItem(): PurchaseItem {
+  return {
+    productCode: "",
+    productName: "",
+    hsn: "",
+    unit: "KG",
+
+    qty: 0,
+    rate: 0,
+    amount: 0,
+
+    gst: 5,
+    gstAmount: 0,
+    netAmount: 0,
+  };
+}
+
+/* =========================================================
    COMPONENT
 ========================================================= */
 
@@ -186,20 +207,9 @@ export default function PurchaseForm({
   ======================================================= */
 
   const [currentItem, setCurrentItem] =
-    useState<PurchaseItem>({
-      productCode: "",
-      productName: "",
-      hsn: "",
-      unit: "KG",
-
-      qty: 0,
-      rate: 0,
-      amount: 0,
-
-      gst: 5,
-      gstAmount: 0,
-      netAmount: 0,
-    });
+    useState<PurchaseItem>(
+      createEmptyItem()
+    );
 
   /* =======================================================
      GRN ITEMS
@@ -229,10 +239,10 @@ export default function PurchaseForm({
 
     invoiceNo: "",
 
-    supplierCode: "",
-    supplierName: "",
-
-    items: [],
+supplierCode: "",
+supplierName: "",
+contactPerson: "",
+items: [],
 
     totalQty: 0,
     totalAmount: 0,
@@ -296,20 +306,9 @@ export default function PurchaseForm({
           : ""
       );
 
-      setCurrentItem({
-        productCode: "",
-        productName: "",
-        hsn: "",
-        unit: "KG",
-
-        qty: 0,
-        rate: 0,
-        amount: 0,
-
-        gst: 5,
-        gstAmount: 0,
-        netAmount: 0,
-      });
+      setCurrentItem(
+        createEmptyItem()
+      );
 
       setEditingItemIndex(null);
 
@@ -334,20 +333,9 @@ export default function PurchaseForm({
 
       setSupplierSearch("");
 
-      setCurrentItem({
-        productCode: "",
-        productName: "",
-        hsn: "",
-        unit: "KG",
-
-        qty: 0,
-        rate: 0,
-        amount: 0,
-
-        gst: 5,
-        gstAmount: 0,
-        netAmount: 0,
-      });
+      setCurrentItem(
+        createEmptyItem()
+      );
 
       setEditingItemIndex(null);
     }
@@ -394,6 +382,7 @@ export default function PurchaseForm({
 
       supplierName:
         supplier.name,
+        contactPerson: supplier.contactPerson,
     }));
   };
 
@@ -415,20 +404,9 @@ export default function PurchaseForm({
 
     if (!product) {
 
-      setCurrentItem({
-        productCode: "",
-        productName: "",
-        hsn: "",
-        unit: "KG",
-
-        qty: 0,
-        rate: 0,
-        amount: 0,
-
-        gst: 5,
-        gstAmount: 0,
-        netAmount: 0,
-      });
+      setCurrentItem(
+        createEmptyItem()
+      );
 
       return;
     }
@@ -565,20 +543,9 @@ export default function PurchaseForm({
 
   const resetCurrentItem = () => {
 
-    setCurrentItem({
-      productCode: "",
-      productName: "",
-      hsn: "",
-      unit: "KG",
-
-      qty: 0,
-      rate: 0,
-      amount: 0,
-
-      gst: 5,
-      gstAmount: 0,
-      netAmount: 0,
-    });
+    setCurrentItem(
+      createEmptyItem()
+    );
 
     setProductSearch("");
 
@@ -976,28 +943,22 @@ export default function PurchaseForm({
         ),
     };
 
+    /*
+      IMPORTANT:
+
+      Do NOT reset the form here.
+
+      Parent PurchasePage first opens the
+      confirmation window.
+
+      Actual reset happens automatically after
+      the transaction is confirmed and the parent
+      changes purchase/edit state.
+    */
+
     onSave(
       finalPurchase
     );
-
-    const newPurchase =
-      emptyPurchase();
-
-    setPurchase(
-      newPurchase
-    );
-
-    setDateDisplay(
-      formatDateDisplay(
-        newPurchase.purchaseDate
-      )
-    );
-
-    setPurchaseItems([]);
-
-    resetCurrentItem();
-
-    setSupplierSearch("");
   };
 
   /* =======================================================
@@ -1319,8 +1280,6 @@ export default function PurchaseForm({
               }}
             >
 
-              {/* MANUAL DATE */}
-
               <input
                 type="text"
 
@@ -1353,8 +1312,6 @@ export default function PurchaseForm({
                     "42px",
                 }}
               />
-
-              {/* NATIVE CALENDAR */}
 
               <input
                 ref={
@@ -1402,8 +1359,6 @@ export default function PurchaseForm({
                     "pointer",
                 }}
               />
-
-              {/* CALENDAR BUTTON */}
 
               <button
                 type="button"
@@ -1619,46 +1574,34 @@ export default function PurchaseForm({
 
           </div>
 
-          {/* SUPPLIER NAME */}
+        {/* CONTACT PERSON */}
+<div style={{ flex: 1, minWidth: 0 }}>
+  <label
+    style={{
+      display: "block",
+      fontSize: 12,
+      fontWeight: 600,
+      marginBottom: 4,
+    }}
+  >
+    Contact Person
+  </label>
 
-          <div
-            style={
-              fieldStyle
-            }
-          >
-
-            <label
-              style={
-                labelStyle
-              }
-            >
-              Supplier Name
-            </label>
-
-            <input
-              type="text"
-
-              value={
-                purchase.supplierName
-              }
-
-              readOnly
-
-              placeholder=
-                "Selected Supplier"
-
-              style={{
-                ...inputStyle,
-
-                background:
-                  "#f3f4f6",
-
-                fontWeight:
-                  600,
-              }}
-            />
-
-          </div>
+  <input
+    type="text"
+    value={purchase.contactPerson}
+    readOnly
+    placeholder="Contact Person"
+    style={{
+      width: "100%",
+      padding: "7px 9px",
+      border: "1px solid #ccc",
+      borderRadius: 4,
+      fontSize: 13,
+      background: "#f7f7f7",
+    }}
+  />
+</div>
 
         </div>
 
@@ -1702,8 +1645,6 @@ export default function PurchaseForm({
           >
             ➕ Product Entry
           </div>
-
-          {/* PRODUCT ROW */}
 
           <div
             style={{
@@ -2161,8 +2102,6 @@ export default function PurchaseForm({
 
           </div>
 
-          {/* CANCEL ROW EDIT */}
-
           {editingItemIndex !==
             null && (
 
@@ -2300,7 +2239,6 @@ export default function PurchaseForm({
                     <th
                       style={{
                         ...addedTh,
-
                         width:
                           "40px",
                       }}
@@ -2335,7 +2273,6 @@ export default function PurchaseForm({
                     <th
                       style={{
                         ...addedTh,
-
                         textAlign:
                           "right",
                       }}
@@ -2346,7 +2283,6 @@ export default function PurchaseForm({
                     <th
                       style={{
                         ...addedTh,
-
                         textAlign:
                           "right",
                       }}
@@ -2357,7 +2293,6 @@ export default function PurchaseForm({
                     <th
                       style={{
                         ...addedTh,
-
                         textAlign:
                           "right",
                       }}
@@ -2368,7 +2303,6 @@ export default function PurchaseForm({
                     <th
                       style={{
                         ...addedTh,
-
                         textAlign:
                           "center",
                       }}
@@ -2379,7 +2313,6 @@ export default function PurchaseForm({
                     <th
                       style={{
                         ...addedTh,
-
                         textAlign:
                           "right",
                       }}
@@ -2390,7 +2323,6 @@ export default function PurchaseForm({
                     <th
                       style={{
                         ...addedTh,
-
                         textAlign:
                           "right",
                       }}
@@ -2401,7 +2333,6 @@ export default function PurchaseForm({
                     <th
                       style={{
                         ...addedTh,
-
                         textAlign:
                           "center",
                       }}
@@ -2436,7 +2367,6 @@ export default function PurchaseForm({
                         <td
                           style={{
                             ...addedTd,
-
                             textAlign:
                               "center",
                           }}
@@ -2447,7 +2377,6 @@ export default function PurchaseForm({
                         <td
                           style={{
                             ...addedTd,
-
                             fontWeight:
                               600,
                           }}
@@ -2486,7 +2415,6 @@ export default function PurchaseForm({
                         <td
                           style={{
                             ...addedTd,
-
                             textAlign:
                               "right",
                           }}
@@ -2501,7 +2429,6 @@ export default function PurchaseForm({
                         <td
                           style={{
                             ...addedTd,
-
                             textAlign:
                               "right",
                           }}
@@ -2517,7 +2444,6 @@ export default function PurchaseForm({
                         <td
                           style={{
                             ...addedTd,
-
                             textAlign:
                               "right",
                           }}
@@ -2533,7 +2459,6 @@ export default function PurchaseForm({
                         <td
                           style={{
                             ...addedTd,
-
                             textAlign:
                               "center",
                           }}
@@ -2548,7 +2473,6 @@ export default function PurchaseForm({
                         <td
                           style={{
                             ...addedTd,
-
                             textAlign:
                               "right",
                           }}
@@ -2564,13 +2488,10 @@ export default function PurchaseForm({
                         <td
                           style={{
                             ...addedTd,
-
                             textAlign:
                               "right",
-
                             fontWeight:
                               700,
-
                             color:
                               "#14532d",
                           }}
@@ -2586,7 +2507,6 @@ export default function PurchaseForm({
                         <td
                           style={{
                             ...addedTd,
-
                             textAlign:
                               "center",
                           }}
@@ -2605,38 +2525,27 @@ export default function PurchaseForm({
                             }}
                           >
 
-                            {/* EDIT */}
-
                             <button
                               type="button"
-
                               onClick={() =>
                                 handleEditItem(
                                   index
                                 )
                               }
-
                               title="Edit Product Row"
-
                               style={{
                                 padding:
                                   "4px 7px",
-
                                 border:
                                   "none",
-
                                 borderRadius:
                                   "4px",
-
                                 background:
                                   "#2563eb",
-
                                 color:
                                   "#ffffff",
-
                                 cursor:
                                   "pointer",
-
                                 fontSize:
                                   "11px",
                               }}
@@ -2644,38 +2553,27 @@ export default function PurchaseForm({
                               ✏️
                             </button>
 
-                            {/* DELETE */}
-
                             <button
                               type="button"
-
                               onClick={() =>
                                 handleDeleteItem(
                                   index
                                 )
                               }
-
                               title="Delete Product Row"
-
                               style={{
                                 padding:
                                   "4px 7px",
-
                                 border:
                                   "none",
-
                                 borderRadius:
                                   "4px",
-
                                 background:
                                   "#dc2626",
-
                                 color:
                                   "#ffffff",
-
                                 cursor:
                                   "pointer",
-
                                 fontSize:
                                   "11px",
                               }}
@@ -2691,13 +2589,10 @@ export default function PurchaseForm({
                     )
                   )}
 
-                  {/* TOTAL ROW */}
-
                   <tr
                     style={{
                       background:
                         "#dcfce7",
-
                       fontWeight:
                         700,
                     }}
@@ -2705,13 +2600,10 @@ export default function PurchaseForm({
 
                     <td
                       colSpan={4}
-
                       style={{
                         ...addedTd,
-
                         textAlign:
                           "right",
-
                         color:
                           "#14532d",
                       }}
@@ -2722,10 +2614,8 @@ export default function PurchaseForm({
                     <td
                       style={{
                         ...addedTd,
-
                         textAlign:
                           "right",
-
                         color:
                           "#14532d",
                       }}
@@ -2740,7 +2630,6 @@ export default function PurchaseForm({
                     <td
                       style={{
                         ...addedTd,
-
                         textAlign:
                           "right",
                       }}
@@ -2751,7 +2640,6 @@ export default function PurchaseForm({
                     <td
                       style={{
                         ...addedTd,
-
                         textAlign:
                           "right",
                       }}
@@ -2767,7 +2655,6 @@ export default function PurchaseForm({
                     <td
                       style={{
                         ...addedTd,
-
                         textAlign:
                           "center",
                       }}
@@ -2778,7 +2665,6 @@ export default function PurchaseForm({
                     <td
                       style={{
                         ...addedTd,
-
                         textAlign:
                           "right",
                       }}
@@ -2794,10 +2680,8 @@ export default function PurchaseForm({
                     <td
                       style={{
                         ...addedTd,
-
                         textAlign:
                           "right",
-
                         color:
                           "#14532d",
                       }}
@@ -2849,32 +2733,24 @@ export default function PurchaseForm({
           }}
         >
 
-          {/* TOTAL QTY */}
-
           <div
             style={{
               padding:
                 "10px 12px",
-
               background:
                 "#f8fafc",
-
               border:
                 "1px solid #d1d5db",
-
               borderRadius:
                 "6px",
             }}
           >
-
             <div
               style={{
                 fontSize:
                   "10px",
-
                 color:
                   "#6b7280",
-
                 fontWeight:
                   600,
               }}
@@ -2886,13 +2762,10 @@ export default function PurchaseForm({
               style={{
                 marginTop:
                   "3px",
-
                 fontSize:
                   "16px",
-
                 fontWeight:
                   800,
-
                 color:
                   "#111827",
               }}
@@ -2903,35 +2776,26 @@ export default function PurchaseForm({
                 )
               }
             </div>
-
           </div>
-
-          {/* TOTAL AMOUNT */}
 
           <div
             style={{
               padding:
                 "10px 12px",
-
               background:
                 "#f8fafc",
-
               border:
                 "1px solid #d1d5db",
-
               borderRadius:
                 "6px",
             }}
           >
-
             <div
               style={{
                 fontSize:
                   "10px",
-
                 color:
                   "#6b7280",
-
                 fontWeight:
                   600,
               }}
@@ -2943,13 +2807,10 @@ export default function PurchaseForm({
               style={{
                 marginTop:
                   "3px",
-
                 fontSize:
                   "16px",
-
                 fontWeight:
                   800,
-
                 color:
                   "#111827",
               }}
@@ -2961,35 +2822,26 @@ export default function PurchaseForm({
                 )
               }
             </div>
-
           </div>
-
-          {/* TOTAL GST */}
 
           <div
             style={{
               padding:
                 "10px 12px",
-
               background:
                 "#f8fafc",
-
               border:
                 "1px solid #d1d5db",
-
               borderRadius:
                 "6px",
             }}
           >
-
             <div
               style={{
                 fontSize:
                   "10px",
-
                 color:
                   "#6b7280",
-
                 fontWeight:
                   600,
               }}
@@ -3001,13 +2853,10 @@ export default function PurchaseForm({
               style={{
                 marginTop:
                   "3px",
-
                 fontSize:
                   "16px",
-
                 fontWeight:
                   800,
-
                 color:
                   "#111827",
               }}
@@ -3019,35 +2868,26 @@ export default function PurchaseForm({
                 )
               }
             </div>
-
           </div>
-
-          {/* NET AMOUNT */}
 
           <div
             style={{
               padding:
                 "10px 12px",
-
               background:
                 "#f0fdf4",
-
               border:
                 "1px solid #bbf7d0",
-
               borderRadius:
                 "6px",
             }}
           >
-
             <div
               style={{
                 fontSize:
                   "10px",
-
                 color:
                   "#166534",
-
                 fontWeight:
                   600,
               }}
@@ -3059,13 +2899,10 @@ export default function PurchaseForm({
               style={{
                 marginTop:
                   "3px",
-
                 fontSize:
                   "17px",
-
                 fontWeight:
                   800,
-
                 color:
                   "#14532d",
               }}
@@ -3077,7 +2914,6 @@ export default function PurchaseForm({
                 )
               }
             </div>
-
           </div>
 
         </div>
@@ -3149,8 +2985,6 @@ export default function PurchaseForm({
           }}
         >
 
-          {/* RESET */}
-
           <button
             type="button"
 
@@ -3189,8 +3023,6 @@ export default function PurchaseForm({
           >
             🔄 Reset
           </button>
-
-          {/* SAVE / UPDATE */}
 
           <button
             type="submit"

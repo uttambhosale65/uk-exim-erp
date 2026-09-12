@@ -1,6 +1,6 @@
 import {
-  loadStock,
   convertToStockQty,
+  loadStock,
 } from "./StockStorage";
 
 import {
@@ -18,28 +18,65 @@ import {
 /* =========================================================
    MONTHLY STOCK REPORT
 
-   VERSION 1.1
+   FINAL ACCOUNTING MODEL
    ---------------------------------------------------------
-   IMPORTANT STOCK ACCOUNTING RULE
 
-   For every selected month:
+   ACCOUNTING RULE:
 
-     Opening + Purchase - Sales = Closing
+      Opening Stock
+      + Purchase
+      - Sales
+      = Closing Stock
 
-   StockStorage remains the source of truth for CURRENT STOCK.
+   MONTHLY RULE:
 
-   Purchase / Sales quantities are converted into the same
-   stock-base quantity used by StockStorage.
+      Monthly Opening
+      =
+      Initial Opening Stock
+      + All Purchases before selected month
+      - All Sales before selected month
 
-   For summary totals:
+      Monthly Closing
+      =
+      Monthly Opening
+      + Current Month Purchases
+      - Current Month Sales
 
-     Closing = actual calculated closing stock
-     Purchase = converted monthly purchase
-     Sales = converted monthly sales
-     Opening = Closing - Purchase + Sales
+   IMPORTANT:
 
-   This guarantees that the four summary values always
-   reconcile mathematically.
+   1. StockStorage remains the source of truth for current
+      stock and stored Opening Stock.
+
+   2. Purchase transactions are ALWAYS Purchase
+      transactions.
+
+   3. Sales transactions are ALWAYS Sales transactions.
+
+   4. The earliest Purchase is NOT treated as Opening Stock.
+
+   5. No Purchase transaction is excluded from the
+      Purchase column.
+
+   6. Opening Stock is taken from the stored Stock records.
+
+   7. Opening Stock is converted into the stock/base product
+      quantity when required.
+
+   8. No artificial Opening value is created.
+
+   9. No Math.max(0, opening) is used.
+
+   10. If historical Sales occurred before sufficient
+       Opening/Purchase stock existed, the report may show
+       negative stock. This represents the actual transaction
+       sequence and must not be hidden.
+
+   11. Packet / Gram / KG quantities are converted using the
+       same convertToStockQty logic used by StockStorage.
+
+   12. Closing Stock must reconcile with the transaction
+       accounting model.
+
 ========================================================= */
 
 export type MonthlyStockRow = {
@@ -71,8 +108,7 @@ export type MonthlyStockSummary = {
 function num(
   value: unknown
 ): number {
-  const result =
-    Number(value);
+  const result = Number(value);
 
   return Number.isFinite(result)
     ? result
@@ -81,13 +117,6 @@ function num(
 
 /* =========================================================
    ROUND HELPER
-
-   ERP stock quantities are displayed up to 3 decimals.
-
-   Example:
-   135.49499999999995
-   →
-   135.495
 ========================================================= */
 
 function round3(
@@ -96,67 +125,6 @@ function round3(
   return Number(
     num(value).toFixed(3)
   );
-}
-
-/* =========================================================
-   STOCK QUANTITY → BASE KG
-
-   Used when a Stock row itself is stored as packet quantity.
-
-   Packet:
-     Qty × Net Weight(g) ÷ 1000
-
-   Gram:
-     Qty ÷ 1000
-
-   KG:
-     Qty as-is
-========================================================= */
-
-function toBaseStockQty(
-  productCode: string,
-  quantity: number,
-  productsMap: Map<string, any>
-): number {
-  const value =
-    num(quantity);
-
-  const product =
-    productsMap.get(
-      productCode
-    );
-
-  if (!product) {
-    return value;
-  }
-
-  const unit =
-    String(
-      product.unit || ""
-    ).trim();
-
-  const netWeight =
-    num(
-      product.netWeight
-    );
-
-  if (
-    unit === "Pkt" &&
-    netWeight > 0
-  ) {
-    return (
-      value *
-      netWeight
-    ) / 1000;
-  }
-
-  if (
-    unit === "Gram"
-  ) {
-    return value / 1000;
-  }
-
-  return value;
 }
 
 /* =========================================================
@@ -190,17 +158,19 @@ function isValidMonth(
 /* =========================================================
    DATE HELPER
 
-   Supports:
+   Supported formats:
 
    YYYY-MM-DD
    DD/MM/YYYY
    DD-MM-YYYY
-   Native Date strings
+
+   Native Date is used only as a final fallback.
 ========================================================= */
 
 function parseDate(
   value: unknown
 ): Date | null {
+
   if (!value) {
     return null;
   }
@@ -222,6 +192,7 @@ function parseDate(
     );
 
   if (isoMatch) {
+
     const year =
       Number(isoMatch[1]);
 
@@ -234,7 +205,6 @@ function parseDate(
     if (
       !isValidYear(year) ||
       !isValidMonth(month) ||
-      !Number.isInteger(day) ||
       day < 1 ||
       day > 31
     ) {
@@ -249,12 +219,9 @@ function parseDate(
       );
 
     if (
-      date.getFullYear() !==
-        year ||
-      date.getMonth() !==
-        month - 1 ||
-      date.getDate() !==
-        day
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
     ) {
       return null;
     }
@@ -272,6 +239,7 @@ function parseDate(
     );
 
   if (slashMatch) {
+
     const day =
       Number(slashMatch[1]);
 
@@ -284,7 +252,6 @@ function parseDate(
     if (
       !isValidYear(year) ||
       !isValidMonth(month) ||
-      !Number.isInteger(day) ||
       day < 1 ||
       day > 31
     ) {
@@ -299,12 +266,9 @@ function parseDate(
       );
 
     if (
-      date.getFullYear() !==
-        year ||
-      date.getMonth() !==
-        month - 1 ||
-      date.getDate() !==
-        day
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
     ) {
       return null;
     }
@@ -322,6 +286,7 @@ function parseDate(
     );
 
   if (dashMatch) {
+
     const day =
       Number(dashMatch[1]);
 
@@ -334,7 +299,6 @@ function parseDate(
     if (
       !isValidYear(year) ||
       !isValidMonth(month) ||
-      !Number.isInteger(day) ||
       day < 1 ||
       day > 31
     ) {
@@ -349,12 +313,9 @@ function parseDate(
       );
 
     if (
-      date.getFullYear() !==
-        year ||
-      date.getMonth() !==
-        month - 1 ||
-      date.getDate() !==
-        day
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
     ) {
       return null;
     }
@@ -377,28 +338,10 @@ function parseDate(
     return null;
   }
 
-  const year =
-    parsed.getFullYear();
-
-  const month =
-    parsed.getMonth() + 1;
-
-  const day =
-    parsed.getDate();
-
-  if (
-    !isValidYear(year) ||
-    !isValidMonth(month) ||
-    day < 1 ||
-    day > 31
-  ) {
-    return null;
-  }
-
   return new Date(
-    year,
-    month - 1,
-    day
+    parsed.getFullYear(),
+    parsed.getMonth(),
+    parsed.getDate()
   );
 }
 
@@ -409,6 +352,7 @@ function parseDate(
 function createMonthKey(
   date: Date
 ): string {
+
   const year =
     date.getFullYear();
 
@@ -459,30 +403,27 @@ function getNextMonthStart(
 
 /* =========================================================
    PRODUCT → STOCK TARGET
-
-   Packed products can point to a loose/base product.
-
-   Example:
-
-   P0001 → P0006
-   P0002 → P0006
-   P0003 → P0006
-
-   Purchase/Sales quantities are converted to the
-   base stock quantity before aggregation.
 ========================================================= */
 
 function getStockTargetCode(
   productCode: string,
   productsMap: Map<string, any>
 ): string {
+
+  const code =
+    String(
+      productCode || ""
+    ).trim();
+
+  if (!code) {
+    return "";
+  }
+
   const product =
-    productsMap.get(
-      productCode
-    );
+    productsMap.get(code);
 
   if (!product) {
-    return productCode;
+    return code;
   }
 
   return (
@@ -490,20 +431,13 @@ function getStockTargetCode(
       product.stockBaseCode || ""
     ).trim() ||
     String(
-      product.code ||
-        productCode
+      product.code || code
     ).trim()
   );
 }
 
 /* =========================================================
    PRODUCT QTY → STOCK QTY
-
-   This uses the same conversion function used by
-   StockStorage.
-
-   Therefore Monthly Report and StockStorage use
-   the same packet → KG calculation.
 ========================================================= */
 
 function getStockQuantity(
@@ -511,17 +445,25 @@ function getStockQuantity(
   quantity: unknown,
   productsMap: Map<string, any>
 ): number {
+
+  const qty =
+    num(quantity);
+
+  if (qty <= 0) {
+    return 0;
+  }
+
   const product =
     productsMap.get(
       productCode
     );
 
   if (!product) {
-    return 0;
+    return qty;
   }
 
   return convertToStockQty(
-    num(quantity),
+    qty,
     String(
       product.unit || ""
     ),
@@ -532,6 +474,450 @@ function getStockQuantity(
 }
 
 /* =========================================================
+   INITIAL OPENING STOCK MAP
+
+   StockStorage stores Opening Stock in the product's own
+   unit.
+
+   Example:
+
+      P0002
+      Unit = Pkt
+      Opening = 132 Pkt
+      Net Weight = 100g
+
+      132 Pkt
+      × 100g
+      ÷ 1000
+      =
+      13.200 KG
+
+   If P0002 maps to P0006, that opening quantity is added
+   to P0006's stock/base product.
+========================================================= */
+
+function getInitialOpeningMap(
+  stockRecords: any[],
+  productsMap: Map<string, any>
+): Map<string, number> {
+
+  const openingMap =
+    new Map<string, number>();
+
+  stockRecords.forEach(
+    (stockItem) => {
+
+      const productCode =
+        String(
+          stockItem?.productCode ||
+            ""
+        ).trim();
+
+      if (!productCode) {
+        return;
+      }
+
+      const targetCode =
+        getStockTargetCode(
+          productCode,
+          productsMap
+        );
+
+      if (!targetCode) {
+        return;
+      }
+
+      const openingQty =
+        getStockQuantity(
+          productCode,
+          stockItem?.openingStock,
+          productsMap
+        );
+
+      if (
+        Math.abs(openingQty) <=
+        0.0000001
+      ) {
+        return;
+      }
+
+      openingMap.set(
+        targetCode,
+        round3(
+          num(
+            openingMap.get(
+              targetCode
+            )
+          ) + openingQty
+        )
+      );
+    }
+  );
+
+  return openingMap;
+}
+
+/* =========================================================
+   PURCHASE QUANTITY BEFORE SELECTED MONTH
+========================================================= */
+
+function getPurchaseBeforeMonth(
+  purchases: any[],
+  monthStart: Date,
+  productCode: string,
+  productsMap: Map<string, any>
+): number {
+
+  let total = 0;
+
+  purchases.forEach(
+    (purchase) => {
+
+      const date =
+        parseDate(
+          purchase?.purchaseDate
+        );
+
+      if (
+        !date ||
+        date >= monthStart ||
+        !Array.isArray(
+          purchase?.items
+        )
+      ) {
+        return;
+      }
+
+      purchase.items.forEach(
+        (item: any) => {
+
+          const code =
+            String(
+              item?.productCode ||
+                ""
+            ).trim();
+
+          if (!code) {
+            return;
+          }
+
+          const target =
+            getStockTargetCode(
+              code,
+              productsMap
+            );
+
+          if (
+            target !==
+            productCode
+          ) {
+            return;
+          }
+
+          total +=
+            getStockQuantity(
+              code,
+              item?.qty,
+              productsMap
+            );
+        }
+      );
+    }
+  );
+
+  return round3(total);
+}
+
+/* =========================================================
+   SALES QUANTITY BEFORE SELECTED MONTH
+========================================================= */
+
+function getSalesBeforeMonth(
+  sales: any[],
+  monthStart: Date,
+  productCode: string,
+  productsMap: Map<string, any>
+): number {
+
+  let total = 0;
+
+  sales.forEach(
+    (sale) => {
+
+      const date =
+        parseDate(
+          sale?.salesDate
+        );
+
+      if (
+        !date ||
+        date >= monthStart ||
+        !Array.isArray(
+          sale?.items
+        )
+      ) {
+        return;
+      }
+
+      sale.items.forEach(
+        (item: any) => {
+
+          const code =
+            String(
+              item?.productCode ||
+                ""
+            ).trim();
+
+          if (!code) {
+            return;
+          }
+
+          const target =
+            getStockTargetCode(
+              code,
+              productsMap
+            );
+
+          if (
+            target !==
+            productCode
+          ) {
+            return;
+          }
+
+          total +=
+            getStockQuantity(
+              code,
+              item?.qty,
+              productsMap
+            );
+        }
+      );
+    }
+  );
+
+  return round3(total);
+}
+
+/* =========================================================
+   MONTHLY PURCHASE QUANTITY
+
+   IMPORTANT:
+
+   Every Purchase transaction in the selected month is
+   counted.
+
+   There is NO baseline Purchase exclusion.
+
+   A Purchase is a Purchase.
+========================================================= */
+
+function getMonthlyPurchaseQuantity(
+  purchases: any[],
+  monthStart: Date,
+  nextMonthStart: Date,
+  productCode: string,
+  productsMap: Map<string, any>
+): number {
+
+  let total = 0;
+
+  purchases.forEach(
+    (purchase) => {
+
+      const date =
+        parseDate(
+          purchase?.purchaseDate
+        );
+
+      if (
+        !date ||
+        date < monthStart ||
+        date >= nextMonthStart ||
+        !Array.isArray(
+          purchase?.items
+        )
+      ) {
+        return;
+      }
+
+      purchase.items.forEach(
+        (item: any) => {
+
+          const code =
+            String(
+              item?.productCode ||
+                ""
+            ).trim();
+
+          if (!code) {
+            return;
+          }
+
+          const target =
+            getStockTargetCode(
+              code,
+              productsMap
+            );
+
+          if (
+            target !==
+            productCode
+          ) {
+            return;
+          }
+
+          total +=
+            getStockQuantity(
+              code,
+              item?.qty,
+              productsMap
+            );
+        }
+      );
+    }
+  );
+
+  return round3(total);
+}
+
+/* =========================================================
+   MONTHLY SALES QUANTITY
+========================================================= */
+
+function getMonthlySalesQuantity(
+  sales: any[],
+  monthStart: Date,
+  nextMonthStart: Date,
+  productCode: string,
+  productsMap: Map<string, any>
+): number {
+
+  let total = 0;
+
+  sales.forEach(
+    (sale) => {
+
+      const date =
+        parseDate(
+          sale?.salesDate
+        );
+
+      if (
+        !date ||
+        date < monthStart ||
+        date >= nextMonthStart ||
+        !Array.isArray(
+          sale?.items
+        )
+      ) {
+        return;
+      }
+
+      sale.items.forEach(
+        (item: any) => {
+
+          const code =
+            String(
+              item?.productCode ||
+                ""
+            ).trim();
+
+          if (!code) {
+            return;
+          }
+
+          const target =
+            getStockTargetCode(
+              code,
+              productsMap
+            );
+
+          if (
+            target !==
+            productCode
+          ) {
+            return;
+          }
+
+          total +=
+            getStockQuantity(
+              code,
+              item?.qty,
+              productsMap
+            );
+        }
+      );
+    }
+  );
+
+  return round3(total);
+}
+
+/* =========================================================
+   GET FIRST TRANSACTION DATE
+========================================================= */
+
+function getFirstTransactionDate(
+  purchases: any[],
+  sales: any[]
+): Date | null {
+
+  let firstDate:
+    Date | null = null;
+
+  purchases.forEach(
+    (purchase) => {
+
+      const date =
+        parseDate(
+          purchase?.purchaseDate
+        );
+
+      if (
+        !date
+      ) {
+        return;
+      }
+
+      if (
+        !firstDate ||
+        date < firstDate
+      ) {
+        firstDate =
+          date;
+      }
+    }
+  );
+
+  sales.forEach(
+    (sale) => {
+
+      const date =
+        parseDate(
+          sale?.salesDate
+        );
+
+      if (
+        !date
+      ) {
+        return;
+      }
+
+      if (
+        !firstDate ||
+        date < firstDate
+      ) {
+        firstDate =
+          date;
+      }
+    }
+  );
+
+  return firstDate;
+}
+
+/* =========================================================
    GET MONTHLY REPORT
 ========================================================= */
 
@@ -539,6 +925,7 @@ export function getStockMonthlyReport(
   year: number,
   month: number
 ): MonthlyStockSummary {
+
   /* -------------------------------------------------------
      INVALID DATE
   ------------------------------------------------------- */
@@ -561,9 +948,6 @@ export function getStockMonthlyReport(
      LOAD DATA
   ------------------------------------------------------- */
 
-  const stock =
-    loadStock();
-
   const purchases =
     loadPurchases();
 
@@ -572,6 +956,9 @@ export function getStockMonthlyReport(
 
   const products =
     loadProducts();
+
+  const stockRecords =
+    loadStock();
 
   /* -------------------------------------------------------
      MONTH RANGE
@@ -589,6 +976,11 @@ export function getStockMonthlyReport(
       month
     );
 
+  const selectedMonthKey =
+    `${year}-${String(
+      month
+    ).padStart(2, "0")}`;
+
   /* -------------------------------------------------------
      PRODUCT MAP
   ------------------------------------------------------- */
@@ -598,6 +990,7 @@ export function getStockMonthlyReport(
 
   products.forEach(
     (product) => {
+
       const code =
         String(
           product?.code || ""
@@ -613,60 +1006,154 @@ export function getStockMonthlyReport(
   );
 
   /* -------------------------------------------------------
-     ROW MAP
+     INITIAL OPENING STOCK
+
+     This comes ONLY from StockStorage.
+
+     No value is calculated here as an artificial Opening.
   ------------------------------------------------------- */
 
-  const rowsMap =
-    new Map<
-      string,
-      MonthlyStockRow
-    >();
+  const initialOpeningMap =
+    getInitialOpeningMap(
+      stockRecords,
+      productsMap
+    );
+
+  /* -------------------------------------------------------
+     FIRST TRANSACTION
+
+     Used only to determine whether a selected month is
+     before the ERP transaction history.
+
+     It does NOT establish Opening Stock.
+  ------------------------------------------------------- */
+
+  const firstTransactionDate =
+    getFirstTransactionDate(
+      purchases,
+      sales
+    );
+
+  if (
+    firstTransactionDate
+  ) {
+
+    const firstTransactionMonth =
+      getMonthStart(
+        firstTransactionDate.getFullYear(),
+        firstTransactionDate.getMonth() + 1
+      );
+
+    if (
+      monthStart <
+      firstTransactionMonth
+    ) {
+
+      /*
+        If there is no transaction in the selected month or
+        before it, but Opening Stock exists, the report can
+        still show the Opening Stock.
+
+        Otherwise return an empty report.
+      */
+
+      let hasOpeningStock =
+        false;
+
+      initialOpeningMap.forEach(
+        (value) => {
+
+          if (
+            Math.abs(value) >
+            0.0005
+          ) {
+            hasOpeningStock =
+              true;
+          }
+        }
+      );
+
+      if (!hasOpeningStock) {
+
+        return {
+          month:
+            selectedMonthKey,
+
+          openingTotal: 0,
+
+          purchaseTotal: 0,
+
+          salesTotal: 0,
+
+          closingTotal: 0,
+
+          rows: [],
+        };
+      }
+    }
+  }
 
   /* =======================================================
-     CURRENT STOCK MASTER
-
-     StockStorage remains the source of truth.
-
-     Current stock is NOT rebuilt from all historical
-     transactions.
+     BASE PRODUCT MAP
   ======================================================= */
 
-  stock.forEach(
-    (item) => {
-      const productCode =
+  const baseProductsMap =
+    new Map<
+      string,
+      {
+        productCode: string;
+        productName: string;
+        unit: string;
+      }
+    >();
+
+  products.forEach(
+    (product) => {
+
+      const code =
         String(
-          item?.productCode || ""
+          product?.code || ""
         ).trim();
 
-      if (!productCode) {
+      if (!code) {
         return;
       }
 
-      rowsMap.set(
-        productCode,
+      const stockTarget =
+        getStockTargetCode(
+          code,
+          productsMap
+        );
+
+      /*
+        Only base products are displayed as stock rows.
+
+        Packet products that map to a base product are
+        included in that base product's quantity.
+      */
+
+      if (
+        stockTarget !== code
+      ) {
+        return;
+      }
+
+      baseProductsMap.set(
+        stockTarget,
         {
-          productCode,
+          productCode:
+            stockTarget,
 
           productName:
             String(
-              item?.productName ||
+              product?.name ||
                 ""
             ),
 
           unit:
             String(
-              item?.unit || ""
-            ),
-
-          openingStock: 0,
-
-          purchaseQty: 0,
-
-          salesQty: 0,
-
-          closingStock:
-            num(
-              item?.currentStock
+              product?.unit ||
+                "KG"
             ),
         }
       );
@@ -674,18 +1161,133 @@ export function getStockMonthlyReport(
   );
 
   /* =======================================================
-     PURCHASE TRANSACTIONS
+     ROW MAP
+  ======================================================= */
+
+  const rowsMap =
+    new Map<
+      string,
+      MonthlyStockRow
+    >();
+
+  /* -------------------------------------------------------
+     ADD BASE PRODUCTS
+  ------------------------------------------------------- */
+
+  baseProductsMap.forEach(
+    (
+      product,
+      productCode
+    ) => {
+
+      rowsMap.set(
+        productCode,
+        {
+          productCode,
+
+          productName:
+            product.productName,
+
+          unit:
+            product.unit,
+
+          openingStock: 0,
+
+          purchaseQty: 0,
+
+          salesQty: 0,
+
+          closingStock: 0,
+        }
+      );
+    }
+  );
+
+  /* =======================================================
+     ENSURE TRANSACTION ROW
+  ======================================================= */
+
+  const ensureTransactionRow =
+    (
+      productCode: string
+    ): MonthlyStockRow | null => {
+
+      const stockCode =
+        getStockTargetCode(
+          productCode,
+          productsMap
+        );
+
+      if (!stockCode) {
+        return null;
+      }
+
+      const existing =
+        rowsMap.get(
+          stockCode
+        );
+
+      if (existing) {
+        return existing;
+      }
+
+      const baseProduct =
+        productsMap.get(
+          stockCode
+        );
+
+      const transactionProduct =
+        productsMap.get(
+          productCode
+        );
+
+      const displayProduct =
+        baseProduct ||
+        transactionProduct;
+
+      const row:
+        MonthlyStockRow = {
+
+        productCode:
+          stockCode,
+
+        productName:
+          String(
+            displayProduct?.name ||
+              stockCode
+          ),
+
+        unit:
+          String(
+            displayProduct?.unit ||
+              "KG"
+          ),
+
+        openingStock: 0,
+
+        purchaseQty: 0,
+
+        salesQty: 0,
+
+        closingStock: 0,
+      };
+
+      rowsMap.set(
+        stockCode,
+        row
+      );
+
+      return row;
+    };
+
+  /* =======================================================
+     COLLECT PURCHASE PRODUCTS
   ======================================================= */
 
   purchases.forEach(
     (purchase) => {
-      const date =
-        parseDate(
-          purchase?.purchaseDate
-        );
 
       if (
-        !date ||
         !Array.isArray(
           purchase?.items
         )
@@ -694,74 +1296,18 @@ export function getStockMonthlyReport(
       }
 
       purchase.items.forEach(
-        (item) => {
+        (item: any) => {
+
           const code =
             String(
               item?.productCode ||
                 ""
             ).trim();
 
-          if (!code) {
-            return;
-          }
-
-          const stockProductCode =
-            getStockTargetCode(
-              code,
-              productsMap
+          if (code) {
+            ensureTransactionRow(
+              code
             );
-
-          const row =
-            rowsMap.get(
-              stockProductCode
-            );
-
-          if (!row) {
-            return;
-          }
-
-          const qty =
-            getStockQuantity(
-              code,
-              item?.qty,
-              productsMap
-            );
-
-          if (qty <= 0) {
-            return;
-          }
-
-          /* ------------------------------------------------
-             PURCHASE INSIDE SELECTED MONTH
-          ------------------------------------------------ */
-
-          if (
-            date >=
-              monthStart &&
-            date <
-              nextMonthStart
-          ) {
-            row.purchaseQty +=
-              qty;
-
-            return;
-          }
-
-          /* ------------------------------------------------
-             PURCHASE AFTER SELECTED MONTH
-
-             Current stock already includes this purchase.
-
-             Remove it to reconstruct the selected month's
-             closing stock.
-          ------------------------------------------------ */
-
-          if (
-            date >=
-            nextMonthStart
-          ) {
-            row.closingStock -=
-              qty;
           }
         }
       );
@@ -769,18 +1315,13 @@ export function getStockMonthlyReport(
   );
 
   /* =======================================================
-     SALES TRANSACTIONS
+     COLLECT SALES PRODUCTS
   ======================================================= */
 
   sales.forEach(
     (sale) => {
-      const date =
-        parseDate(
-          sale?.salesDate
-        );
 
       if (
-        !date ||
         !Array.isArray(
           sale?.items
         )
@@ -789,74 +1330,18 @@ export function getStockMonthlyReport(
       }
 
       sale.items.forEach(
-        (item) => {
+        (item: any) => {
+
           const code =
             String(
               item?.productCode ||
                 ""
             ).trim();
 
-          if (!code) {
-            return;
-          }
-
-          const stockProductCode =
-            getStockTargetCode(
-              code,
-              productsMap
+          if (code) {
+            ensureTransactionRow(
+              code
             );
-
-          const row =
-            rowsMap.get(
-              stockProductCode
-            );
-
-          if (!row) {
-            return;
-          }
-
-          const qty =
-            getStockQuantity(
-              code,
-              item?.qty,
-              productsMap
-            );
-
-          if (qty <= 0) {
-            return;
-          }
-
-          /* ------------------------------------------------
-             SALES INSIDE SELECTED MONTH
-          ------------------------------------------------ */
-
-          if (
-            date >=
-              monthStart &&
-            date <
-              nextMonthStart
-          ) {
-            row.salesQty +=
-              qty;
-
-            return;
-          }
-
-          /* ------------------------------------------------
-             SALES AFTER SELECTED MONTH
-
-             Current stock already includes this reduction.
-
-             Add it back to reconstruct the selected month's
-             closing stock.
-          ------------------------------------------------ */
-
-          if (
-            date >=
-            nextMonthStart
-          ) {
-            row.closingStock +=
-              qty;
           }
         }
       );
@@ -864,46 +1349,121 @@ export function getStockMonthlyReport(
   );
 
   /* =======================================================
-     ROW-LEVEL ACCOUNTING
+     COLLECT OPENING STOCK PRODUCTS
 
-     Opening + Purchase - Sales = Closing
+     If Opening Stock exists for a product which is not
+     already represented by a transaction, make sure it is
+     visible in the report.
+  ======================================================= */
 
-     Therefore:
+  initialOpeningMap.forEach(
+    (
+      _openingQty,
+      productCode
+    ) => {
 
-     Opening =
-       Closing - Purchase + Sales
+      ensureTransactionRow(
+        productCode
+      );
+    }
+  );
+
+  /* =======================================================
+     CALCULATE ACCOUNTING VALUES
   ======================================================= */
 
   rowsMap.forEach(
     (row) => {
-      row.closingStock =
+
+      /* -----------------------------------------------
+         INITIAL OPENING STOCK
+      ------------------------------------------------ */
+
+      const initialOpening =
         round3(
-          row.closingStock
+          num(
+            initialOpeningMap.get(
+              row.productCode
+            )
+          )
         );
 
-      row.purchaseQty =
-        round3(
-          row.purchaseQty
+      /* -----------------------------------------------
+         PURCHASES BEFORE CURRENT MONTH
+      ------------------------------------------------ */
+
+      const previousPurchases =
+        getPurchaseBeforeMonth(
+          purchases,
+          monthStart,
+          row.productCode,
+          productsMap
         );
 
-      row.salesQty =
-        round3(
-          row.salesQty
+      /* -----------------------------------------------
+         SALES BEFORE CURRENT MONTH
+      ------------------------------------------------ */
+
+      const previousSales =
+        getSalesBeforeMonth(
+          sales,
+          monthStart,
+          row.productCode,
+          productsMap
         );
+
+      /* -----------------------------------------------
+         MONTHLY OPENING
+
+         Initial Opening
+         + Previous Purchases
+         - Previous Sales
+      ------------------------------------------------ */
 
       row.openingStock =
         round3(
-          row.closingStock -
-            row.purchaseQty +
-            row.salesQty
+          initialOpening +
+            previousPurchases -
+            previousSales
         );
 
-      /*
-        Recalculate closing once again from the
-        accounting equation.
+      /* -----------------------------------------------
+         CURRENT MONTH PURCHASE
 
-        This removes floating-point noise.
-      */
+         ALL purchases are included.
+
+         No Purchase is excluded.
+      ------------------------------------------------ */
+
+      row.purchaseQty =
+        getMonthlyPurchaseQuantity(
+          purchases,
+          monthStart,
+          nextMonthStart,
+          row.productCode,
+          productsMap
+        );
+
+      /* -----------------------------------------------
+         CURRENT MONTH SALES
+      ------------------------------------------------ */
+
+      row.salesQty =
+        getMonthlySalesQuantity(
+          sales,
+          monthStart,
+          nextMonthStart,
+          row.productCode,
+          productsMap
+        );
+
+      /* -----------------------------------------------
+         MONTHLY CLOSING
+
+         Opening
+         + Purchase
+         - Sales
+      ------------------------------------------------ */
 
       row.closingStock =
         round3(
@@ -915,31 +1475,65 @@ export function getStockMonthlyReport(
   );
 
   /* =======================================================
-     SORT ROWS
+     REMOVE COMPLETELY EMPTY ROWS
   ======================================================= */
 
   const rows =
     Array.from(
       rowsMap.values()
-    ).sort(
-      (a, b) =>
-        a.productCode.localeCompare(
-          b.productCode
-        )
-    );
+    )
+      .filter(
+        (row) =>
+          Math.abs(
+            row.openingStock
+          ) > 0.0005 ||
+          Math.abs(
+            row.purchaseQty
+          ) > 0.0005 ||
+          Math.abs(
+            row.salesQty
+          ) > 0.0005 ||
+          Math.abs(
+            row.closingStock
+          ) > 0.0005
+      )
+      .sort(
+        (a, b) =>
+          a.productCode.localeCompare(
+            b.productCode,
+            undefined,
+            {
+              numeric: true,
+            }
+          )
+      );
 
   /* =======================================================
-     TRANSACTION TOTALS
+     SUMMARY TOTALS
   ======================================================= */
+
+  const openingTotal =
+    round3(
+      rows.reduce(
+        (
+          total,
+          row
+        ) =>
+          total +
+          row.openingStock,
+        0
+      )
+    );
 
   const purchaseTotal =
     round3(
       rows.reduce(
-        (total, row) =>
+        (
+          total,
+          row
+        ) =>
           total +
-          num(
-            row.purchaseQty
-          ),
+          row.purchaseQty,
         0
       )
     );
@@ -947,92 +1541,36 @@ export function getStockMonthlyReport(
   const salesTotal =
     round3(
       rows.reduce(
-        (total, row) =>
+        (
+          total,
+          row
+        ) =>
           total +
-          num(
-            row.salesQty
-          ),
+          row.salesQty,
         0
       )
     );
-
-  /* =======================================================
-     CLOSING TOTAL
-
-     Important:
-
-     Stock rows can be stored in packet quantities.
-
-     Therefore each row's closing stock is converted to
-     the common base KG before calculating the summary.
-
-     This follows the same packet → KG conversion used
-     by StockMaster.
-  ======================================================= */
 
   const closingTotal =
     round3(
       rows.reduce(
-        (total, row) =>
+        (
+          total,
+          row
+        ) =>
           total +
-          toBaseStockQty(
-            row.productCode,
-            row.closingStock,
-            productsMap
-          ),
+          row.closingStock,
         0
       )
     );
 
   /* =======================================================
-     OPENING TOTAL
-
-     IMPORTANT VERSION 1.1 FIX
-
-     Do NOT independently sum packet opening quantities
-     and then compare them with converted transaction totals.
-
-     Instead use the accounting identity:
-
-       Opening + Purchase - Sales = Closing
-
-     Therefore:
-
-       Opening = Closing - Purchase + Sales
-
-     This guarantees the summary cards always reconcile.
+     RETURN REPORT
   ======================================================= */
-
-  const openingTotal =
-    round3(
-      closingTotal -
-        purchaseTotal +
-        salesTotal
-    );
-
-  /* =======================================================
-     FINAL RECONCILIATION
-
-     Final closing is calculated from the four-value
-     accounting relationship.
-
-     This prevents floating point mismatch such as:
-
-       135.49499999999995
-  ======================================================= */
-
-  const reconciledClosingTotal =
-    round3(
-      openingTotal +
-        purchaseTotal -
-        salesTotal
-    );
 
   return {
     month:
-      `${year}-${String(
-        month
-      ).padStart(2, "0")}`,
+      selectedMonthKey,
 
     openingTotal,
 
@@ -1040,8 +1578,7 @@ export function getStockMonthlyReport(
 
     salesTotal,
 
-    closingTotal:
-      reconciledClosingTotal,
+    closingTotal,
 
     rows,
   };
@@ -1053,6 +1590,7 @@ export function getStockMonthlyReport(
 
 export function getCurrentStockMonthlyReport():
   MonthlyStockSummary {
+
   const today =
     new Date();
 
@@ -1068,11 +1606,15 @@ export function getCurrentStockMonthlyReport():
 
 export function getStockReportMonths():
   string[] {
+
   const purchases =
     loadPurchases();
 
   const sales =
     loadSales();
+
+  const stockRecords =
+    loadStock();
 
   const months =
     new Set<string>();
@@ -1083,6 +1625,7 @@ export function getStockReportMonths():
 
   purchases.forEach(
     (purchase) => {
+
       const date =
         parseDate(
           purchase?.purchaseDate
@@ -1109,6 +1652,7 @@ export function getStockReportMonths():
 
   sales.forEach(
     (sale) => {
+
       const date =
         parseDate(
           sale?.salesDate
@@ -1130,7 +1674,19 @@ export function getStockReportMonths():
   );
 
   /* -------------------------------------------------------
-     ALWAYS INCLUDE CURRENT MONTH
+     OPENING STOCK
+
+     Opening Stock itself has no date in the current Stock
+     model, so it does not create a historical month here.
+
+     It is applied as the initial balance to transaction
+     history.
+  ------------------------------------------------------- */
+
+  void stockRecords;
+
+  /* -------------------------------------------------------
+     CURRENT MONTH
   ------------------------------------------------------- */
 
   const today =
@@ -1148,9 +1704,7 @@ export function getStockReportMonths():
   }
 
   /* -------------------------------------------------------
-     VALIDATE + SORT
-
-     Newest month first.
+     SORT NEWEST FIRST
   ------------------------------------------------------- */
 
   return Array.from(
@@ -1164,6 +1718,7 @@ export function getStockReportMonths():
     )
     .filter(
       (key) => {
+
         const parts =
           key.split("-");
 
@@ -1174,12 +1729,8 @@ export function getStockReportMonths():
           Number(parts[1]);
 
         return (
-          isValidYear(
-            year
-          ) &&
-          isValidMonth(
-            month
-          )
+          isValidYear(year) &&
+          isValidMonth(month)
         );
       }
     )
@@ -1191,17 +1742,12 @@ export function getStockReportMonths():
 
 /* =========================================================
    FORMAT MONTH
-
-   Example:
-
-   2026-08
-   →
-   August 2026
 ========================================================= */
 
 export function formatStockReportMonth(
   monthKey: string
 ): string {
+
   const match =
     String(
       monthKey || ""

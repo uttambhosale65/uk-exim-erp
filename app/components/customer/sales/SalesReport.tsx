@@ -27,105 +27,130 @@ export default function SalesReport() {
   // =====================================================
 
   const filteredSales = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
+    const keyword =
+      search.trim().toLowerCase();
 
-   const orderedSales = [...sales].reverse();
+    const orderedSales =
+      [...sales].reverse();
 
-if (!keyword) {
-  return orderedSales;
-}
+    if (!keyword) {
+      return orderedSales;
+    }
 
-return orderedSales.filter((sale) => {
-      const salesNoMatch =
-        sale.salesNo
-          ?.toLowerCase()
-          .includes(keyword);
+    return orderedSales.filter(
+      (sale) => {
+        const salesNoMatch =
+          sale.salesNo
+            ?.toLowerCase()
+            .includes(keyword);
 
-      const invoiceMatch =
-        sale.invoiceNo
-          ?.toLowerCase()
-          .includes(keyword);
+        const invoiceMatch =
+          sale.invoiceNo
+            ?.toLowerCase()
+            .includes(keyword);
 
-      const customerMatch =
-        sale.customerName
-          ?.toLowerCase()
-          .includes(keyword) ||
-        sale.customerCode
-          ?.toLowerCase()
-          .includes(keyword);
+        const customerMatch =
+          sale.customerName
+            ?.toLowerCase()
+            .includes(keyword) ||
+          sale.customerCode
+            ?.toLowerCase()
+            .includes(keyword);
 
-      const dateMatch =
-        sale.salesDate
-          ?.toLowerCase()
-          .includes(keyword);
+        const dateMatch =
+          sale.salesDate
+            ?.toLowerCase()
+            .includes(keyword);
 
-      const productMatch =
-        Array.isArray(sale.items) &&
-        sale.items.some(
-          (item) =>
-            item.productName
-              ?.toLowerCase()
-              .includes(keyword) ||
-            item.productCode
-              ?.toLowerCase()
-              .includes(keyword) ||
-            item.hsn
-              ?.toLowerCase()
-              .includes(keyword)
+        const productMatch =
+          Array.isArray(sale.items) &&
+          sale.items.some(
+            (item) =>
+              item.productName
+                ?.toLowerCase()
+                .includes(keyword) ||
+              item.productCode
+                ?.toLowerCase()
+                .includes(keyword) ||
+              item.hsn
+                ?.toLowerCase()
+                .includes(keyword)
+          );
+
+        return (
+          salesNoMatch ||
+          invoiceMatch ||
+          customerMatch ||
+          dateMatch ||
+          productMatch
         );
-
-      return (
-        salesNoMatch ||
-        invoiceMatch ||
-        customerMatch ||
-        dateMatch ||
-        productMatch
-      );
-    });
+      }
+    );
   }, [sales, search]);
 
   // =====================================================
   // TOTALS
   // =====================================================
 
-  const totalSales = filteredSales.reduce(
-    (total, sale) =>
-      total +
-      Number(sale.grandTotal || 0),
-    0
-  );
-
-  const totalTaxable = filteredSales.reduce(
-    (total, sale) =>
-      total +
-      Number(sale.taxableAmount || 0),
-    0
-  );
-
-  const totalGST = filteredSales.reduce(
-    (total, sale) =>
-      total +
-      Number(sale.gstAmount || 0),
-    0
-  );
-
-  const totalQuantity = filteredSales.reduce(
-    (total, sale) => {
-      if (!Array.isArray(sale.items)) {
-        return total;
-      }
-
-      return (
+  const totalSales =
+    filteredSales.reduce(
+      (total, sale) =>
         total +
-        sale.items.reduce(
-          (sum, item) =>
-            sum + Number(item.qty || 0),
-          0
-        )
-      );
-    },
-    0
-  );
+        Number(
+          sale.grandTotal || 0
+        ),
+      0
+    );
+
+  const totalTaxable =
+    filteredSales.reduce(
+      (total, sale) =>
+        total +
+        Number(
+          sale.taxableAmount || 0
+        ),
+      0
+    );
+
+  const totalGST =
+    filteredSales.reduce(
+      (total, sale) =>
+        total +
+        Number(
+          sale.gstAmount || 0
+        ),
+      0
+    );
+
+  const totalQuantity =
+    filteredSales.reduce(
+      (total, sale) => {
+
+        if (
+          !Array.isArray(
+            sale.items
+          )
+        ) {
+          return total;
+        }
+
+        return (
+          total +
+          sale.items.reduce(
+            (
+              sum,
+              item
+            ) =>
+              sum +
+              Number(
+                item.qty || 0
+              ),
+            0
+          )
+        );
+      },
+      0
+    );
 
   // =====================================================
   // PRINT
@@ -173,82 +198,218 @@ return orderedSales.filter((sale) => {
 
           @media print {
 
+            /*
+             * Hide the normal ERP screen.
+             */
+
             body * {
               visibility: hidden !important;
             }
+
+            /*
+             * Show only the report.
+             */
 
             .sales-report-print-area,
             .sales-report-print-area * {
               visibility: visible !important;
             }
 
+            /*
+             * Main print area.
+             */
+
             .sales-report-print-area {
               position: absolute !important;
               left: 0 !important;
               top: 0 !important;
+
               width: 100% !important;
+              max-width: 100% !important;
+
               margin: 0 !important;
               padding: 0 !important;
+
               border: none !important;
+              border-radius: 0 !important;
+
               box-shadow: none !important;
+
               background: #ffffff !important;
+
+              overflow: visible !important;
+
+              height: auto !important;
+              max-height: none !important;
             }
+
+            /*
+             * Hide screen-only controls.
+             */
 
             .sales-report-no-print {
               display: none !important;
             }
 
+            /*
+             * Show professional print header.
+             */
+
             .sales-print-header {
               display: block !important;
+
+              width: 100% !important;
+
+              break-inside: avoid !important;
+              page-break-inside: avoid !important;
             }
+
+            /*
+             * Print footer.
+             */
 
             .sales-print-footer {
               display: block !important;
+
+              width: 100% !important;
+
+              break-inside: avoid !important;
+              page-break-inside: avoid !important;
             }
+
+            /*
+             * IMPORTANT:
+             *
+             * Screen table has a fixed-height scroll area.
+             * Remove that restriction completely while printing.
+             */
 
             .sales-report-table-wrapper {
-              overflow: visible !important;
+              display: block !important;
+
               width: 100% !important;
+              max-width: 100% !important;
+
+              height: auto !important;
+              max-height: none !important;
+
+              min-height: 0 !important;
+
+              overflow: visible !important;
+              overflow-x: visible !important;
+              overflow-y: visible !important;
+
               border: none !important;
+              border-radius: 0 !important;
+
+              box-sizing: border-box !important;
+
+              break-inside: auto !important;
+              page-break-inside: auto !important;
             }
+
+            /*
+             * Full report table.
+             */
 
             .sales-report-table {
+              display: table !important;
+
               width: 100% !important;
-              min-width: 0 !important;
               max-width: 100% !important;
+
+              min-width: 0 !important;
+
               table-layout: fixed !important;
+
               border-collapse: collapse !important;
+
+              margin: 0 !important;
+
+              break-inside: auto !important;
+              page-break-inside: auto !important;
             }
+
+            /*
+             * Repeat table header on every printed page.
+             */
 
             .sales-report-table thead {
-              display: table-header-group;
+              display: table-header-group !important;
             }
 
+            /*
+             * Keep individual transaction rows together.
+             */
+
             .sales-report-table tr {
-              page-break-inside: avoid;
+              break-inside: avoid !important;
+              page-break-inside: avoid !important;
             }
+
+            /*
+             * Allow table body to continue naturally
+             * across multiple A4 pages.
+             */
+
+            .sales-report-table tbody {
+              display: table-row-group !important;
+            }
+
+            /*
+             * Compact print columns.
+             */
 
             .sales-report-table th {
               font-size: 8px !important;
               padding: 4px 3px !important;
+
+              line-height: 10px !important;
+
+              white-space: normal !important;
+              word-break: break-word !important;
+
+              overflow: visible !important;
+              text-overflow: clip !important;
             }
 
             .sales-report-table td {
               font-size: 8px !important;
               padding: 4px 3px !important;
+
+              line-height: 10px !important;
+
+              overflow: visible !important;
+              text-overflow: clip !important;
             }
+
+            /*
+             * Summary cards stay compact.
+             */
 
             .sales-report-summary {
               display: grid !important;
+
               grid-template-columns:
                 repeat(4, 1fr) !important;
+
               gap: 5px !important;
+
+              width: 100% !important;
+
               margin-bottom: 8px !important;
+
+              break-inside: avoid !important;
+              page-break-inside: avoid !important;
             }
 
             .sales-report-summary-card {
               padding: 6px !important;
+
               min-height: 35px !important;
+
+              break-inside: avoid !important;
+              page-break-inside: avoid !important;
             }
 
             .sales-report-summary-title {
@@ -260,6 +421,10 @@ return orderedSales.filter((sale) => {
               font-size: 11px !important;
             }
 
+            /*
+             * Make sure header/footer are visible.
+             */
+
             .sales-print-header,
             .sales-print-header * {
               visibility: visible !important;
@@ -268,6 +433,23 @@ return orderedSales.filter((sale) => {
             .sales-print-footer,
             .sales-print-footer * {
               visibility: visible !important;
+            }
+
+            /*
+             * Avoid accidental horizontal clipping.
+             */
+
+            html,
+            body {
+              width: 100% !important;
+              height: auto !important;
+
+              overflow: visible !important;
+
+              margin: 0 !important;
+              padding: 0 !important;
+
+              background: #ffffff !important;
             }
           }
         `}
@@ -341,7 +523,8 @@ return orderedSales.filter((sale) => {
               }}
             >
               <span>
-                Report Date: {reportDate}
+                Report Date:{" "}
+                {reportDate}
               </span>
 
               <span>
@@ -400,7 +583,9 @@ return orderedSales.filter((sale) => {
               placeholder="🔍 Search Sales / Customer / Product"
               value={search}
               onChange={(e) =>
-                setSearch(e.target.value)
+                setSearch(
+                  e.target.value
+                )
               }
               style={searchStyle}
             />
@@ -504,7 +689,8 @@ return orderedSales.filter((sale) => {
             className="sales-report-summary-card"
             style={{
               ...summaryCard,
-              background: "#f0fdf4",
+              background:
+                "#f0fdf4",
               border:
                 "1px solid #bbf7d0",
             }}
@@ -547,28 +733,99 @@ return orderedSales.filter((sale) => {
           >
 
             <colgroup>
-              <col style={{ width: "4%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "13%" }} />
-              <col style={{ width: "13%" }} />
-              <col style={{ width: "7%" }} />
-              <col style={{ width: "6%" }} />
-              <col style={{ width: "6%" }} />
-              <col style={{ width: "7%" }} />
-              <col style={{ width: "5%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "7%" }} />
-              <col style={{ width: "8%" }} />
+              <col
+                style={{
+                  width: "4%",
+                }}
+              />
+
+              <col
+                style={{
+                  width: "8%",
+                }}
+              />
+
+              <col
+                style={{
+                  width: "8%",
+                }}
+              />
+
+              <col
+                style={{
+                  width: "8%",
+                }}
+              />
+
+              <col
+                style={{
+                  width: "13%",
+                }}
+              />
+
+              <col
+                style={{
+                  width: "13%",
+                }}
+              />
+
+              <col
+                style={{
+                  width: "7%",
+                }}
+              />
+
+              <col
+                style={{
+                  width: "6%",
+                }}
+              />
+
+              <col
+                style={{
+                  width: "6%",
+                }}
+              />
+
+              <col
+                style={{
+                  width: "7%",
+                }}
+              />
+
+              <col
+                style={{
+                  width: "5%",
+                }}
+              />
+
+              <col
+                style={{
+                  width: "8%",
+                }}
+              />
+
+              <col
+                style={{
+                  width: "7%",
+                }}
+              />
+
+              <col
+                style={{
+                  width: "8%",
+                }}
+              />
             </colgroup>
 
             <thead>
 
               <tr
                 style={{
-                  background: "#14532d",
-                  color: "#ffffff",
+                  background:
+                    "#14532d",
+                  color:
+                    "#ffffff",
                 }}
               >
 
@@ -642,13 +899,18 @@ return orderedSales.filter((sale) => {
                   <td
                     colSpan={14}
                     style={{
-                      padding: "35px",
-                      textAlign: "center",
-                      color: "#6b7280",
-                      fontWeight: 600,
+                      padding:
+                        "35px",
+                      textAlign:
+                        "center",
+                      color:
+                        "#6b7280",
+                      fontWeight:
+                        600,
                     }}
                   >
-                    📦 No Sales Records Found
+                    📦 No Sales Records
+                    Found
                   </td>
 
                 </tr>
@@ -656,7 +918,10 @@ return orderedSales.filter((sale) => {
               ) : (
 
                 filteredSales.map(
-                  (sale, saleIndex) => {
+                  (
+                    sale,
+                    saleIndex
+                  ) => {
 
                     const items =
                       Array.isArray(
@@ -670,7 +935,8 @@ return orderedSales.filter((sale) => {
                     // =========================================
 
                     if (
-                      items.length === 0
+                      items.length ===
+                      0
                     ) {
 
                       return (
@@ -678,42 +944,63 @@ return orderedSales.filter((sale) => {
                           key={sale.id}
                           style={{
                             background:
-                              saleIndex % 2 === 0
+                              saleIndex %
+                                2 ===
+                              0
                                 ? "#ffffff"
                                 : "#f8fafc",
                           }}
                         >
 
                           <td
-                            style={tdStyle}
+                            style={
+                              tdStyle
+                            }
                           >
-                            {saleIndex + 1}
+                            {saleIndex +
+                              1}
                           </td>
 
                           <td
-                            style={tdStyle}
+                            style={
+                              tdStyle
+                            }
                           >
-                            {sale.salesNo}
+                            {
+                              sale.salesNo
+                            }
                           </td>
 
                           <td
-                            style={tdStyle}
+                            style={
+                              tdStyle
+                            }
                           >
-                            {sale.salesDate}
+                            {
+                              sale.salesDate
+                            }
                           </td>
 
                           <td
-                            style={tdStyle}
+                            style={
+                              tdStyle
+                            }
                           >
-                            {sale.invoiceNo ||
-                              "-"}
+                            {
+                              sale.invoiceNo ||
+                              "-"
+                            }
                           </td>
 
                           <td
-                            style={tdStyle}
+                            style={
+                              tdStyle
+                            }
                           >
-                            {sale.customerName ||
-                              "-"}
+                            {
+                              sale.customerName ||
+                              "-"
+                            }
                           </td>
 
                           <td
@@ -738,14 +1025,17 @@ return orderedSales.filter((sale) => {
                               ...tdStyle,
                               textAlign:
                                 "right",
-                              fontWeight: 700,
+                              fontWeight:
+                                700,
                             }}
                           >
                             ₹{" "}
                             {Number(
                               sale.grandTotal ||
                                 0
-                            ).toFixed(2)}
+                            ).toFixed(
+                              2
+                            )}
                           </td>
 
                         </tr>
@@ -764,14 +1054,17 @@ return orderedSales.filter((sale) => {
 
                         const isLastItem =
                           itemIndex ===
-                          items.length - 1;
+                          items.length -
+                            1;
 
                         return (
                           <tr
                             key={`${sale.id}-${item.productCode}-${itemIndex}`}
                             style={{
                               background:
-                                saleIndex % 2 === 0
+                                saleIndex %
+                                  2 ===
+                                0
                                   ? "#ffffff"
                                   : "#f8fafc",
                             }}
@@ -780,7 +1073,9 @@ return orderedSales.filter((sale) => {
                             {/* # */}
 
                             <td
-                              style={tdStyle}
+                              style={
+                                tdStyle
+                              }
                             >
                               {itemIndex ===
                               0
@@ -792,7 +1087,9 @@ return orderedSales.filter((sale) => {
                             {/* SALES NO */}
 
                             <td
-                              style={tdStyle}
+                              style={
+                                tdStyle
+                              }
                             >
                               {itemIndex ===
                               0
@@ -803,7 +1100,9 @@ return orderedSales.filter((sale) => {
                             {/* DATE */}
 
                             <td
-                              style={tdStyle}
+                              style={
+                                tdStyle
+                              }
                             >
                               {itemIndex ===
                               0
@@ -814,7 +1113,9 @@ return orderedSales.filter((sale) => {
                             {/* INVOICE */}
 
                             <td
-                              style={tdStyle}
+                              style={
+                                tdStyle
+                              }
                             >
                               {itemIndex ===
                               0
@@ -854,16 +1155,21 @@ return orderedSales.filter((sale) => {
                                 ""
                               }
                             >
-                              {item.productName ||
-                                "-"}
+                              {
+                                item.productName ||
+                                "-"
+                              }
                             </td>
 
                             {/* HSN */}
 
                             <td
-                              style={tdStyle}
+                              style={
+                                tdStyle
+                              }
                             >
-                              {item.hsn || "-"}
+                              {item.hsn ||
+                                "-"}
                             </td>
 
                             {/* QTY */}
@@ -876,7 +1182,8 @@ return orderedSales.filter((sale) => {
                               }}
                             >
                               {Number(
-                                item.qty || 0
+                                item.qty ||
+                                  0
                               )}
                             </td>
 
@@ -889,7 +1196,8 @@ return orderedSales.filter((sale) => {
                                   "center",
                               }}
                             >
-                              {item.unit || "-"}
+                              {item.unit ||
+                                "-"}
                             </td>
 
                             {/* RATE */}
@@ -903,8 +1211,11 @@ return orderedSales.filter((sale) => {
                             >
                               ₹{" "}
                               {Number(
-                                item.rate || 0
-                              ).toFixed(2)}
+                                item.rate ||
+                                  0
+                              ).toFixed(
+                                2
+                              )}
                             </td>
 
                             {/* GST */}
@@ -917,7 +1228,8 @@ return orderedSales.filter((sale) => {
                               }}
                             >
                               {Number(
-                                item.gst || 0
+                                item.gst ||
+                                  0
                               )}
                               %
                             </td>
@@ -933,8 +1245,11 @@ return orderedSales.filter((sale) => {
                             >
                               ₹{" "}
                               {Number(
-                                item.amount || 0
-                              ).toFixed(2)}
+                                item.amount ||
+                                  0
+                              ).toFixed(
+                                2
+                              )}
                             </td>
 
                             {/* GST AMOUNT */}
@@ -950,7 +1265,9 @@ return orderedSales.filter((sale) => {
                               {Number(
                                 item.gstAmount ||
                                   0
-                              ).toFixed(2)}
+                              ).toFixed(
+                                2
+                              )}
                             </td>
 
                             {/* GRAND TOTAL */}
@@ -960,7 +1277,8 @@ return orderedSales.filter((sale) => {
                                 ...tdStyle,
                                 textAlign:
                                   "right",
-                                fontWeight: 700,
+                                fontWeight:
+                                  700,
                                 color:
                                   "#14532d",
                               }}
@@ -969,7 +1287,9 @@ return orderedSales.filter((sale) => {
                                 ? `₹${Number(
                                     sale.grandTotal ||
                                       0
-                                  ).toFixed(2)}`
+                                  ).toFixed(
+                                    2
+                                  )}`
                                 : ""}
                             </td>
 
@@ -1026,11 +1346,14 @@ return orderedSales.filter((sale) => {
                 {" "}
                 <strong
                   style={{
-                    color: "#14532d",
+                    color:
+                      "#14532d",
                   }}
                 >
                   ₹
-                  {totalSales.toFixed(2)}
+                  {totalSales.toFixed(
+                    2
+                  )}
                 </strong>
               </span>
 
@@ -1038,8 +1361,10 @@ return orderedSales.filter((sale) => {
 
             <div
               style={{
-                textAlign: "center",
-                marginTop: "5px",
+                textAlign:
+                  "center",
+                marginTop:
+                  "5px",
               }}
             >
               Designed & Developed by

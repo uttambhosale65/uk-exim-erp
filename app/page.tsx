@@ -81,10 +81,10 @@ export default function Home() {
   const card = {
     background: "#ffffff",
     borderRadius: "8px",
-    padding: "10px 12px",
+   padding: "6px 10px",
     boxShadow:
       "0 2px 6px rgba(0,0,0,0.07)",
-    minHeight: "76px",
+    minHeight: "62px",
     boxSizing: "border-box" as const,
     minWidth: 0,
   };
@@ -364,25 +364,24 @@ export default function Home() {
                 cardStyle={card}
               />
 
-              {/* CURRENT STOCK */}
+           {/* CURRENT STOCK */}
 
-              <DashboardMainCard
-                title="Current Stock"
-                value={Number(
-                  latestMonthlyReport?.closingTotal ??
-                    dashboard.stock
-                ).toLocaleString(
-                  "en-IN",
-                  {
-                    maximumFractionDigits: 3,
-                  }
-                )}
-                icon="📦"
-                color="#14532d"
-                cardStyle={card}
-                suffix=" KG"
-              />
-
+<DashboardMainCard
+  title="Current Stock"
+  value={Number(
+    dashboard.stock
+  ).toLocaleString(
+    "en-IN",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  )}
+  icon="📦"
+  color="#14532d"
+  cardStyle={card}
+  suffix=" KG"
+/>
               {/* SALES */}
 
               <DashboardMainCard
@@ -422,7 +421,7 @@ export default function Home() {
 
             <div
               style={{
-                marginTop: "12px",
+                marginTop: "8px",
                 background: "#ffffff",
                 borderRadius: "8px",
                 padding: "12px",
@@ -554,8 +553,8 @@ export default function Home() {
 
                   <div
                     style={{
-                      marginTop: "10px",
-                      paddingTop: "9px",
+                      marginTop: "7px",
+                      paddingTop: "6px",
                       borderTop:
                         "1px solid #e5e7eb",
                     }}
@@ -733,8 +732,8 @@ export default function Home() {
 
                   <div
                     style={{
-                      marginTop: "10px",
-                      paddingTop: "9px",
+                      marginTop: "4px",
+                      paddingTop: "4px",
                       borderTop:
                         "1px solid #e5e7eb",
                     }}
@@ -812,7 +811,7 @@ export default function Home() {
     return (
       <div
         style={{
-          marginTop: "8px",
+          marginTop: "3px",
           width: "100%",
           minWidth: 0,
         }}
@@ -1073,13 +1072,19 @@ export default function Home() {
         <div
           className="erp-sidebar"
           style={{
-            width: "240px",
-            flexShrink: 0,
-            boxSizing: "border-box",
-            background: "#111827",
-            color: "#ffffff",
-            padding: "20px",
-          }}
+  position: "fixed",
+  left: 0,
+  top: 0,
+  width: "240px",
+  height: "100vh",
+  flexShrink: 0,
+  boxSizing: "border-box",
+  background: "#111827",
+  color: "#ffffff",
+  padding: "20px",
+  overflowY: "auto",
+  zIndex: 1000,
+}}
         >
           <h2
             style={{
@@ -1277,16 +1282,16 @@ export default function Home() {
         ================================================== */}
 
         <div
-          className="erp-main-content"
-          style={{
-            flex: 1,
-            minWidth: 0,
-            width: 0,
-            maxWidth: "100%",
-            padding: "16px",
-            boxSizing: "border-box",
-            overflowX: "hidden",
-          }}
+        style={{
+  flex: 1,
+  minWidth: 0,
+  width: "calc(100% - 240px)",
+  marginLeft: "240px",
+  maxWidth: "calc(100% - 240px)",
+  padding: "16px",
+  boxSizing: "border-box",
+  overflowX: "hidden",
+}}
         >
           {renderPage()}
 
@@ -1298,8 +1303,8 @@ export default function Home() {
             "dashboard" && (
             <div
               style={{
-                marginTop: "20px",
-                paddingTop: "10px",
+                marginTop: "8px",
+                paddingTop: "4px",
                 borderTop:
                   "1px solid #d1d5db",
                 overflow: "hidden",
@@ -1622,7 +1627,7 @@ function MonthlyStockGraph({
   }
 
   const width = 900;
-  const height = 260;
+  const height = 75;
 
   const paddingLeft = 55;
   const paddingRight = 20;
@@ -1959,7 +1964,7 @@ function MonthlyStockMovementGraph({
   }
 
   const width = 900;
-  const height = 250;
+  const height = 180;
 
   const paddingLeft = 60;
   const paddingRight = 20;
@@ -2165,7 +2170,7 @@ function MonthlyStockMovementGraph({
         <svg
           viewBox={`0 0 ${width} ${height}`}
           width="100%"
-          height="250"
+          height="75"
           role="img"
           aria-label="Monthly stock movement graph"
         >

@@ -14,16 +14,18 @@ import {
 } from "./StockStorage";
 
 export default function StockMaster() {
-  const [stock, setStock] =
-    useState<Stock[]>([]);
+  const [stock, setStock] = useState<Stock[]>([]);
 
-  const [search, setSearch] =
-    useState("");
+  const [search, setSearch] = useState("");
 
   const [activeView, setActiveView] =
-    useState<"current" | "monthly">(
-      "current"
-    );
+    useState<"current" | "monthly">("current");
+
+  const [showOpeningEditor, setShowOpeningEditor] =
+    useState(false);
+
+  const [openingValues, setOpeningValues] =
+    useState<Record<string, string>>({});
 
   /* =====================================================
      LOAD STOCK
@@ -38,11 +40,10 @@ export default function StockMaster() {
   ===================================================== */
 
   const handleResetStock = () => {
-    const confirmed =
-      window.confirm(
-        "Are you sure you want to reset all stock?\n\n" +
-          "This will clear the current stock records."
-      );
+    const confirmed = window.confirm(
+      "Are you sure you want to reset all stock?\n\n" +
+        "This will clear the current stock records."
+    );
 
     if (!confirmed) return;
 
@@ -52,43 +53,116 @@ export default function StockMaster() {
   };
 
   /* =====================================================
+     OPENING STOCK EDITOR
+  ===================================================== */
+
+  const handleOpenOpeningEditor = () => {
+    const currentStock = loadStock();
+
+    const values: Record<string, string> = {};
+
+    currentStock.forEach((item) => {
+      values[item.productCode] = String(
+        Number(item.openingStock || 0)
+      );
+    });
+
+    setOpeningValues(values);
+    setShowOpeningEditor(true);
+  };
+
+  /* =====================================================
+     OPENING STOCK CHANGE
+  ===================================================== */
+
+  const handleOpeningChange = (
+    productCode: string,
+    value: string
+  ) => {
+    if (value !== "" && !/^\d*\.?\d*$/.test(value)) {
+      return;
+    }
+
+    setOpeningValues((previous) => ({
+      ...previous,
+      [productCode]: value,
+    }));
+  };
+
+  /* =====================================================
+     SAVE OPENING STOCK
+  ===================================================== */
+
+  const handleSaveOpeningStock = () => {
+    const updates: Record<string, number> = {};
+
+    Object.entries(openingValues).forEach(
+      ([productCode, value]) => {
+        const qty =
+          value.trim() === ""
+            ? 0
+            : Number(value);
+
+        if (!Number.isFinite(qty) || qty < 0) {
+          return;
+        }
+
+        updates[productCode] = qty;
+      }
+    );
+
+    const confirmed = window.confirm(
+      "Save Opening Stock?\n\n" +
+        "This will update the Opening Stock values for the displayed stock items.\n\n" +
+        "Purchase and Sales transactions will NOT be changed."
+    );
+
+    if (!confirmed) return;
+
+    setOpeningStockBulk(updates);
+
+    const refreshedStock = loadStock();
+
+    setStock(refreshedStock);
+    setShowOpeningEditor(false);
+
+    window.alert(
+      "Opening Stock saved successfully."
+    );
+  };
+
+  /* =====================================================
      SEARCH
   ===================================================== */
 
-  const filteredStock =
-    stock.filter(
-      (item) =>
-        item.productName
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          ) ||
-        item.productCode
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          ) ||
-        item.hsn
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          )
-    );
+  const filteredStock = stock.filter(
+    (item) =>
+      item.productName
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      item.productCode
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      item.hsn
+        .toLowerCase()
+        .includes(search.toLowerCase())
+  );
 
   /* =====================================================
      TOTAL CURRENT STOCK
   ===================================================== */
 
- const totalStock =
-  filteredStock.reduce(
-    (total, item) => {
-      const product =
-        loadProducts().find(
-          (p) => p.code === item.productCode
-        );
+  const products = loadProducts();
 
-      const qty =
-        Number(item.currentStock || 0);
+  const totalStock = filteredStock.reduce(
+    (total, item) => {
+      const product = products.find(
+        (p) => p.code === item.productCode
+      );
+
+      const qty = Number(
+        item.currentStock || 0
+      );
 
       if (
         product?.unit === "Pkt" &&
@@ -104,22 +178,19 @@ export default function StockMaster() {
     },
     0
   );
+
   /* =====================================================
      PRINT DATE
   ===================================================== */
 
   const printDate =
-    new Date().toLocaleDateString(
-      "en-IN"
-    );
+    new Date().toLocaleDateString("en-IN");
 
   /* =====================================================
-     VIEW
+     MONTHLY VIEW
   ===================================================== */
 
-  if (
-    activeView === "monthly"
-  ) {
+  if (activeView === "monthly") {
     return (
       <div
         style={{
@@ -149,18 +220,15 @@ export default function StockMaster() {
           <button
             type="button"
             onClick={() =>
-              setActiveView(
-                "current"
-              )
+              setActiveView("current")
             }
             style={{
               height: "34px",
-              padding:
-                "0 14px",
-              border: "1px solid #d1d5db",
+              padding: "0 14px",
+              border:
+                "1px solid #d1d5db",
               borderRadius: "6px",
-              background:
-                "#ffffff",
+              background: "#ffffff",
               color: "#374151",
               cursor: "pointer",
               fontSize: "11px",
@@ -173,18 +241,14 @@ export default function StockMaster() {
           <button
             type="button"
             onClick={() =>
-              setActiveView(
-                "monthly"
-              )
+              setActiveView("monthly")
             }
             style={{
               height: "34px",
-              padding:
-                "0 14px",
+              padding: "0 14px",
               border: "none",
               borderRadius: "6px",
-              background:
-                "#14532d",
+              background: "#14532d",
               color: "#ffffff",
               cursor: "pointer",
               fontSize: "11px",
@@ -199,6 +263,10 @@ export default function StockMaster() {
       </div>
     );
   }
+
+  /* =====================================================
+     CURRENT STOCK VIEW
+  ===================================================== */
 
   return (
     <>
@@ -300,8 +368,7 @@ export default function StockMaster() {
               fontSize: "18px",
               fontWeight: 800,
               color: "#111827",
-              letterSpacing:
-                "0.5px",
+              letterSpacing: "0.5px",
             }}
           >
             UK EXIM ENTERPRISES
@@ -313,8 +380,7 @@ export default function StockMaster() {
               fontSize: "14px",
               fontWeight: 800,
               color: "#14532d",
-              letterSpacing:
-                "0.3px",
+              letterSpacing: "0.3px",
             }}
           >
             STOCK REPORT
@@ -327,8 +393,8 @@ export default function StockMaster() {
               color: "#6b7280",
             }}
           >
-            Product-wise Current
-            Stock Details
+            Product-wise Current Stock
+            Details
           </div>
 
           <div
@@ -342,15 +408,12 @@ export default function StockMaster() {
             }}
           >
             <span>
-              Report Date:{" "}
-              {printDate}
+              Report Date: {printDate}
             </span>
 
             <span>
               Total Products:{" "}
-              {
-                filteredStock.length
-              }
+              {filteredStock.length}
             </span>
           </div>
         </div>
@@ -397,8 +460,8 @@ export default function StockMaster() {
                 fontSize: "11px",
               }}
             >
-              Product-wise Current
-              Stock Details
+              Product-wise Current Stock
+              Details
             </div>
           </div>
 
@@ -409,9 +472,7 @@ export default function StockMaster() {
             placeholder="🔍 Search Product / Code / HSN..."
             value={search}
             onChange={(e) =>
-              setSearch(
-                e.target.value
-              )
+              setSearch(e.target.value)
             }
             style={{
               width: "300px",
@@ -428,53 +489,42 @@ export default function StockMaster() {
             }}
           />
         </div>
-{/* =================================================
-    OPENING STOCK ADJUSTMENT
-================================================== */}
 
-<div
-  className="stock-no-print"
-  style={{
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    marginBottom: "12px",
-    flexWrap: "wrap",
-  }}
->
-  <button
-    type="button"
-    onClick={() => {
-      const updates: Record<string, number> = {
-        P0001: 5,
-        P0002: 132,
-        P0003: 4,
-        P0004: 16,
-        P0005: 32,
-        P0006: 8,
-        P0007: 2,
-        P0008: 0,
-        P0009: 0,
-      };
+        {/* =================================================
+            OPENING STOCK ACTION
+        ================================================== */}
 
-      setOpeningStockBulk(updates);
-      setStock(loadStock());
-    }}
-    style={{
-      height: "34px",
-      padding: "0 14px",
-      border: "none",
-      borderRadius: "6px",
-      background: "#14532d",
-      color: "#ffffff",
-      cursor: "pointer",
-      fontWeight: 700,
-      fontSize: "11px",
-    }}
-  >
-    🔧 Set Opening Stock
-  </button>
-</div>
+        <div
+          className="stock-no-print"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginBottom: "12px",
+            flexWrap: "wrap",
+          }}
+        >
+          <button
+            type="button"
+            onClick={
+              handleOpenOpeningEditor
+            }
+            style={{
+              height: "34px",
+              padding: "0 14px",
+              border: "none",
+              borderRadius: "6px",
+              background: "#14532d",
+              color: "#ffffff",
+              cursor: "pointer",
+              fontWeight: 700,
+              fontSize: "11px",
+            }}
+          >
+            🔧 Set Opening Stock
+          </button>
+        </div>
+
         {/* =================================================
             STOCK VIEW BUTTONS
         ================================================== */}
@@ -493,18 +543,14 @@ export default function StockMaster() {
           <button
             type="button"
             onClick={() =>
-              setActiveView(
-                "current"
-              )
+              setActiveView("current")
             }
             style={{
               height: "34px",
-              padding:
-                "0 14px",
+              padding: "0 14px",
               border: "none",
               borderRadius: "6px",
-              background:
-                "#14532d",
+              background: "#14532d",
               color: "#ffffff",
               cursor: "pointer",
               fontWeight: 700,
@@ -517,19 +563,15 @@ export default function StockMaster() {
           <button
             type="button"
             onClick={() =>
-              setActiveView(
-                "monthly"
-              )
+              setActiveView("monthly")
             }
             style={{
               height: "34px",
-              padding:
-                "0 14px",
+              padding: "0 14px",
               border:
                 "1px solid #14532d",
               borderRadius: "6px",
-              background:
-                "#ffffff",
+              background: "#ffffff",
               color: "#14532d",
               cursor: "pointer",
               fontWeight: 700,
@@ -560,16 +602,13 @@ export default function StockMaster() {
 
           <div
             style={{
-              background:
-                "#f8fafc",
+              background: "#f8fafc",
               border:
                 "1px solid #d1d5db",
               borderRadius: "7px",
-              padding:
-                "9px 12px",
+              padding: "9px 12px",
               minHeight: "58px",
-              boxSizing:
-                "border-box",
+              boxSizing: "border-box",
               minWidth: 0,
             }}
           >
@@ -581,8 +620,7 @@ export default function StockMaster() {
                 marginBottom: "4px",
               }}
             >
-              TOTAL CURRENT
-              STOCK
+              TOTAL CURRENT STOCK
             </div>
 
             <div
@@ -592,7 +630,7 @@ export default function StockMaster() {
                 fontWeight: 800,
               }}
             >
-             {totalStock.toFixed(3)} KG
+              {totalStock.toFixed(3)} KG
             </div>
           </div>
 
@@ -601,8 +639,7 @@ export default function StockMaster() {
           <div
             style={{
               display: "flex",
-              alignItems:
-                "center",
+              alignItems: "center",
               gap: "8px",
               minWidth: 0,
             }}
@@ -615,20 +652,16 @@ export default function StockMaster() {
                 window.print()
               }
               style={{
-                padding:
-                  "0 14px",
-                background:
-                  "#14532d",
+                padding: "0 14px",
+                background: "#14532d",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "7px",
-                cursor:
-                  "pointer",
+                cursor: "pointer",
                 fontWeight: 700,
                 fontSize: "11px",
                 minHeight: "58px",
-                whiteSpace:
-                  "nowrap",
+                whiteSpace: "nowrap",
               }}
             >
               🖨️ Print Report
@@ -642,20 +675,16 @@ export default function StockMaster() {
                 handleResetStock
               }
               style={{
-                padding:
-                  "0 14px",
-                background:
-                  "#dc2626",
+                padding: "0 14px",
+                background: "#dc2626",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "7px",
-                cursor:
-                  "pointer",
+                cursor: "pointer",
                 fontWeight: 700,
                 fontSize: "11px",
                 minHeight: "58px",
-                whiteSpace:
-                  "nowrap",
+                whiteSpace: "nowrap",
               }}
             >
               🗑️ Reset Stock
@@ -674,13 +703,11 @@ export default function StockMaster() {
             justifyContent:
               "space-between",
             alignItems: "center",
-            background:
-              "#f0fdf4",
+            background: "#f0fdf4",
             border:
               "1px solid #bbf7d0",
             borderRadius: "5px",
-            padding:
-              "7px 10px",
+            padding: "7px 10px",
             marginBottom: "10px",
             fontSize: "10px",
           }}
@@ -691,8 +718,7 @@ export default function StockMaster() {
               color: "#374151",
             }}
           >
-            TOTAL CURRENT
-            STOCK
+            TOTAL CURRENT STOCK
           </span>
 
           <span
@@ -702,7 +728,7 @@ export default function StockMaster() {
               color: "#14532d",
             }}
           >
-           {totalStock.toFixed(3)} KG
+            {totalStock.toFixed(3)} KG
           </span>
         </div>
 
@@ -711,9 +737,7 @@ export default function StockMaster() {
         ================================================== */}
 
         <StockTable
-          stock={
-            filteredStock
-          }
+          stock={filteredStock}
         />
 
         {/* =================================================
@@ -747,6 +771,418 @@ export default function StockMaster() {
           </span>
         </div>
       </div>
+
+      {/* =====================================================
+          OPENING STOCK MODAL
+      ===================================================== */}
+
+      {showOpeningEditor && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background:
+              "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+            padding: "20px",
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "820px",
+              background: "#ffffff",
+              borderRadius: "10px",
+              boxShadow:
+                "0 10px 35px rgba(0,0,0,0.25)",
+              overflow: "hidden",
+            }}
+          >
+            {/* HEADER */}
+
+            <div
+              style={{
+                padding:
+                  "12px 16px",
+                background: "#14532d",
+                color: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent:
+                  "space-between",
+                gap: "10px",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: "15px",
+                    fontWeight: 800,
+                  }}
+                >
+                  Opening Stock Entry
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "2px",
+                    fontSize: "10px",
+                    opacity: 0.9,
+                  }}
+                >
+                  Enter the actual opening
+                  stock quantity.
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowOpeningEditor(
+                    false
+                  )
+                }
+                style={{
+                  width: "30px",
+                  height: "30px",
+                  border: "none",
+                  borderRadius: "5px",
+                  background:
+                    "rgba(255,255,255,0.15)",
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  fontSize: "18px",
+                  fontWeight: 700,
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* BODY */}
+
+            <div
+              style={{
+                padding: "14px 16px",
+                maxHeight: "65vh",
+                overflowY: "auto",
+              }}
+            >
+              <div
+                style={{
+                  border:
+                    "1px solid #d1d5db",
+                  borderRadius: "7px",
+                  overflow: "hidden",
+                }}
+              >
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse:
+                      "collapse",
+                    fontSize: "11px",
+                  }}
+                >
+                  <thead>
+                    <tr
+                      style={{
+                        background:
+                          "#f3f4f6",
+                      }}
+                    >
+                      <th
+                        style={{
+                          textAlign:
+                            "left",
+                          padding:
+                            "8px 10px",
+                          borderBottom:
+                            "1px solid #d1d5db",
+                        }}
+                      >
+                        Product Code
+                      </th>
+
+                      <th
+                        style={{
+                          textAlign:
+                            "left",
+                          padding:
+                            "8px 10px",
+                          borderBottom:
+                            "1px solid #d1d5db",
+                        }}
+                      >
+                        Product Name
+                      </th>
+
+                      <th
+                        style={{
+                          textAlign:
+                            "center",
+                          padding:
+                            "8px 10px",
+                          borderBottom:
+                            "1px solid #d1d5db",
+                        }}
+                      >
+                        Unit
+                      </th>
+
+                      <th
+                        style={{
+                          textAlign:
+                            "right",
+                          padding:
+                            "8px 10px",
+                          borderBottom:
+                            "1px solid #d1d5db",
+                        }}
+                      >
+                        Opening Stock
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {stock.map(
+                      (item) => {
+                        const product =
+                          products.find(
+                            (p) =>
+                              p.code ===
+                              item.productCode
+                          );
+
+                        return (
+                          <tr
+                            key={
+                              item.productCode
+                            }
+                          >
+                            <td
+                              style={{
+                                padding:
+                                  "7px 10px",
+                                borderBottom:
+                                  "1px solid #e5e7eb",
+                                fontWeight: 700,
+                              }}
+                            >
+                              {
+                                item.productCode
+                              }
+                            </td>
+
+                            <td
+                              style={{
+                                padding:
+                                  "7px 10px",
+                                borderBottom:
+                                  "1px solid #e5e7eb",
+                              }}
+                            >
+                              {
+                                item.productName
+                              }
+                            </td>
+
+                            <td
+                              style={{
+                                padding:
+                                  "7px 10px",
+                                borderBottom:
+                                  "1px solid #e5e7eb",
+                                textAlign:
+                                  "center",
+                              }}
+                            >
+                              {
+                                product?.unit ||
+                                item.unit
+                              }
+                            </td>
+
+                            <td
+                              style={{
+                                padding:
+                                  "7px 10px",
+                                borderBottom:
+                                  "1px solid #e5e7eb",
+                                textAlign:
+                                  "right",
+                              }}
+                            >
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={
+                                  openingValues[
+                                    item
+                                      .productCode
+                                  ] ??
+                                  "0"
+                                }
+                                onChange={(
+                                  e
+                                ) =>
+                                  handleOpeningChange(
+                                    item.productCode,
+                                    e.target
+                                      .value
+                                  )
+                                }
+                                style={{
+                                  width:
+                                    "130px",
+                                  maxWidth:
+                                    "100%",
+                                  height:
+                                    "30px",
+                                  padding:
+                                    "0 8px",
+                                  border:
+                                    "1px solid #cbd5e1",
+                                  borderRadius:
+                                    "5px",
+                                  textAlign:
+                                    "right",
+                                  fontSize:
+                                    "11px",
+                                  boxSizing:
+                                    "border-box",
+                                  outline:
+                                    "none",
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      }
+                    )}
+
+                    {stock.length ===
+                      0 && (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          style={{
+                            padding:
+                              "20px",
+                            textAlign:
+                              "center",
+                            color:
+                              "#6b7280",
+                          }}
+                        >
+                          No stock records
+                          available.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* IMPORTANT NOTE */}
+
+              <div
+                style={{
+                  marginTop: "10px",
+                  padding:
+                    "9px 11px",
+                  background:
+                    "#fffbeb",
+                  border:
+                    "1px solid #fde68a",
+                  borderRadius: "6px",
+                  color: "#92400e",
+                  fontSize: "10px",
+                  lineHeight: 1.5,
+                }}
+              >
+                <strong>
+                  Accounting Note:
+                </strong>{" "}
+                Opening Stock is a starting
+                stock balance. It does not
+                create a Purchase transaction
+                and it does not change existing
+                Purchase or Sales entries.
+              </div>
+            </div>
+
+            {/* FOOTER */}
+
+            <div
+              style={{
+                padding:
+                  "10px 16px",
+                borderTop:
+                  "1px solid #e5e7eb",
+                display: "flex",
+                justifyContent:
+                  "flex-end",
+                gap: "8px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  setShowOpeningEditor(
+                    false
+                  )
+                }
+                style={{
+                  height: "34px",
+                  padding:
+                    "0 16px",
+                  border:
+                    "1px solid #d1d5db",
+                  borderRadius: "6px",
+                  background:
+                    "#ffffff",
+                  color: "#374151",
+                  cursor:
+                    "pointer",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  handleSaveOpeningStock
+                }
+                style={{
+                  height: "34px",
+                  padding:
+                    "0 16px",
+                  border: "none",
+                  borderRadius: "6px",
+                  background:
+                    "#14532d",
+                  color: "#ffffff",
+                  cursor:
+                    "pointer",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                }}
+              >
+                💾 Save Opening Stock
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

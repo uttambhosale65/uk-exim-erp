@@ -17,18 +17,16 @@ import {
 
 import {
   loadStock,
-  saveStock,
-  reduceStock,
   getCurrentStock,
   convertToStockQty,
 } from "../components/stock/StockStorage";
 
+import TransactionConfirmModal, {
+  TransactionConfirmMode,
+} from "../components/common/TransactionConfirmModal";
+
 /* =====================================================
    SALES NUMBER MIGRATION
-
-   Existing old Sales records ला एकदाच
-   SAL-0001, SAL-0002, SAL-0003...
-   unique numbering देण्यासाठी
 ===================================================== */
 
 const SALES_NUMBER_VERSION =
@@ -62,10 +60,8 @@ function getStockImpact(
 
   if (!product) {
     return {
-      stockProductCode:
-        productCode,
-      stockQty:
-        Number(qty) || 0,
+      stockProductCode: productCode,
+      stockQty: Number(qty) || 0,
     };
   }
 
@@ -91,113 +87,7 @@ function getStockImpact(
 }
 
 /* =====================================================
-   RESTORE SALE STOCK
-
-   Sale Edit / Delete झाल्यावर
-   Stock Base Product मध्ये quantity परत वाढवणे.
-===================================================== */
-
-function restoreSaleStock(
-  sale: Sales
-) {
-  const stock = loadStock();
-
-  const items = Array.isArray(
-    sale.items
-  )
-    ? sale.items
-    : [];
-
-  items.forEach((item) => {
-    if (
-      !item.productCode ||
-      Number(item.qty) <= 0
-    ) {
-      return;
-    }
-
-    const stockImpact =
-      getStockImpact(
-        item.productCode,
-        Number(item.qty)
-      );
-
-    const index =
-      stock.findIndex(
-        (stockItem) =>
-          stockItem.productCode ===
-          stockImpact.stockProductCode
-      );
-
-    if (index === -1) {
-      return;
-    }
-
-    stock[index].salesQty =
-      Math.max(
-        0,
-        Number(
-          stock[index].salesQty || 0
-        ) -
-          stockImpact.stockQty
-      );
-
-    stock[index].currentStock =
-      Number(
-        stock[index].openingStock || 0
-      ) +
-      Number(
-        stock[index].purchaseQty || 0
-      ) -
-      Number(
-        stock[index].salesQty || 0
-      );
-  });
-
-  saveStock(stock);
-}
-
-/* =====================================================
-   APPLY SALE TO STOCK
-
-   Packed Product → Stock Base Product
-   Packet Qty → KG
-===================================================== */
-
-function applySaleStock(
-  sale: Sales
-) {
-  const items = Array.isArray(
-    sale.items
-  )
-    ? sale.items
-    : [];
-
-  items.forEach((item) => {
-    if (
-      !item.productCode ||
-      Number(item.qty) <= 0
-    ) {
-      return;
-    }
-
-    const stockImpact =
-      getStockImpact(
-        item.productCode,
-        Number(item.qty)
-      );
-
-    reduceStock(
-      stockImpact.stockProductCode,
-      stockImpact.stockQty
-    );
-  });
-}
-
-/* =====================================================
    REPAIR OLD SALES NUMBERS
-
-   हे फक्त एकदाच चालेल.
 ===================================================== */
 
 function migrateSalesNumbers(
@@ -249,6 +139,7 @@ function migrateSalesNumbers(
 ===================================================== */
 
 export default function SalesPage() {
+
   const [sales, setSales] =
     useState<Sales[]>([]);
 
@@ -268,10 +159,20 @@ export default function SalesPage() {
     );
 
   /* =====================================================
+     CONFIRMATION
+  ===================================================== */
+
+  const [pendingSale, setPendingSale] =
+    useState<Sales | null>(
+      null
+    );
+
+  /* =====================================================
      LOAD SALES
-===================================================== */
+  ===================================================== */
 
   useEffect(() => {
+
     const loadedSales =
       loadSales();
 
@@ -289,18 +190,18 @@ export default function SalesPage() {
         correctedSales
       )
     );
+
   }, []);
 
   /* =====================================================
-     SAVE SALE
-===================================================== */
+     VALIDATE SALE STOCK
 
-  const handleSave = (
+     येथे कोणताही stock बदल होत नाही.
+  ===================================================== */
+
+  const validateSaleStock = (
     sale: Sales
-  ) => {
-    /* =================================================
-       STOCK VALIDATION
-    ================================================= */
+  ): boolean => {
 
     const stockItems =
       Array.isArray(
@@ -312,6 +213,7 @@ export default function SalesPage() {
     for (
       const item of stockItems
     ) {
+
       if (
         !item.productCode ||
         Number(item.qty) <= 0
@@ -337,12 +239,13 @@ export default function SalesPage() {
          EDIT SALE
 
          जुन्या sale ची quantity
-         temporarily add back.
+         calculation मध्ये temporarily add back.
       ----------------------------------------------- */
 
       if (
         editingSale
       ) {
+
         const oldItem =
           editingSale.items?.find(
             (old) =>
@@ -350,7 +253,10 @@ export default function SalesPage() {
               item.productCode
           );
 
-        if (oldItem) {
+        if (
+          oldItem
+        ) {
+
           const oldStockImpact =
             getStockImpact(
               oldItem.productCode,
@@ -361,6 +267,7 @@ export default function SalesPage() {
             oldStockImpact.stockProductCode ===
             stockImpact.stockProductCode
           ) {
+
             availableStock +=
               oldStockImpact.stockQty;
           }
@@ -374,6 +281,7 @@ export default function SalesPage() {
         requiredQty >
         availableStock
       ) {
+
         alert(
           `❌ Insufficient Stock\n\n` +
             `${item.productName}\n` +
@@ -383,9 +291,34 @@ export default function SalesPage() {
             `Sale cannot be saved.`
         );
 
-        return;
+        return false;
       }
     }
+
+    return true;
+  };
+
+  /* =====================================================
+     CONFIRMED SALE PROCESS
+
+     IMPORTANT:
+     येथेच actual Sales save होते.
+
+     New Sale:
+       1. Sales save
+       2. Stock rebuild
+
+     Edit:
+       1. Sales register update
+       2. Stock rebuild
+
+     StockStorage transaction-based असल्यामुळे
+     manual stock +/- करू नये.
+  ===================================================== */
+
+  const processConfirmedSale = (
+    sale: Sales
+  ) => {
 
     /* =================================================
        EDIT EXISTING SALE
@@ -394,21 +327,9 @@ export default function SalesPage() {
     if (
       editingSale
     ) {
-      restoreSaleStock(
-        editingSale
-      );
 
-      applySaleStock(
-        sale
-      );
-
-      /*
-        Edit करताना जुना Sales No.
-        कायम ठेवायचा.
-      */
-
-      const finalEditedSale: Sales =
-        {
+      const finalEditedSale:
+        Sales = {
           ...sale,
           salesNo:
             editingSale.salesNo,
@@ -418,18 +339,47 @@ export default function SalesPage() {
         sales.map(
           (item) =>
             item.id ===
-            sale.id
+            editingSale.id
               ? finalEditedSale
               : item
         );
+
+      /* -----------------------------------------------
+         FIRST SAVE SALES TRANSACTION
+      ------------------------------------------------ */
+
+      saveSales(
+        updatedSales
+      );
 
       setSales(
         updatedSales
       );
 
-      saveSales(
-        updatedSales
-      );
+      /* -----------------------------------------------
+         THEN REBUILD STOCK
+
+         StockStorage स्वतः saved Sales transaction
+         वाचून correct stock calculate करेल.
+      ------------------------------------------------ */
+
+      try {
+
+        loadStock();
+
+      } catch (
+        error
+      ) {
+
+        console.error(
+          "Stock rebuild after Sale Update failed:",
+          error
+        );
+      }
+
+      /* -----------------------------------------------
+         NEXT SALES NUMBER
+      ------------------------------------------------ */
 
       setSalesNo(
         getNextSalesNo(
@@ -441,6 +391,10 @@ export default function SalesPage() {
         null
       );
 
+      setPendingSale(
+        null
+      );
+
       return;
     }
 
@@ -448,39 +402,44 @@ export default function SalesPage() {
        NEW SALE
     ================================================= */
 
-    const newSalesNo =
-      getNextSalesNo(
-        sales
-      );
-
-    const finalSale: Sales =
-      {
-        ...sale,
-        salesNo:
-          newSalesNo,
-      };
-
     const updatedSales = [
       ...sales,
-      finalSale,
+      sale,
     ];
 
-    setSales(
-      updatedSales
-    );
+    /* -----------------------------------------------
+       FIRST SAVE SALES TRANSACTION
+    ------------------------------------------------ */
 
     saveSales(
       updatedSales
     );
 
-    applySaleStock(
-      finalSale
+    setSales(
+      updatedSales
     );
 
-    /*
-      नवीन Sale save झाल्यानंतर
-      पुढचा Sales Number तयार करा.
-    */
+    /* -----------------------------------------------
+       THEN REBUILD STOCK
+    ------------------------------------------------ */
+
+    try {
+
+      loadStock();
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "Stock rebuild after Sale failed:",
+        error
+      );
+    }
+
+    /* -----------------------------------------------
+       NEXT SALES NUMBER
+    ------------------------------------------------ */
 
     setSalesNo(
       getNextSalesNo(
@@ -491,20 +450,133 @@ export default function SalesPage() {
     setEditingSale(
       null
     );
+
+    setPendingSale(
+      null
+    );
   };
 
   /* =====================================================
+     SAVE / UPDATE SALE REQUEST
+
+     येथे actual save नाही.
+     फक्त confirmation window उघडते.
+  ===================================================== */
+
+  const handleSave = (
+    sale: Sales
+  ) => {
+
+    /* -----------------------------------------------
+       STOCK VALIDATION
+    ------------------------------------------------ */
+
+    if (
+      !validateSaleStock(
+        sale
+      )
+    ) {
+      return;
+    }
+
+    /* -----------------------------------------------
+       EDIT SALE
+    ------------------------------------------------ */
+
+    if (
+      editingSale
+    ) {
+
+      const finalEditedSale:
+        Sales = {
+          ...sale,
+
+          salesNo:
+            editingSale.salesNo,
+        };
+
+      setPendingSale(
+        finalEditedSale
+      );
+
+      return;
+    }
+
+    /* -----------------------------------------------
+       NEW SALE
+    ------------------------------------------------ */
+
+    const newSalesNo =
+      getNextSalesNo(
+        sales
+      );
+
+    const finalSale:
+      Sales = {
+        ...sale,
+
+        salesNo:
+          newSalesNo,
+      };
+
+    setPendingSale(
+      finalSale
+    );
+  };
+
+  /* =====================================================
+     CONFIRM SALE
+
+     ONLY this button causes actual save.
+  ===================================================== */
+const handleConfirmSale =
+  () => {
+
+    console.log("CONFIRM SALE CLICKED", pendingSale);
+
+    if (
+      !pendingSale
+    ) {
+      return;
+    }
+
+    processConfirmedSale(
+      pendingSale
+    );
+  };
+
+  /* =====================================================
+     CANCEL CONFIRMATION
+
+     No save.
+     No stock change.
+  ===================================================== */
+
+  const handleCancelSale =
+    () => {
+
+      setPendingSale(
+        null
+      );
+    };
+
+  /* =====================================================
      EDIT SALE
-===================================================== */
+  ===================================================== */
 
   const handleEdit = (
     sale: Sales
   ) => {
+
     setEditingSale(
       sale
     );
 
     setSelectedSale(
+      null
+    );
+
+    setPendingSale(
       null
     );
 
@@ -516,17 +588,20 @@ export default function SalesPage() {
 
   /* =====================================================
      DELETE SALE
-===================================================== */
+  ===================================================== */
 
   const handleDelete = (
     id: string
   ) => {
+
     const confirmed =
       window.confirm(
-        "Are you sure you want to delete this sales record?\n\nStock will be restored."
+        "Are you sure you want to delete this sales record?\n\nStock will be recalculated."
       );
 
-    if (!confirmed) {
+    if (
+      !confirmed
+    ) {
       return;
     }
 
@@ -542,9 +617,9 @@ export default function SalesPage() {
       return;
     }
 
-    restoreSaleStock(
-      saleToDelete
-    );
+    /* -----------------------------------------------
+       DELETE SALE FIRST
+    ------------------------------------------------ */
 
     const updatedSales =
       sales.filter(
@@ -552,18 +627,35 @@ export default function SalesPage() {
           sale.id !== id
       );
 
-    setSales(
-      updatedSales
-    );
-
     saveSales(
       updatedSales
     );
 
-    /*
-      Existing Sales Numbers
-      बदलायचे नाहीत.
-    */
+    setSales(
+      updatedSales
+    );
+
+    /* -----------------------------------------------
+       REBUILD STOCK
+    ------------------------------------------------ */
+
+    try {
+
+      loadStock();
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "Stock rebuild after Sale Delete failed:",
+        error
+      );
+    }
+
+    /* -----------------------------------------------
+       NEXT SALES NUMBER
+    ------------------------------------------------ */
 
     setSalesNo(
       getNextSalesNo(
@@ -586,15 +678,28 @@ export default function SalesPage() {
         null
       );
     }
+
+    if (
+      pendingSale?.id === id
+    ) {
+      setPendingSale(
+        null
+      );
+    }
   };
 
   /* =====================================================
      CANCEL EDIT
-===================================================== */
+  ===================================================== */
 
   const handleCancelEdit =
     () => {
+
       setEditingSale(
+        null
+      );
+
+      setPendingSale(
         null
       );
 
@@ -607,16 +712,21 @@ export default function SalesPage() {
 
   /* =====================================================
      OPEN INVOICE
-===================================================== */
+  ===================================================== */
 
   const handleInvoice = (
     sale: Sales
   ) => {
+
     setSelectedSale(
       sale
     );
 
     setEditingSale(
+      null
+    );
+
+    setPendingSale(
       null
     );
 
@@ -628,10 +738,11 @@ export default function SalesPage() {
 
   /* =====================================================
      CLOSE INVOICE
-===================================================== */
+  ===================================================== */
 
   const handleCloseInvoice =
     () => {
+
       setSelectedSale(
         null
       );
@@ -639,38 +750,54 @@ export default function SalesPage() {
 
   /* =====================================================
      INVOICE VIEW
-===================================================== */
+  ===================================================== */
 
   if (
     selectedSale
   ) {
+
     return (
       <div
         className="invoice-page-wrapper"
         style={{
           minHeight:
             "100vh",
+
           background:
             "#f3f4f6",
+
           padding:
             "20px",
         }}
       >
+
         <InvoicePrint
           sale={
             selectedSale
           }
+
           onClose={
             handleCloseInvoice
           }
         />
+
       </div>
     );
   }
 
   /* =====================================================
+     CONFIRMATION MODE
+  ===================================================== */
+
+  const salesConfirmMode:
+    TransactionConfirmMode =
+      editingSale
+        ? "UPDATE"
+        : "CREATE";
+
+  /* =====================================================
      SALES PAGE
-===================================================== */
+  ===================================================== */
 
   return (
     <div
@@ -679,16 +806,22 @@ export default function SalesPage() {
           "10px",
       }}
     >
-      {/* PAGE TITLE */}
+
+      {/* =================================================
+          PAGE TITLE
+      ================================================== */}
 
       <h2
         style={{
           color:
             "#14532d",
+
           marginBottom:
             "15px",
+
           fontSize:
             "20px",
+
           fontWeight:
             700,
         }}
@@ -696,7 +829,9 @@ export default function SalesPage() {
         📤 Sales / Issue Master
       </h2>
 
-      {/* SALES FORM */}
+      {/* =================================================
+          SALES FORM
+      ================================================== */}
 
       <SalesForm
         key={
@@ -705,36 +840,74 @@ export default function SalesPage() {
             "new"
           }`
         }
+
         salesNo={
           salesNo
         }
+
         editingSale={
           editingSale
         }
+
         onSave={
           handleSave
         }
+
         onCancelEdit={
           handleCancelEdit
         }
       />
 
-      {/* SALES REGISTER */}
+      {/* =================================================
+          SALES REGISTER
+      ================================================== */}
 
       <SalesTable
         sales={
           sales
         }
+
         onEdit={
           handleEdit
         }
+
         onDelete={
           handleDelete
         }
+
         onInvoice={
           handleInvoice
         }
       />
+
+      {/* =================================================
+          SALES CONFIRMATION MODAL
+      ================================================== */}
+
+      <TransactionConfirmModal
+        open={
+          !!pendingSale
+        }
+
+        type="SALES"
+
+        mode={
+          salesConfirmMode
+        }
+
+        transaction={
+          pendingSale || {}
+        }
+
+        onConfirm={
+          handleConfirmSale
+        }
+
+        onCancel={
+          handleCancelSale
+        }
+      />
+
     </div>
   );
 }
