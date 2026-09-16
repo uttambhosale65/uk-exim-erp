@@ -364,24 +364,24 @@ export default function Home() {
                 cardStyle={card}
               />
 
-           {/* CURRENT STOCK */}
+              {/* CURRENT STOCK */}
 
-<DashboardMainCard
-  title="Current Stock"
-  value={Number(
-    dashboard.stock
-  ).toLocaleString(
-    "en-IN",
-    {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }
-  )}
-  icon="📦"
-  color="#14532d"
-  cardStyle={card}
-  suffix=" KG"
-/>
+              <DashboardMainCard
+                title="Current Stock"
+                value={Number(
+                    dashboard.stock
+                ).toLocaleString(
+                  "en-IN",
+                  {
+                    maximumFractionDigits: 3,
+                  }
+                )}
+                icon="📦"
+                color="#14532d"
+                cardStyle={card}
+                suffix=" KG"
+              />
+
               {/* SALES */}
 
               <DashboardMainCard

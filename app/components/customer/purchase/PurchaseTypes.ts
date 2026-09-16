@@ -47,6 +47,7 @@ export type Purchase = {
 
   supplierCode: string;
   supplierName: string;
+  contactPerson: string;
 
   /* -------------------------------------------------------
      GRN ITEMS
