@@ -34,6 +34,18 @@ import {
 import Settings from "./components/settings/Settings";
 
 /* =========================================================
+   INTERNATIONAL EXPORT MODULES
+   ========================================================= */
+
+import ExportCustomerMaster from "./international/export/customer/ExportCustomerMaster";
+import ExportEnquiryMaster from "./international/export/enquiry/ExportEnquiryMaster";
+import ExportQuotationMaster from "./international/export/quotation/ExportQuotationMaster";
+import ExportProformaInvoiceMaster from "./international/export/proforma/ExportProformaInvoiceMaster";
+import ExportOrderMaster from "./international/export/order/ExportOrderMaster";
+import ExportPurchaseMaster from "./international/export/purchase/ExportPurchaseMaster";
+import InternationalExportStockMaster from "./international/export/stock/InternationalExportStockMaster";
+
+/* =========================================================
    MAIN HOME
    UK EXIM ERP – VERSION 1.0
 ========================================================= */
@@ -81,7 +93,7 @@ export default function Home() {
   const card = {
     background: "#ffffff",
     borderRadius: "8px",
-   padding: "6px 10px",
+    padding: "6px 10px",
     boxShadow:
       "0 2px 6px rgba(0,0,0,0.07)",
     minHeight: "62px",
@@ -276,6 +288,143 @@ export default function Home() {
         return <Settings />;
 
       /* ---------------------------------------------------
+         INTERNATIONAL EXPORT WORKSPACE
+      --------------------------------------------------- */
+
+      case "international-export":
+        return (
+          <InternationalExportWorkspace
+            onOpen={(page) =>
+              setActivePage(page)
+            }
+          />
+        );
+
+      /* ---------------------------------------------------
+         INTERNATIONAL EXPORT CUSTOMER
+      --------------------------------------------------- */
+
+      case "export-customer":
+        return (
+          <InternationalModuleWrapper
+            title="🌍 Export Customer Master"
+            onBack={() =>
+              setActivePage(
+                "international-export"
+              )
+            }
+          >
+            <ExportCustomerMaster />
+          </InternationalModuleWrapper>
+        );
+
+      /* ---------------------------------------------------
+         INTERNATIONAL EXPORT ENQUIRY
+      --------------------------------------------------- */
+
+      case "export-enquiry":
+        return (
+          <InternationalModuleWrapper
+            title="🌍 Export Enquiry"
+            onBack={() =>
+              setActivePage(
+                "international-export"
+              )
+            }
+          >
+            <ExportEnquiryMaster />
+          </InternationalModuleWrapper>
+        );
+
+      /* ---------------------------------------------------
+         INTERNATIONAL EXPORT QUOTATION
+      --------------------------------------------------- */
+
+      case "export-quotation":
+        return (
+          <InternationalModuleWrapper
+            title="🌍 Export Quotation"
+            onBack={() =>
+              setActivePage(
+                "international-export"
+              )
+            }
+          >
+            <ExportQuotationMaster />
+          </InternationalModuleWrapper>
+        );
+
+      /* ---------------------------------------------------
+         INTERNATIONAL PROFORMA INVOICE
+      --------------------------------------------------- */
+
+      case "export-proforma":
+        return (
+          <InternationalModuleWrapper
+            title="🌍 Export Proforma Invoice"
+            onBack={() =>
+              setActivePage(
+                "international-export"
+              )
+            }
+          >
+            <ExportProformaInvoiceMaster />
+          </InternationalModuleWrapper>
+        );
+/* ---------------------------------------------------
+   INTERNATIONAL EXPORT PURCHASE
+--------------------------------------------------- */
+
+      case "export-purchase":
+        return (
+          <InternationalModuleWrapper
+            title="🌍 International Export Purchase"
+            onBack={() =>
+              setActivePage(
+                "international-export"
+              )
+            }
+          >
+            <ExportPurchaseMaster />
+          </InternationalModuleWrapper>
+        );
+
+/* ---------------------------------------------------
+   INTERNATIONAL EXPORT STOCK
+--------------------------------------------------- */
+
+case "export-stock":
+  return (
+    <InternationalModuleWrapper
+      title="🌍 International Export Stock"
+      onBack={() =>
+        setActivePage(
+          "international-export"
+        )
+      }
+    >
+      <InternationalExportStockMaster />
+    </InternationalModuleWrapper>
+  );
+      /* ---------------------------------------------------
+         INTERNATIONAL EXPORT ORDER
+      --------------------------------------------------- */
+
+      case "export-order":
+        return (
+          <InternationalModuleWrapper
+            title="🌍 Export Order"
+            onBack={() =>
+              setActivePage(
+                "international-export"
+              )
+            }
+          >
+            <ExportOrderMaster />
+          </InternationalModuleWrapper>
+        );
+
+      /* ---------------------------------------------------
          DASHBOARD
       --------------------------------------------------- */
 
@@ -369,7 +518,7 @@ export default function Home() {
               <DashboardMainCard
                 title="Current Stock"
                 value={Number(
-                    dashboard.stock
+                  dashboard.stock
                 ).toLocaleString(
                   "en-IN",
                   {
@@ -1049,9 +1198,9 @@ export default function Home() {
     );
   }
 
-  /* =======================================================
+  /* =========================================================
      MAIN LAYOUT
-  ======================================================= */
+  ========================================================= */
 
   return (
     <>
@@ -1072,19 +1221,19 @@ export default function Home() {
         <div
           className="erp-sidebar"
           style={{
-  position: "fixed",
-  left: 0,
-  top: 0,
-  width: "240px",
-  height: "100vh",
-  flexShrink: 0,
-  boxSizing: "border-box",
-  background: "#111827",
-  color: "#ffffff",
-  padding: "20px",
-  overflowY: "auto",
-  zIndex: 1000,
-}}
+            position: "fixed",
+            left: 0,
+            top: 0,
+            width: "240px",
+            height: "100vh",
+            flexShrink: 0,
+            boxSizing: "border-box",
+            background: "#111827",
+            color: "#ffffff",
+            padding: "20px",
+            overflowY: "auto",
+            zIndex: 1000,
+          }}
         >
           <h2
             style={{
@@ -1258,6 +1407,40 @@ export default function Home() {
             💰 Sales Report
           </div>
 
+          {/* =================================================
+              INTERNATIONAL EXPORT
+          ================================================== */}
+
+          <div
+            style={
+              activePage ===
+                "international-export" ||
+              activePage ===
+                "export-customer" ||
+              activePage ===
+                "export-enquiry" ||
+              activePage ===
+                "export-quotation" ||
+              activePage ===
+                "export-proforma" ||
+              activePage ===
+                "export-order" ||
+              activePage ===
+                "export-purchase" ||
+              activePage ===
+                "export-stock"
+                ? activeMenu
+                : menuItem
+            }
+            onClick={() =>
+              setActivePage(
+                "international-export"
+              )
+            }
+          >
+            🌍 International Export
+          </div>
+
           {/* SETTINGS */}
 
           <div
@@ -1282,22 +1465,23 @@ export default function Home() {
         ================================================== */}
 
         <div
-        style={{
-  flex: 1,
-  minWidth: 0,
-  width: "calc(100% - 240px)",
-  marginLeft: "240px",
-  maxWidth: "calc(100% - 240px)",
-  padding: "16px",
-  boxSizing: "border-box",
-  overflowX: "hidden",
-}}
+          className="erp-main-content"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            width: "calc(100% - 240px)",
+            marginLeft: "240px",
+            maxWidth: "calc(100% - 240px)",
+            padding: "16px",
+            boxSizing: "border-box",
+            overflowX: "hidden",
+          }}
         >
           {renderPage()}
 
           {/* =================================================
               FOOTER
-          ================================================== */}
+          ================================================= */}
 
           {activePage ===
             "dashboard" && (
@@ -1447,6 +1631,900 @@ export default function Home() {
 }
 
 /* =========================================================
+   INTERNATIONAL EXPORT WORKSPACE
+========================================================= */
+
+function InternationalExportWorkspace({
+  onOpen,
+}: {
+  onOpen: (
+    page:
+      | "export-customer"
+      | "export-enquiry"
+      | "export-quotation"
+      | "export-proforma"
+      | "export-order"
+      | "export-purchase"
+      | "export-stock"
+  ) => void;
+}) {
+  const [exportData, setExportData] =
+    useState({
+      customers: 0,
+      enquiries: 0,
+      quotations: 0,
+      proformas: 0,
+      orders: 0,
+      purchases: 0,
+    });
+
+  useEffect(() => {
+    const getArrayLength = (
+      key: string
+    ) => {
+      try {
+        const data =
+          localStorage.getItem(key);
+
+        if (!data) {
+          return 0;
+        }
+
+        const parsed =
+          JSON.parse(data);
+
+        return Array.isArray(parsed)
+          ? parsed.length
+          : 0;
+      } catch {
+        return 0;
+      }
+    };
+
+    setExportData({
+      customers:
+        getArrayLength(
+          "uk-exim-export-customers"
+        ),
+
+      enquiries:
+        getArrayLength(
+          "uk-exim-export-enquiries"
+        ),
+
+      quotations:
+        getArrayLength(
+          "uk-exim-export-quotations"
+        ),
+
+      proformas:
+        getArrayLength(
+          "uk-exim-export-proforma-invoices"
+        ),
+
+      orders:
+        getArrayLength(
+          "uk-exim-export-orders"
+        ),
+
+      purchases:
+        getArrayLength(
+          "uk-exim-export-purchases"
+        ),
+    });
+  }, []);
+
+  const actionButton = {
+    border: "1px solid #d1d5db",
+    borderRadius: "8px",
+    background: "#ffffff",
+    padding: "12px",
+    cursor: "pointer",
+    textAlign: "left" as const,
+    boxShadow:
+      "0 2px 6px rgba(0,0,0,0.05)",
+    transition: "0.2s",
+  };
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        minWidth: 0,
+      }}
+    >
+      {/* HEADER */}
+
+      <div
+        style={{
+          marginBottom: "12px",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "22px",
+            fontWeight: 900,
+            color: "#14532d",
+          }}
+        >
+          🌍 International Export
+        </div>
+
+        <div
+          style={{
+            marginTop: "3px",
+            fontSize: "11px",
+            color: "#6b7280",
+          }}
+        >
+          Export Dashboard / Workspace
+        </div>
+      </div>
+
+      {/* SUMMARY */}
+
+      <div
+        className="export-workspace-summary"
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(6, minmax(0, 1fr))",
+          gap: "8px",
+          marginBottom: "12px",
+        }}
+      >
+        <ExportWorkspaceCard
+          title="Customers"
+          value={exportData.customers}
+          icon="👥"
+          onClick={() =>
+            onOpen(
+              "export-customer"
+            )
+          }
+        />
+
+        <ExportWorkspaceCard
+          title="Enquiries"
+          value={exportData.enquiries}
+          icon="📩"
+          onClick={() =>
+            onOpen(
+              "export-enquiry"
+            )
+          }
+        />
+
+        <ExportWorkspaceCard
+          title="Quotations"
+          value={exportData.quotations}
+          icon="📄"
+          onClick={() =>
+            onOpen(
+              "export-quotation"
+            )
+          }
+        />
+
+        <ExportWorkspaceCard
+          title="Proforma"
+          value={exportData.proformas}
+          icon="🧾"
+          onClick={() =>
+            onOpen(
+              "export-proforma"
+            )
+          }
+        />
+
+        <ExportWorkspaceCard
+          title="Export Orders"
+          value={exportData.orders}
+          icon="📦"
+          onClick={() =>
+            onOpen(
+              "export-order"
+            )
+          }
+        />
+
+        <ExportWorkspaceCard
+          title="Export Purchases"
+          value={exportData.purchases}
+          icon="📥"
+          onClick={() =>
+            onOpen(
+              "export-purchase"
+            )
+          }
+        />
+      </div>
+
+      {/* QUICK ACTIONS */}
+
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: "8px",
+          border:
+            "1px solid #e5e7eb",
+          padding: "12px",
+          boxShadow:
+            "0 2px 6px rgba(0,0,0,0.06)",
+          marginBottom: "12px",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "15px",
+            fontWeight: 900,
+            color: "#14532d",
+            marginBottom: "8px",
+          }}
+        >
+          ⚡ Quick Actions
+        </div>
+
+        <div
+          className="export-workspace-actions"
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(7, minmax(0, 1fr))",
+            gap: "8px",
+          }}
+        >
+          <button
+            type="button"
+            style={actionButton}
+            onClick={() =>
+              onOpen(
+                "export-customer"
+              )
+            }
+          >
+            <div
+              style={{
+                fontSize: "18px",
+              }}
+            >
+              👥
+            </div>
+
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#374151",
+              }}
+            >
+              Export Customer
+            </div>
+
+            <div
+              style={{
+                marginTop: "2px",
+                fontSize: "9px",
+                color: "#6b7280",
+              }}
+            >
+              Manage export buyers
+            </div>
+          </button>
+
+          <button
+            type="button"
+            style={actionButton}
+            onClick={() =>
+              onOpen(
+                "export-enquiry"
+              )
+            }
+          >
+            <div
+              style={{
+                fontSize: "18px",
+              }}
+            >
+              📩
+            </div>
+
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#374151",
+              }}
+            >
+              New Enquiry
+            </div>
+
+            <div
+              style={{
+                marginTop: "2px",
+                fontSize: "9px",
+                color: "#6b7280",
+              }}
+            >
+              Record buyer enquiry
+            </div>
+          </button>
+
+          <button
+            type="button"
+            style={actionButton}
+            onClick={() =>
+              onOpen(
+                "export-quotation"
+              )
+            }
+          >
+            <div
+              style={{
+                fontSize: "18px",
+              }}
+            >
+              📄
+            </div>
+
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#374151",
+              }}
+            >
+              New Quotation
+            </div>
+
+            <div
+              style={{
+                marginTop: "2px",
+                fontSize: "9px",
+                color: "#6b7280",
+              }}
+            >
+              Prepare export quotation
+            </div>
+          </button>
+
+          <button
+            type="button"
+            style={actionButton}
+            onClick={() =>
+              onOpen(
+                "export-proforma"
+              )
+            }
+          >
+            <div
+              style={{
+                fontSize: "18px",
+              }}
+            >
+              🧾
+            </div>
+
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#374151",
+              }}
+            >
+              New Proforma
+            </div>
+
+            <div
+              style={{
+                marginTop: "2px",
+                fontSize: "9px",
+                color: "#6b7280",
+              }}
+            >
+              Create from quotation
+            </div>
+          </button>
+
+          <button
+            type="button"
+            style={actionButton}
+            onClick={() =>
+              onOpen(
+                "export-order"
+              )
+            }
+          >
+            <div
+              style={{
+                fontSize: "18px",
+              }}
+            >
+              📦
+            </div>
+
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#374151",
+              }}
+            >
+              New Export Order
+            </div>
+
+            <div
+              style={{
+                marginTop: "2px",
+                fontSize: "9px",
+                color: "#6b7280",
+              }}
+            >
+              Create from proforma
+            </div>
+          </button>
+
+          <button
+            type="button"
+            style={actionButton}
+            onClick={() =>
+              onOpen(
+                "export-purchase"
+              )
+            }
+          >
+            <div
+              style={{
+                fontSize: "18px",
+              }}
+            >
+              📥
+            </div>
+
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#374151",
+              }}
+            >
+              New Export Purchase
+            </div>
+
+            <div
+              style={{
+                marginTop: "2px",
+                fontSize: "9px",
+                color: "#6b7280",
+              }}
+            >
+              Purchase goods for export
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* WORKFLOW */}
+
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: "8px",
+          border:
+            "1px solid #e5e7eb",
+          padding: "12px",
+          boxShadow:
+            "0 2px 6px rgba(0,0,0,0.06)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "15px",
+            fontWeight: 900,
+            color: "#14532d",
+            marginBottom: "9px",
+          }}
+        >
+          🔄 Export Workflow
+        </div>
+
+        <div
+          className="export-workflow"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            flexWrap: "wrap",
+          }}
+        >
+          <WorkflowStep
+            number="1"
+            title="Enquiry"
+            onClick={() =>
+              onOpen(
+                "export-enquiry"
+              )
+            }
+          />
+
+          <WorkflowArrow />
+
+          <WorkflowStep
+            number="2"
+            title="Quotation"
+            onClick={() =>
+              onOpen(
+                "export-quotation"
+              )
+            }
+          />
+
+          <WorkflowArrow />
+
+          <WorkflowStep
+            number="3"
+            title="Proforma"
+            onClick={() =>
+              onOpen(
+                "export-proforma"
+              )
+            }
+          />
+
+          <WorkflowArrow />
+
+          <WorkflowStep
+            number="4"
+            title="Export Order"
+            onClick={() =>
+              onOpen(
+                "export-order"
+              )
+            }
+          />
+
+          <WorkflowArrow />
+
+          <WorkflowStep
+            number="5"
+            title="Reservation"
+            disabled
+          />
+
+          <WorkflowArrow />
+
+          <WorkflowStep
+            number="6"
+            title="Packing"
+            disabled
+          />
+
+          <WorkflowArrow />
+
+          <WorkflowStep
+            number="7"
+            title="Shipment"
+            disabled
+          />
+
+          <WorkflowArrow />
+
+          <WorkflowStep
+            number="8"
+            title="Invoice"
+            disabled
+          />
+
+          <WorkflowArrow />
+
+          <WorkflowStep
+            number="9"
+            title="Payment"
+            disabled
+          />
+        </div>
+
+        <div
+          style={{
+            marginTop: "10px",
+            padding: "8px 10px",
+            borderRadius: "6px",
+            background: "#f0fdf4",
+            border:
+              "1px solid #bbf7d0",
+            color: "#166534",
+            fontSize: "10px",
+            lineHeight: 1.5,
+          }}
+        >
+          <strong>
+            Current Stage:
+          </strong>{" "}
+          Export Order completed.
+          Stock Reservation will be
+          developed separately after
+          this Workspace is tested.
+        </div>
+      </div>
+
+      {/* RESPONSIVE CSS */}
+
+      <style>{`
+        @media (max-width: 1200px) {
+          .export-workspace-summary {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          }
+
+          .export-workspace-actions {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          }
+        }
+
+        @media (max-width: 800px) {
+          .export-workspace-summary {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+
+          .export-workspace-actions {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .export-workspace-summary,
+          .export-workspace-actions {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* =========================================================
+   EXPORT WORKSPACE CARD
+========================================================= */
+
+function ExportWorkspaceCard({
+  title,
+  value,
+  icon,
+  onClick,
+}: {
+  title: string;
+  value: number;
+  icon: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        border:
+          "1px solid #e5e7eb",
+        borderRadius: "8px",
+        background: "#ffffff",
+        padding: "10px",
+        cursor: "pointer",
+        textAlign: "left",
+        minWidth: 0,
+        boxShadow:
+          "0 2px 6px rgba(0,0,0,0.05)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
+          color: "#374151",
+          fontSize: "10px",
+          fontWeight: 700,
+        }}
+      >
+        <span>{icon}</span>
+
+        <span
+          style={{
+            overflow: "hidden",
+            textOverflow:
+              "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {title}
+        </span>
+      </div>
+
+      <div
+        style={{
+          marginTop: "5px",
+          color: "#14532d",
+          fontSize: "20px",
+          fontWeight: 900,
+          lineHeight: 1,
+        }}
+      >
+        {value}
+      </div>
+
+      <div
+        style={{
+          marginTop: "4px",
+          color: "#6b7280",
+          fontSize: "8px",
+        }}
+      >
+        Open →
+      </div>
+    </button>
+  );
+}
+
+/* =========================================================
+   INTERNATIONAL MODULE WRAPPER
+========================================================= */
+
+function InternationalModuleWrapper({
+  title,
+  onBack,
+  children,
+}: {
+  title: string;
+  onBack: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        width: "100%",
+        minWidth: 0,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent:
+            "space-between",
+          alignItems: "center",
+          gap: "10px",
+          marginBottom: "8px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div
+          style={{
+            color: "#14532d",
+            fontSize: "18px",
+            fontWeight: 900,
+          }}
+        >
+          {title}
+        </div>
+
+        <button
+          type="button"
+          onClick={onBack}
+          style={{
+            border: "none",
+            borderRadius: "6px",
+            padding: "7px 10px",
+            background: "#14532d",
+            color: "#ffffff",
+            cursor: "pointer",
+            fontSize: "10px",
+            fontWeight: 800,
+          }}
+        >
+          ← Export Workspace
+        </button>
+      </div>
+
+      {children}
+    </div>
+  );
+}
+
+/* =========================================================
+   EXPORT WORKFLOW STEP
+========================================================= */
+
+function WorkflowStep({
+  number,
+  title,
+  onClick,
+  disabled = false,
+}: {
+  number: string;
+  title: string;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "5px",
+        border:
+          disabled
+            ? "1px solid #e5e7eb"
+            : "1px solid #bbf7d0",
+        borderRadius: "7px",
+        padding: "6px 8px",
+        background:
+          disabled
+            ? "#f9fafb"
+            : "#f0fdf4",
+        color:
+          disabled
+            ? "#9ca3af"
+            : "#166534",
+        cursor:
+          disabled
+            ? "default"
+            : "pointer",
+        fontSize: "9px",
+        fontWeight: 800,
+      }}
+    >
+      <span
+        style={{
+          width: "18px",
+          height: "18px",
+          borderRadius: "50%",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background:
+            disabled
+              ? "#e5e7eb"
+              : "#22c55e",
+          color:
+            disabled
+              ? "#6b7280"
+              : "#ffffff",
+          fontSize: "8px",
+          fontWeight: 900,
+        }}
+      >
+        {number}
+      </span>
+
+      {title}
+    </button>
+  );
+}
+
+/* =========================================================
+   WORKFLOW ARROW
+========================================================= */
+
+function WorkflowArrow() {
+  return (
+    <span
+      style={{
+        color: "#9ca3af",
+        fontSize: "12px",
+        fontWeight: 800,
+      }}
+    >
+      →
+    </span>
+  );
+}
+
+/* =========================================================
    DASHBOARD MAIN CARD
 ========================================================= */
 
@@ -1521,6 +2599,7 @@ function DashboardMainCard({
         }}
       >
         {value}
+
         {suffix && (
           <span
             style={{
