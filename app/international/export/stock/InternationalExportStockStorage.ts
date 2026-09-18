@@ -6,6 +6,7 @@ const STORAGE_KEY = "uk-exim-international-export-stock";
 
 export function loadInternationalExportStock(): InternationalExportStock[] {
   if (typeof window === "undefined") return [];
+
   const data = localStorage.getItem(STORAGE_KEY);
   if (!data) return [];
 
@@ -21,6 +22,7 @@ export function saveInternationalExportStock(
   stock: InternationalExportStock[]
 ): void {
   if (typeof window === "undefined") return;
+
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stock));
 }
 
@@ -47,7 +49,13 @@ export function getInternationalExportStockByProductCode(
  * - This function touches only uk-exim-international-export-stock.
  * - Domestic Stock (uk-exim-stock) is never read or written here.
  * - Opening Stock records are preserved.
- * - Purchase-derived stock is rebuilt from the supplied purchase list.
+ * - Purchase-derived stock is rebuilt from RECEIVED quantities only.
+ *
+ * Stock rules:
+ * - Draft              -> 0 stock
+ * - Partially Received -> receivedQty stock
+ * - Received           -> qty / receivedQty stock
+ * - Cancelled          -> 0 stock
  */
 export function rebuildInternationalExportStockFromPurchases(
   purchases: ExportPurchase[] = loadExportPurchases()
@@ -56,6 +64,7 @@ export function rebuildInternationalExportStockFromPurchases(
 
   const existing = loadInternationalExportStock();
 
+  // Preserve manually entered Opening Stock records.
   const openingStock = existing.filter(
     (item) => item.source !== "Purchase"
   );
@@ -66,32 +75,56 @@ export function rebuildInternationalExportStockFromPurchases(
       productCode: string;
       productName: string;
       lotBatchNo: string;
-      qty: number;
+      receivedQty: number;
       unit: string;
       purchaseReference: string;
     }
   >();
 
   for (const purchase of purchases) {
+    // Cancelled Purchase must never contribute stock.
     if (purchase.status === "Cancelled") continue;
 
     for (const item of purchase.items || []) {
       const qty = Number(item.qty || 0);
-      if (!item.productCode || !item.lotBatchNo || qty <= 0) continue;
+
+      // New field introduced in ExportPurchaseItem.
+      const rawReceivedQty = Number(item.receivedQty || 0);
+
+      /*
+       * Safety normalization:
+       * receivedQty can never be negative
+       * and can never exceed ordered qty.
+       */
+      const receivedQty = Math.min(
+        Math.max(rawReceivedQty, 0),
+        Math.max(qty, 0)
+      );
+
+      if (
+        !item.productCode ||
+        !item.lotBatchNo ||
+        qty <= 0 ||
+        receivedQty <= 0
+      ) {
+        continue;
+      }
 
       const lotBatchNo = item.lotBatchNo.trim();
-      const key = `${purchase.purchaseNo}__${item.productCode}__${lotBatchNo}`.toUpperCase();
+
+      const key =
+        `${purchase.purchaseNo}__${item.productCode}__${lotBatchNo}`.toUpperCase();
 
       const current = purchaseStockMap.get(key);
 
       if (current) {
-        current.qty += qty;
+        current.receivedQty += receivedQty;
       } else {
         purchaseStockMap.set(key, {
           productCode: item.productCode,
           productName: item.productName,
           lotBatchNo,
-          qty,
+          receivedQty,
           unit: item.unit || "KG",
           purchaseReference: purchase.purchaseNo,
         });
@@ -112,23 +145,75 @@ export function rebuildInternationalExportStockFromPurchases(
 
     const now = new Date().toISOString();
 
+    /*
+     * Do not allow reserved/packed/loaded/shipped quantities
+     * to exceed the newly received stock.
+     *
+     * This protects stock integrity when a Purchase is edited
+     * and receivedQty is reduced.
+     */
+    const availableQty = entry.receivedQty;
+
+    const previousReserved = Number(
+      existingPurchaseRecord?.reservedQty || 0
+    );
+
+    const previousPacked = Number(
+      existingPurchaseRecord?.packedQty || 0
+    );
+
+    const previousLoaded = Number(
+      existingPurchaseRecord?.loadedQty || 0
+    );
+
+    const previousShipped = Number(
+      existingPurchaseRecord?.shippedQty || 0
+    );
+
+    const shippedQty = Math.min(
+      Math.max(previousShipped, 0),
+      availableQty
+    );
+
+    const loadedQty = Math.min(
+      Math.max(previousLoaded, shippedQty),
+      availableQty
+    );
+
+    const packedQty = Math.min(
+      Math.max(previousPacked, loadedQty),
+      availableQty
+    );
+
+    const reservedQty = Math.min(
+      Math.max(previousReserved, 0),
+      Math.max(availableQty - packedQty, 0)
+    );
+
     purchaseStock.push({
       id:
         existingPurchaseRecord?.id ||
         crypto.randomUUID(),
+
       productCode: entry.productCode,
       productName: entry.productName,
       lotBatchNo: entry.lotBatchNo,
-      availableQty: entry.qty,
-      reservedQty: existingPurchaseRecord?.reservedQty || 0,
-      packedQty: existingPurchaseRecord?.packedQty || 0,
-      loadedQty: existingPurchaseRecord?.loadedQty || 0,
-      shippedQty: existingPurchaseRecord?.shippedQty || 0,
+
+      availableQty,
+
+      reservedQty,
+      packedQty,
+      loadedQty,
+      shippedQty,
+
       unit: entry.unit,
+
       source: "Purchase",
       purchaseReference: entry.purchaseReference,
+
       createdAt:
         existingPurchaseRecord?.createdAt || now,
+
       updatedAt: now,
     });
   }

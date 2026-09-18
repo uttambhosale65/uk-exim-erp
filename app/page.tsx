@@ -2107,6 +2107,45 @@ function InternationalExportWorkspace({
               Purchase goods for export
             </div>
           </button>
+
+          <button
+            type="button"
+            style={actionButton}
+            onClick={() =>
+              onOpen(
+                "export-stock"
+              )
+            }
+          >
+            <div
+              style={{
+                fontSize: "18px",
+              }}
+            >
+              📦
+            </div>
+
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#374151",
+              }}
+            >
+              Export Stock
+            </div>
+
+            <div
+              style={{
+                marginTop: "2px",
+                fontSize: "9px",
+                color: "#6b7280",
+              }}
+            >
+              View international stock
+            </div>
+          </button>
         </div>
       </div>
 
