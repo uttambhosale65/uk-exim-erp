@@ -43,6 +43,53 @@ function formatDateForInput(value: string): string {
   return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 }
 
+function isValidDateDisplay(value: string): boolean {
+  if (!value) return false;
+
+  const parts = value.split("/");
+  if (parts.length !== 3) return false;
+
+  const day = Number(parts[0]);
+  const month = Number(parts[1]);
+  const year = Number(parts[2]);
+
+  if (
+    !Number.isInteger(day) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(year)
+  ) {
+    return false;
+  }
+
+  if (year < 2000 || year > 2100) return false;
+  if (month < 1 || month > 12) return false;
+
+  const date = new Date(year, month - 1, day);
+
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+}
+
+function formatDateForStorage(value: string): string {
+  const parts = value.split("/");
+  if (parts.length !== 3) return "";
+
+  const [day, month, year] = parts;
+
+  if (
+    day.length !== 2 ||
+    month.length !== 2 ||
+    year.length !== 4
+  ) {
+    return "";
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
 function getToday(): string {
   const now = new Date();
 
@@ -85,6 +132,9 @@ export default function ExportQuotationForm({
 }: ExportQuotationFormProps) {
   const [quotationNo, setQuotationNo] = useState("");
   const [quotationDate, setQuotationDate] = useState(getToday());
+  const [quotationDateDisplay, setQuotationDateDisplay] = useState(
+    formatDateForDisplay(getToday())
+  );
   const [enquiryNo, setEnquiryNo] = useState("");
 
   const [customerCode, setCustomerCode] = useState("");
@@ -99,6 +149,9 @@ export default function ExportQuotationForm({
 
   const [validityDate, setValidityDate] = useState(
     getDefaultValidityDate()
+  );
+  const [validityDateDisplay, setValidityDateDisplay] = useState(
+    formatDateForDisplay(getDefaultValidityDate())
   );
 
   const [incoterm, setIncoterm] = useState("FOB");
@@ -142,6 +195,9 @@ export default function ExportQuotationForm({
     if (editingQuotation) {
       setQuotationNo(editingQuotation.quotationNo);
       setQuotationDate(editingQuotation.quotationDate);
+      setQuotationDateDisplay(
+        formatDateForDisplay(editingQuotation.quotationDate)
+      );
       setEnquiryNo(editingQuotation.enquiryNo);
 
       setCustomerCode(editingQuotation.customerCode);
@@ -157,6 +213,9 @@ export default function ExportQuotationForm({
       );
 
       setValidityDate(editingQuotation.validityDate);
+      setValidityDateDisplay(
+        formatDateForDisplay(editingQuotation.validityDate)
+      );
       setIncoterm(editingQuotation.incoterm);
       setPaymentTerms(editingQuotation.paymentTerms);
       setFreight(editingQuotation.freight);
@@ -171,6 +230,7 @@ export default function ExportQuotationForm({
 
     setQuotationNo(nextQuotationNo);
     setQuotationDate(getToday());
+    setQuotationDateDisplay(formatDateForDisplay(getToday()));
     setEnquiryNo("");
     setCustomerCode("");
     setCustomerName("");
@@ -179,6 +239,9 @@ export default function ExportQuotationForm({
     setCurrency("USD");
     setItems([createEmptyItem()]);
     setValidityDate(getDefaultValidityDate());
+    setValidityDateDisplay(
+      formatDateForDisplay(getDefaultValidityDate())
+    );
     setIncoterm("FOB");
     setPaymentTerms("");
     setFreight(0);
@@ -316,11 +379,42 @@ export default function ExportQuotationForm({
     );
   }, [totalGoodsValue, freight, insurance, otherCharges]);
 
+  function handleQuotationDateChange(value: string) {
+    setQuotationDateDisplay(value);
+
+    if (isValidDateDisplay(value)) {
+      setQuotationDate(formatDateForStorage(value));
+    }
+  }
+
+  function handleQuotationDatePicker(value: string) {
+    setQuotationDate(value);
+    setQuotationDateDisplay(formatDateForDisplay(value));
+  }
+
+  function handleValidityDateChange(value: string) {
+    setValidityDateDisplay(value);
+
+    if (isValidDateDisplay(value)) {
+      setValidityDate(formatDateForStorage(value));
+    }
+  }
+
+  function handleValidityDatePicker(value: string) {
+    setValidityDate(value);
+    setValidityDateDisplay(formatDateForDisplay(value));
+  }
+
   function handleSave() {
     setError("");
 
     if (!quotationDate) {
       setError("Quotation Date is required.");
+      return;
+    }
+
+    if (!isValidDateDisplay(quotationDateDisplay)) {
+      setError("Please enter a valid Quotation Date.");
       return;
     }
 
@@ -356,6 +450,11 @@ export default function ExportQuotationForm({
 
     if (!validityDate) {
       setError("Validity Date is required.");
+      return;
+    }
+
+    if (!isValidDateDisplay(validityDateDisplay)) {
+      setError("Please enter a valid Validity Date.");
       return;
     }
 
@@ -470,17 +569,33 @@ export default function ExportQuotationForm({
           </label>
 
           <div className="relative">
-            <input
-              type="date"
-              value={formatDateForInput(quotationDate)}
-              onChange={(event) =>
-                setQuotationDate(event.target.value)
-              }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={quotationDateDisplay}
+                onChange={(event) =>
+                  handleQuotationDateChange(event.target.value)
+                }
+                placeholder="DD/MM/YYYY"
+                maxLength={10}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
 
-            <div className="mt-1 text-xs text-gray-500">
-              {formatDateForDisplay(quotationDate)}
+              <label
+                title="Select Quotation Date"
+                className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-gray-50 text-lg"
+              >
+                📅
+                <input
+                  type="date"
+                  value={formatDateForInput(quotationDate)}
+                  onChange={(event) =>
+                    handleQuotationDatePicker(event.target.value)
+                  }
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  aria-label="Select Quotation Date"
+                />
+              </label>
             </div>
           </div>
         </div>
@@ -645,17 +760,33 @@ export default function ExportQuotationForm({
             Validity Date
           </label>
 
-          <input
-            type="date"
-            value={formatDateForInput(validityDate)}
-            onChange={(event) =>
-              setValidityDate(event.target.value)
-            }
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={validityDateDisplay}
+              onChange={(event) =>
+                handleValidityDateChange(event.target.value)
+              }
+              placeholder="DD/MM/YYYY"
+              maxLength={10}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
 
-          <div className="mt-1 text-xs text-gray-500">
-            {formatDateForDisplay(validityDate)}
+            <label
+              title="Select Validity Date"
+              className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-gray-50 text-lg"
+            >
+              📅
+              <input
+                type="date"
+                value={formatDateForInput(validityDate)}
+                onChange={(event) =>
+                  handleValidityDatePicker(event.target.value)
+                }
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                aria-label="Select Validity Date"
+              />
+            </label>
           </div>
         </div>
       </div>

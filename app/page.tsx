@@ -44,6 +44,8 @@ import ExportProformaInvoiceMaster from "./international/export/proforma/ExportP
 import ExportOrderMaster from "./international/export/order/ExportOrderMaster";
 import ExportPurchaseMaster from "./international/export/purchase/ExportPurchaseMaster";
 import InternationalExportStockMaster from "./international/export/stock/InternationalExportStockMaster";
+import ExportCommercialInvoiceMaster from "./international/export/invoice/ExportCommercialInvoiceMaster";
+import ExportReservationMaster from "./international/export/reservation/ExportReservationMaster";
 
 /* =========================================================
    MAIN HOME
@@ -406,6 +408,43 @@ case "export-stock":
       <InternationalExportStockMaster />
     </InternationalModuleWrapper>
   );
+
+/* ---------------------------------------------------
+   INTERNATIONAL EXPORT COMMERCIAL INVOICE
+--------------------------------------------------- */
+
+      case "export-reservation":
+        return (
+          <InternationalModuleWrapper
+            title="🌍 Export Stock Reservation"
+            onBack={() =>
+              setActivePage(
+                "international-export"
+              )
+            }
+          >
+            <ExportReservationMaster />
+          </InternationalModuleWrapper>
+        );
+
+      /* ---------------------------------------------------
+         INTERNATIONAL EXPORT COMMERCIAL INVOICE
+      --------------------------------------------------- */
+
+      case "export-invoice":
+        return (
+          <InternationalModuleWrapper
+            title="🌍 Export Commercial Invoice"
+            onBack={() =>
+              setActivePage(
+                "international-export"
+              )
+            }
+          >
+            <ExportCommercialInvoiceMaster />
+          </InternationalModuleWrapper>
+        );
+
       /* ---------------------------------------------------
          INTERNATIONAL EXPORT ORDER
       --------------------------------------------------- */
@@ -1428,7 +1467,11 @@ case "export-stock":
               activePage ===
                 "export-purchase" ||
               activePage ===
-                "export-stock"
+                "export-stock" ||
+              activePage ===
+                "export-reservation" ||
+              activePage ===
+                "export-invoice"
                 ? activeMenu
                 : menuItem
             }
@@ -1646,6 +1689,8 @@ function InternationalExportWorkspace({
       | "export-order"
       | "export-purchase"
       | "export-stock"
+      | "export-reservation"
+      | "export-invoice"
   ) => void;
 }) {
   const [exportData, setExportData] =
@@ -1656,6 +1701,8 @@ function InternationalExportWorkspace({
       proformas: 0,
       orders: 0,
       purchases: 0,
+      reservations: 0,
+      invoices: 0,
     });
 
   useEffect(() => {
@@ -1710,6 +1757,16 @@ function InternationalExportWorkspace({
       purchases:
         getArrayLength(
           "uk-exim-export-purchases"
+        ),
+
+      reservations:
+        getArrayLength(
+          "uk-exim-export-reservations"
+        ),
+
+      invoices:
+        getArrayLength(
+          "uk-exim-export-commercial-invoices"
         ),
     });
   }, []);
@@ -1768,7 +1825,7 @@ function InternationalExportWorkspace({
         style={{
           display: "grid",
           gridTemplateColumns:
-            "repeat(6, minmax(0, 1fr))",
+            "repeat(8, minmax(0, 1fr))",
           gap: "8px",
           marginBottom: "12px",
         }}
@@ -1838,6 +1895,28 @@ function InternationalExportWorkspace({
             )
           }
         />
+
+        <ExportWorkspaceCard
+          title="Reservations"
+          value={exportData.reservations}
+          icon="🔒"
+          onClick={() =>
+            onOpen(
+              "export-reservation"
+            )
+          }
+        />
+
+        <ExportWorkspaceCard
+          title="Commercial Invoices"
+          value={exportData.invoices}
+          icon="🧾"
+          onClick={() =>
+            onOpen(
+              "export-invoice"
+            )
+          }
+        />
       </div>
 
       {/* QUICK ACTIONS */}
@@ -1870,7 +1949,7 @@ function InternationalExportWorkspace({
           style={{
             display: "grid",
             gridTemplateColumns:
-              "repeat(7, minmax(0, 1fr))",
+              "repeat(9, minmax(0, 1fr))",
             gap: "8px",
           }}
         >
@@ -2113,6 +2192,45 @@ function InternationalExportWorkspace({
             style={actionButton}
             onClick={() =>
               onOpen(
+                "export-reservation"
+              )
+            }
+          >
+            <div
+              style={{
+                fontSize: "18px",
+              }}
+            >
+              🔒
+            </div>
+
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#374151",
+              }}
+            >
+              Stock Reservation
+            </div>
+
+            <div
+              style={{
+                marginTop: "2px",
+                fontSize: "9px",
+                color: "#6b7280",
+              }}
+            >
+              Reserve stock for export order
+            </div>
+          </button>
+
+          <button
+            type="button"
+            style={actionButton}
+            onClick={() =>
+              onOpen(
                 "export-stock"
               )
             }
@@ -2144,6 +2262,45 @@ function InternationalExportWorkspace({
               }}
             >
               View international stock
+            </div>
+          </button>
+
+          <button
+            type="button"
+            style={actionButton}
+            onClick={() =>
+              onOpen(
+                "export-invoice"
+              )
+            }
+          >
+            <div
+              style={{
+                fontSize: "18px",
+              }}
+            >
+              🧾
+            </div>
+
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#374151",
+              }}
+            >
+              Commercial Invoice
+            </div>
+
+            <div
+              style={{
+                marginTop: "2px",
+                fontSize: "9px",
+                color: "#6b7280",
+              }}
+            >
+              Final export invoice
             </div>
           </button>
         </div>
@@ -2233,7 +2390,11 @@ function InternationalExportWorkspace({
           <WorkflowStep
             number="5"
             title="Reservation"
-            disabled
+            onClick={() =>
+              onOpen(
+                "export-reservation"
+              )
+            }
           />
 
           <WorkflowArrow />
@@ -2257,7 +2418,11 @@ function InternationalExportWorkspace({
           <WorkflowStep
             number="8"
             title="Invoice"
-            disabled
+            onClick={() =>
+              onOpen(
+                "export-invoice"
+              )
+            }
           />
 
           <WorkflowArrow />
@@ -2285,10 +2450,9 @@ function InternationalExportWorkspace({
           <strong>
             Current Stage:
           </strong>{" "}
-          Export Order completed.
-          Stock Reservation will be
-          developed separately after
-          this Workspace is tested.
+          Reservation module completed and
+          integrated. Packing and Shipment will
+          be developed next in sequence.
         </div>
       </div>
 

@@ -42,6 +42,20 @@ export default function InternationalExportStockMaster() {
   const handleEditStock = (
     item: InternationalExportStock
   ) => {
+    /*
+     * Purchase-derived stock is controlled by
+     * Export Purchase received quantity.
+     *
+     * It must never be edited directly from
+     * the Stock screen.
+     */
+    if (item.source === "Purchase") {
+      window.alert(
+        "Purchase Stock cannot be edited here.\n\nPlease edit the related Export Purchase and change its Received Qty."
+      );
+      return;
+    }
+
     setEditingStock(item);
     setShowForm(true);
   };
@@ -49,6 +63,20 @@ export default function InternationalExportStockMaster() {
   const handleDeleteStock = (
     item: InternationalExportStock
   ) => {
+    /*
+     * Purchase-derived stock must be deleted only
+     * by deleting/cancelling the related Export Purchase.
+     *
+     * This prevents Stock from becoming different
+     * from the Purchase transaction.
+     */
+    if (item.source === "Purchase") {
+      window.alert(
+        "Purchase Stock cannot be deleted here.\n\nPlease cancel or delete the related Export Purchase."
+      );
+      return;
+    }
+
     const confirmed = window.confirm(
       `Delete International Export Stock?\n\nProduct: ${item.productName}\nLot / Batch: ${item.lotBatchNo}\nAvailable: ${formatQty(item.availableQty)} ${item.unit}`
     );
@@ -81,6 +109,22 @@ export default function InternationalExportStockMaster() {
   const handleSaveStock = (
     savedStock: InternationalExportStock
   ) => {
+    /*
+     * Extra safety:
+     * Purchase-derived stock must never be
+     * manually saved/modified through this form.
+     *
+     * Opening Stock remains editable.
+     */
+    if (
+      savedStock.source === "Purchase"
+    ) {
+      window.alert(
+        "Purchase Stock is controlled by Export Purchase. Please edit the related Export Purchase instead."
+      );
+      return;
+    }
+
     const currentStock =
       loadInternationalExportStock();
 
@@ -446,193 +490,223 @@ export default function InternationalExportStockMaster() {
 
               <tbody>
                 {stock.map(
-                  (item) => (
-                    <tr
-                      key={item.id}
-                      style={{
-                        borderTop:
-                          "1px solid #e5e7eb",
-                      }}
-                    >
-                      {/* Product */}
-                      <td
-                        style={tdStyle}
+                  (item) => {
+                    const isPurchaseStock =
+                      item.source ===
+                      "Purchase";
+
+                    return (
+                      <tr
+                        key={item.id}
+                        style={{
+                          borderTop:
+                            "1px solid #e5e7eb",
+                        }}
                       >
-                        <div
-                          style={{
-                            fontWeight: 800,
-                            color: "#374151",
-                          }}
+                        {/* Product */}
+                        <td
+                          style={tdStyle}
                         >
-                          {
-                            item.productName
-                          }
-                        </div>
+                          <div
+                            style={{
+                              fontWeight: 800,
+                              color: "#374151",
+                            }}
+                          >
+                            {
+                              item.productName
+                            }
+                          </div>
 
-                        <div
-                          style={{
-                            marginTop: "2px",
-                            fontSize: "9px",
-                            color: "#6b7280",
-                          }}
+                          <div
+                            style={{
+                              marginTop: "2px",
+                              fontSize: "9px",
+                              color: "#6b7280",
+                            }}
+                          >
+                            {
+                              item.productCode
+                            }
+                          </div>
+                        </td>
+
+                        {/* Lot */}
+                        <td
+                          style={tdStyle}
                         >
-                          {
-                            item.productCode
-                          }
-                        </div>
-                      </td>
+                          {item.lotBatchNo ||
+                            "—"}
+                        </td>
 
-                      {/* Lot */}
-                      <td
-                        style={tdStyle}
-                      >
-                        {item.lotBatchNo ||
-                          "—"}
-                      </td>
+                        {/* Source */}
+                        <td
+                          style={tdStyle}
+                        >
+                          <span
+                            style={{
+                              display:
+                                "inline-block",
+                              padding:
+                                "3px 7px",
+                              borderRadius:
+                                "999px",
+                              background:
+                                item.source ===
+                                "Purchase"
+                                  ? "#eff6ff"
+                                  : "#f9fafb",
+                              color:
+                                item.source ===
+                                "Purchase"
+                                  ? "#175cd3"
+                                  : "#475467",
+                              fontSize: "9px",
+                              fontWeight: 800,
+                            }}
+                          >
+                            {item.source ||
+                              "Opening Stock"}
+                          </span>
+                        </td>
 
-                      {/* Source */}
-                      <td
-                        style={tdStyle}
-                      >
-                        <span
+                        {/* Purchase Reference */}
+                        <td
                           style={{
-                            display:
-                              "inline-block",
-                            padding:
-                              "3px 7px",
-                            borderRadius:
-                              "999px",
-                            background:
-                              item.source ===
-                              "Purchase"
-                                ? "#eff6ff"
-                                : "#f9fafb",
+                            ...tdStyle,
                             color:
-                              item.source ===
-                              "Purchase"
+                              item.purchaseReference
                                 ? "#175cd3"
-                                : "#475467",
-                            fontSize: "9px",
-                            fontWeight: 800,
+                                : "#98a2b3",
                           }}
                         >
-                          {item.source ||
-                            "Opening Stock"}
-                        </span>
-                      </td>
+                          {item.purchaseReference ||
+                            "—"}
+                        </td>
 
-                      {/* Purchase Reference */}
-                      <td
-                        style={{
-                          ...tdStyle,
-                          color:
-                            item.purchaseReference
-                              ? "#175cd3"
-                              : "#98a2b3",
-                        }}
-                      >
-                        {item.purchaseReference ||
-                          "—"}
-                      </td>
-
-                      {/* Available */}
-                      <td
-                        style={{
-                          ...tdStyle,
-                          fontWeight: 800,
-                          color: "#15803d",
-                        }}
-                      >
-                        {formatQty(
-                          item.availableQty
-                        )}
-                      </td>
-
-                      {/* Reserved */}
-                      <td
-                        style={{
-                          ...tdStyle,
-                          fontWeight: 800,
-                          color: "#b45309",
-                        }}
-                      >
-                        {formatQty(
-                          item.reservedQty
-                        )}
-                      </td>
-
-                      {/* Packed */}
-                      <td
-                        style={tdStyle}
-                      >
-                        {formatQty(
-                          item.packedQty
-                        )}
-                      </td>
-
-                      {/* Loaded */}
-                      <td
-                        style={tdStyle}
-                      >
-                        {formatQty(
-                          item.loadedQty
-                        )}
-                      </td>
-
-                      {/* Shipped */}
-                      <td
-                        style={tdStyle}
-                      >
-                        {formatQty(
-                          item.shippedQty
-                        )}
-                      </td>
-
-                      {/* Unit */}
-                      <td
-                        style={tdStyle}
-                      >
-                        {item.unit}
-                      </td>
-
-                      {/* Actions */}
-                      <td
-                        style={{
-                          ...tdStyle,
-                          whiteSpace:
-                            "nowrap",
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleEditStock(
-                              item
-                            )
-                          }
-                          style={
-                            editButtonStyle
-                          }
+                        {/* Available */}
+                        <td
+                          style={{
+                            ...tdStyle,
+                            fontWeight: 800,
+                            color: "#15803d",
+                          }}
                         >
-                          ✏️ Edit
-                        </button>
+                          {formatQty(
+                            item.availableQty
+                          )}
+                        </td>
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleDeleteStock(
-                              item
-                            )
-                          }
-                          style={
-                            deleteButtonStyle
-                          }
+                        {/* Reserved */}
+                        <td
+                          style={{
+                            ...tdStyle,
+                            fontWeight: 800,
+                            color: "#b45309",
+                          }}
                         >
-                          🗑️ Delete
-                        </button>
-                      </td>
-                    </tr>
-                  )
+                          {formatQty(
+                            item.reservedQty
+                          )}
+                        </td>
+
+                        {/* Packed */}
+                        <td
+                          style={tdStyle}
+                        >
+                          {formatQty(
+                            item.packedQty
+                          )}
+                        </td>
+
+                        {/* Loaded */}
+                        <td
+                          style={tdStyle}
+                        >
+                          {formatQty(
+                            item.loadedQty
+                          )}
+                        </td>
+
+                        {/* Shipped */}
+                        <td
+                          style={tdStyle}
+                        >
+                          {formatQty(
+                            item.shippedQty
+                          )}
+                        </td>
+
+                        {/* Unit */}
+                        <td
+                          style={tdStyle}
+                        >
+                          {item.unit}
+                        </td>
+
+                        {/* Actions */}
+                        <td
+                          style={{
+                            ...tdStyle,
+                            whiteSpace:
+                              "nowrap",
+                          }}
+                        >
+                          {isPurchaseStock ? (
+                            <span
+                              style={{
+                                display:
+                                  "inline-block",
+                                padding:
+                                  "4px 7px",
+                                borderRadius:
+                                  "5px",
+                                background:
+                                  "#f3f4f6",
+                                color:
+                                  "#6b7280",
+                                fontSize: "9px",
+                                fontWeight: 700,
+                              }}
+                              title="Edit or delete this stock from the related Export Purchase."
+                            >
+                              🔒 Via Purchase
+                            </span>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleEditStock(
+                                    item
+                                  )
+                                }
+                                style={
+                                  editButtonStyle
+                                }
+                              >
+                                ✏️ Edit
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDeleteStock(
+                                    item
+                                  )
+                                }
+                                style={
+                                  deleteButtonStyle
+                                }
+                              >
+                                🗑️ Delete
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  }
                 )}
               </tbody>
             </table>
@@ -660,11 +734,11 @@ export default function InternationalExportStockMaster() {
         <strong>
           Stock Safety:
         </strong>{" "}
-        This International Export Stock is
-        completely separate from Domestic
-        Stock. Export Order creation does not
-        reduce this stock. Stock Reservation
-        will be handled in the next stage.
+        Purchase-derived stock is controlled by
+        Export Purchase Received Qty. Edit or
+        delete the related Export Purchase to
+        change this stock. Opening Stock remains
+        independently editable.
       </div>
     </div>
   );

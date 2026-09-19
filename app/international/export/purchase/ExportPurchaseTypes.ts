@@ -12,7 +12,20 @@ export type ExportPurchaseItem = {
 
   packingType: string;
   packageQty: number;
+
+  /**
+   * Net weight of one package.
+   *
+   * Example:
+   * 3 Bags × 25 KG = 75 KG
+   */
+  netWeightPerPackage?: number;
+
+  /**
+   * Total net weight of the item.
+   */
   netWeight: number;
+
   grossWeight: number;
   cbm: number;
 

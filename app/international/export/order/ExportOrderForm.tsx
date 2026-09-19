@@ -108,6 +108,157 @@ function formatDateForInput(value: string): string {
   return date.toISOString().slice(0, 10);
 }
 
+
+function formatDateForDisplay(value: string): string {
+  if (!value) return "";
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}`;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+}
+
+function formatDateForStorage(value: string): string {
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+  if (!match) return "";
+
+  const [, day, month, year] = match;
+  return `${year}-${month}-${day}`;
+}
+
+function isValidDateDisplay(value: string): boolean {
+  const match = value.match(
+    /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/(\d{4})$/
+  );
+
+  if (!match) return false;
+
+  const [, dayText, monthText, yearText] = match;
+  const day = Number(dayText);
+  const month = Number(monthText);
+  const year = Number(yearText);
+
+  const date = new Date(year, month - 1, day);
+
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+}
+
+type EoDateFieldProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+};
+
+function EoDateField({
+  label,
+  value,
+  onChange,
+}: EoDateFieldProps) {
+  const [displayValue, setDisplayValue] = useState(() =>
+    formatDateForDisplay(value)
+  );
+
+  const pickerRef = React.useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setDisplayValue(formatDateForDisplay(value));
+  }, [value]);
+
+  const handleDisplayChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const nextValue = event.target.value;
+
+    setDisplayValue(nextValue);
+
+    if (!nextValue) {
+      onChange("");
+      return;
+    }
+
+    if (isValidDateDisplay(nextValue)) {
+      onChange(formatDateForStorage(nextValue));
+    }
+  };
+
+  const handlePickerChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const storageValue = event.target.value;
+
+    onChange(storageValue);
+    setDisplayValue(formatDateForDisplay(storageValue));
+  };
+
+  const openPicker = () => {
+    const picker = pickerRef.current;
+
+    if (!picker) return;
+
+    if (typeof picker.showPicker === "function") {
+      picker.showPicker();
+    } else {
+      picker.click();
+    }
+  };
+
+  return (
+    <div className="eo-date-field">
+      <label className="eo-label">{label}</label>
+
+      <div className="eo-date-input-wrap">
+        <input
+          className="eo-input eo-date-text"
+          value={displayValue}
+          onChange={handleDisplayChange}
+          placeholder="DD/MM/YYYY"
+          inputMode="numeric"
+          maxLength={10}
+          aria-label={label}
+        />
+
+        <button
+          type="button"
+          className="eo-date-picker-btn"
+          onClick={openPicker}
+          aria-label={`Select ${label}`}
+          title={`Select ${label}`}
+        >
+          📅
+        </button>
+
+        <input
+          ref={pickerRef}
+          className="eo-native-date-picker"
+          type="date"
+          value={formatDateForInput(value)}
+          onChange={handlePickerChange}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+      </div>
+    </div>
+  );
+}
+
 function createEmptyItem(): ExportOrderItem {
   return {
     productCode: "",
@@ -1141,6 +1292,50 @@ export default function ExportOrderForm({
           border-color: #6b7280;
         }
 
+        .eo-date-field {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+
+        .eo-date-input-wrap {
+          position: relative;
+          width: 100%;
+        }
+
+        .eo-date-text {
+          padding-right: 34px;
+        }
+
+        .eo-date-picker-btn {
+          position: absolute;
+          top: 50%;
+          right: 3px;
+          transform: translateY(-50%);
+          width: 27px;
+          height: 27px;
+          border: 0;
+          border-radius: 3px;
+          background: #f3f4f6;
+          cursor: pointer;
+          font-size: 13px;
+          line-height: 27px;
+          padding: 0;
+        }
+
+        .eo-date-picker-btn:hover {
+          background: #e5e7eb;
+        }
+
+        .eo-native-date-picker {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          opacity: 0;
+          pointer-events: none;
+          overflow: hidden;
+        }
+
         .eo-textarea {
           min-height: 42px;
           resize: vertical;
@@ -1355,16 +1550,13 @@ export default function ExportOrderForm({
                 Export Order Date
               </label>
 
-              <input
-                className="eo-input"
-                type="date"
-                value={
-                  form.exportOrderDate
-                }
-                onChange={(e) =>
+              <EoDateField
+                label="Export Order Date"
+                value={form.exportOrderDate}
+                onChange={(value) =>
                   updateField(
                     "exportOrderDate",
-                    e.target.value
+                    value
                   )
                 }
               />
@@ -2049,16 +2241,13 @@ export default function ExportOrderForm({
                 Buyer PO Date
               </label>
 
-              <input
-                className="eo-input"
-                type="date"
-                value={
-                  form.buyerPODate
-                }
-                onChange={(e) =>
+              <EoDateField
+                label="Buyer PO Date"
+                value={form.buyerPODate}
+                onChange={(value) =>
                   updateField(
                     "buyerPODate",
-                    e.target.value
+                    value
                   )
                 }
               />
@@ -2086,14 +2275,13 @@ export default function ExportOrderForm({
                 LC Date
               </label>
 
-              <input
-                className="eo-input"
-                type="date"
+              <EoDateField
+                label="LC Date"
                 value={form.lcDate}
-                onChange={(e) =>
+                onChange={(value) =>
                   updateField(
                     "lcDate",
-                    e.target.value
+                    value
                   )
                 }
               />
@@ -2333,16 +2521,13 @@ export default function ExportOrderForm({
                 Estimated Shipment Date
               </label>
 
-              <input
-                className="eo-input"
-                type="date"
-                value={
-                  form.estimatedShipmentDate
-                }
-                onChange={(e) =>
+              <EoDateField
+                label="Estimated Shipment Date"
+                value={form.estimatedShipmentDate}
+                onChange={(value) =>
                   updateField(
                     "estimatedShipmentDate",
-                    e.target.value
+                    value
                   )
                 }
               />
@@ -2462,16 +2647,13 @@ export default function ExportOrderForm({
                 Shipment Date
               </label>
 
-              <input
-                className="eo-input"
-                type="date"
-                value={
-                  form.estimatedShipmentDate
-                }
-                onChange={(e) =>
+              <EoDateField
+                label="Shipment Date"
+                value={form.estimatedShipmentDate}
+                onChange={(value) =>
                   updateField(
                     "estimatedShipmentDate",
-                    e.target.value
+                    value
                   )
                 }
               />

@@ -109,6 +109,157 @@ function formatDateForInput(value: string): string {
   return date.toISOString().slice(0, 10);
 }
 
+
+function formatDateForDisplay(value: string): string {
+  if (!value) return "";
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}`;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+}
+
+function formatDateForStorage(value: string): string {
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+  if (!match) return "";
+
+  const [, day, month, year] = match;
+  return `${year}-${month}-${day}`;
+}
+
+function isValidDateDisplay(value: string): boolean {
+  const match = value.match(
+    /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/(\d{4})$/
+  );
+
+  if (!match) return false;
+
+  const [, dayText, monthText, yearText] = match;
+  const day = Number(dayText);
+  const month = Number(monthText);
+  const year = Number(yearText);
+
+  const date = new Date(year, month - 1, day);
+
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+}
+
+type PiDateFieldProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+};
+
+function PiDateField({
+  label,
+  value,
+  onChange,
+}: PiDateFieldProps) {
+  const [displayValue, setDisplayValue] = useState(() =>
+    formatDateForDisplay(value)
+  );
+
+  const pickerRef = React.useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setDisplayValue(formatDateForDisplay(value));
+  }, [value]);
+
+  const handleDisplayChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const nextValue = event.target.value;
+
+    setDisplayValue(nextValue);
+
+    if (!nextValue) {
+      onChange("");
+      return;
+    }
+
+    if (isValidDateDisplay(nextValue)) {
+      onChange(formatDateForStorage(nextValue));
+    }
+  };
+
+  const handlePickerChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const storageValue = event.target.value;
+
+    onChange(storageValue);
+    setDisplayValue(formatDateForDisplay(storageValue));
+  };
+
+  const openPicker = () => {
+    const picker = pickerRef.current;
+
+    if (!picker) return;
+
+    if (typeof picker.showPicker === "function") {
+      picker.showPicker();
+    } else {
+      picker.click();
+    }
+  };
+
+  return (
+    <div className="pi-date-field">
+      <label className="pi-label">{label}</label>
+
+      <div className="pi-date-input-wrap">
+        <input
+          className="pi-input pi-date-text"
+          value={displayValue}
+          onChange={handleDisplayChange}
+          placeholder="DD/MM/YYYY"
+          inputMode="numeric"
+          maxLength={10}
+          aria-label={label}
+        />
+
+        <button
+          type="button"
+          className="pi-date-picker-btn"
+          onClick={openPicker}
+          aria-label={`Select ${label}`}
+          title={`Select ${label}`}
+        >
+          📅
+        </button>
+
+        <input
+          ref={pickerRef}
+          className="pi-native-date-picker"
+          type="date"
+          value={formatDateForInput(value)}
+          onChange={handlePickerChange}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+      </div>
+    </div>
+  );
+}
+
 function createEmptyItem(): ExportProformaInvoiceItem {
   return {
     productCode: "",
@@ -871,6 +1022,50 @@ export default function ExportProformaInvoiceForm({
           border-color: #6b7280;
         }
 
+        .pi-date-field {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .pi-date-input-wrap {
+          position: relative;
+          width: 100%;
+        }
+
+        .pi-date-text {
+          padding-right: 34px;
+        }
+
+        .pi-date-picker-btn {
+          position: absolute;
+          top: 50%;
+          right: 3px;
+          transform: translateY(-50%);
+          width: 27px;
+          height: 25px;
+          border: 0;
+          border-radius: 3px;
+          background: #f3f4f6;
+          cursor: pointer;
+          font-size: 13px;
+          line-height: 25px;
+          padding: 0;
+        }
+
+        .pi-date-picker-btn:hover {
+          background: #e5e7eb;
+        }
+
+        .pi-native-date-picker {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          opacity: 0;
+          pointer-events: none;
+          overflow: hidden;
+        }
+
         .pi-input-readonly {
           background: #f3f4f6;
         }
@@ -1096,14 +1291,13 @@ export default function ExportProformaInvoiceForm({
                   Proforma Invoice Date
                 </label>
 
-                <input
-                  className="pi-input"
-                  type="date"
+                <PiDateField
+                  label="Proforma Invoice Date"
                   value={form.proformaInvoiceDate}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     updateField(
                       "proformaInvoiceDate",
-                      e.target.value
+                      value
                     )
                   }
                 />
@@ -1222,14 +1416,13 @@ export default function ExportProformaInvoiceForm({
                   Valid Until
                 </label>
 
-                <input
-                  className="pi-input"
-                  type="date"
+                <PiDateField
+                  label="Valid Until"
                   value={form.validityDate}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     updateField(
                       "validityDate",
-                      e.target.value
+                      value
                     )
                   }
                 />
@@ -1789,14 +1982,13 @@ export default function ExportProformaInvoiceForm({
                 Buyer PO Date
               </label>
 
-              <input
-                className="pi-input"
-                type="date"
+              <PiDateField
+                label="Buyer PO Date"
                 value={form.buyerPODate}
-                onChange={(e) =>
+                onChange={(value) =>
                   updateField(
                     "buyerPODate",
-                    e.target.value
+                    value
                   )
                 }
               />
@@ -1824,14 +2016,13 @@ export default function ExportProformaInvoiceForm({
                 LC Date
               </label>
 
-              <input
-                className="pi-input"
-                type="date"
+              <PiDateField
+                label="LC Date"
                 value={form.lcDate}
-                onChange={(e) =>
+                onChange={(value) =>
                   updateField(
                     "lcDate",
-                    e.target.value
+                    value
                   )
                 }
               />
@@ -2002,14 +2193,13 @@ export default function ExportProformaInvoiceForm({
                 Estimated Shipment Date
               </label>
 
-              <input
-                className="pi-input"
-                type="date"
+              <PiDateField
+                label="Estimated Shipment Date"
                 value={form.estimatedShipmentDate}
-                onChange={(e) =>
+                onChange={(value) =>
                   updateField(
                     "estimatedShipmentDate",
-                    e.target.value
+                    value
                   )
                 }
               />
@@ -2204,14 +2394,13 @@ export default function ExportProformaInvoiceForm({
                 BL / AWB Date
               </label>
 
-              <input
-                className="pi-input"
-                type="date"
+              <PiDateField
+                label="BL / AWB Date"
                 value={form.blAwbDate}
-                onChange={(e) =>
+                onChange={(value) =>
                   updateField(
                     "blAwbDate",
-                    e.target.value
+                    value
                   )
                 }
               />
