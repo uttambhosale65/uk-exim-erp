@@ -46,6 +46,7 @@ import ExportPurchaseMaster from "./international/export/purchase/ExportPurchase
 import InternationalExportStockMaster from "./international/export/stock/InternationalExportStockMaster";
 import ExportCommercialInvoiceMaster from "./international/export/invoice/ExportCommercialInvoiceMaster";
 import ExportReservationMaster from "./international/export/reservation/ExportReservationMaster";
+import PackingMaster from "./international/export/packing/PackingMaster";
 
 /* =========================================================
    MAIN HOME
@@ -56,6 +57,9 @@ export default function Home() {
   const [activePage, setActivePage] =
     useState("dashboard");
 
+  const [showPendingPayments, setShowPendingPayments] =
+    useState(false);
+
   const [dashboard, setDashboard] = useState({
     products: 0,
     customers: 0,
@@ -63,6 +67,7 @@ export default function Home() {
     stock: 0,
     sales: 0,
     purchase: 0,
+    pendingPayment: 0,
   });
 
   const [monthlyReports, setMonthlyReports] =
@@ -152,6 +157,19 @@ export default function Home() {
           ),
         0
       ),
+
+      pendingPayment: sales
+        .filter(
+          (sale) => sale.status === "Pending"
+        )
+        .reduce(
+          (total, sale) =>
+            total +
+            Number(
+              sale.grandTotal ?? 0
+            ),
+          0
+        ),
     });
 
     /* -----------------------------------------------------
@@ -428,6 +446,24 @@ case "export-stock":
         );
 
       /* ---------------------------------------------------
+         INTERNATIONAL EXPORT PACKING
+      --------------------------------------------------- */
+
+      case "export-packing":
+        return (
+          <InternationalModuleWrapper
+            title="🌍 Export Packing"
+            onBack={() =>
+              setActivePage(
+                "international-export"
+              )
+            }
+          >
+            <PackingMaster />
+          </InternationalModuleWrapper>
+        );
+
+      /* ---------------------------------------------------
          INTERNATIONAL EXPORT COMMERCIAL INVOICE
       --------------------------------------------------- */
 
@@ -511,7 +547,7 @@ case "export-stock":
               style={{
                 display: "grid",
                 gridTemplateColumns:
-                  "repeat(6, minmax(0, 1fr))",
+                  "repeat(7, minmax(0, 1fr))",
                 gap: "8px",
                 width: "100%",
               }}
@@ -600,6 +636,23 @@ case "export-stock":
                 icon="🛒"
                 color="#1d4ed8"
                 cardStyle={card}
+              />
+
+              {/* PENDING PAYMENT */}
+
+              <DashboardMainCard
+                title="Pending Payment"
+                value={`₹${dashboard.pendingPayment.toLocaleString(
+                  "en-IN",
+                  {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }
+                )}`}
+                icon="⏳"
+                color="#b45309"
+                cardStyle={card}
+                onClick={() => setShowPendingPayments(true)}
               />
             </div>
 
@@ -1471,6 +1524,8 @@ case "export-stock":
               activePage ===
                 "export-reservation" ||
               activePage ===
+                "export-packing" ||
+              activePage ===
                 "export-invoice"
                 ? activeMenu
                 : menuItem
@@ -1635,6 +1690,222 @@ case "export-stock":
       </div>
 
       {/* =====================================================
+          PENDING PAYMENT LIST
+      ===================================================== */}
+
+      {showPendingPayments && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            zIndex: 2000,
+            boxSizing: "border-box",
+          }}
+          onClick={() => setShowPendingPayments(false)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "1000px",
+              maxHeight: "85vh",
+              overflowY: "auto",
+              background: "#ffffff",
+              borderRadius: "10px",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.20)",
+              padding: "16px",
+              boxSizing: "border-box",
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "10px",
+                marginBottom: "12px",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    color: "#92400e",
+                    fontSize: "18px",
+                    fontWeight: 900,
+                  }}
+                >
+                  ⏳ Pending Payment List
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "3px",
+                    color: "#6b7280",
+                    fontSize: "10px",
+                  }}
+                >
+                  Sales with payment status marked as Pending
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPendingPayments(false)}
+                style={{
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "7px 10px",
+                  background: "#374151",
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  fontSize: "10px",
+                  fontWeight: 800,
+                }}
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {(() => {
+              const pendingSales = loadSales().filter(
+                (sale) => sale.status === "Pending"
+              );
+
+              if (pendingSales.length === 0) {
+                return (
+                  <div
+                    style={{
+                      padding: "25px",
+                      textAlign: "center",
+                      color: "#6b7280",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "8px",
+                      fontSize: "11px",
+                    }}
+                  >
+                    No pending payment sales found.
+                  </div>
+                );
+              }
+
+              return (
+                <>
+                  <div
+                    style={{
+                      marginBottom: "10px",
+                      padding: "9px 11px",
+                      borderRadius: "7px",
+                      background: "#fffbeb",
+                      border: "1px solid #fde68a",
+                      color: "#92400e",
+                      fontSize: "11px",
+                      fontWeight: 800,
+                    }}
+                  >
+                    Total Pending Payment: ₹
+                    {pendingSales
+                      .reduce(
+                        (total, sale) =>
+                          total + Number(sale.grandTotal ?? 0),
+                        0
+                      )
+                      .toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                  </div>
+
+                  <div
+                    style={{
+                      overflowX: "auto",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "8px",
+                    }}
+                  >
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        minWidth: "700px",
+                        fontSize: "10px",
+                      }}
+                    >
+                      <thead>
+                        <tr
+                          style={{
+                            background: "#f3f4f6",
+                            color: "#374151",
+                          }}
+                        >
+                          <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
+                            Sales No.
+                          </th>
+                          <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
+                            Date
+                          </th>
+                          <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
+                            Customer
+                          </th>
+                          <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
+                            Payment Mode
+                          </th>
+                          <th style={{ padding: "8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>
+                            Pending Amount
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {pendingSales.map((sale) => (
+                          <tr key={sale.id}>
+                            <td style={{ padding: "8px", borderBottom: "1px solid #f1f5f9", fontWeight: 700 }}>
+                              {sale.salesNo}
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid #f1f5f9" }}>
+                              {sale.salesDate}
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid #f1f5f9" }}>
+                              {sale.customerName || "—"}
+                            </td>
+                            <td style={{ padding: "8px", borderBottom: "1px solid #f1f5f9" }}>
+                              {sale.paymentMode || "—"}
+                            </td>
+                            <td
+                              style={{
+                                padding: "8px",
+                                borderBottom: "1px solid #f1f5f9",
+                                textAlign: "right",
+                                fontWeight: 900,
+                                color: "#b45309",
+                              }}
+                            >
+                              ₹
+                              {Number(sale.grandTotal ?? 0).toLocaleString(
+                                "en-IN",
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                }
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
           PRINT STYLE
       ===================================================== */}
 
@@ -1690,6 +1961,7 @@ function InternationalExportWorkspace({
       | "export-purchase"
       | "export-stock"
       | "export-reservation"
+      | "export-packing"
       | "export-invoice"
   ) => void;
 }) {
@@ -1702,6 +1974,7 @@ function InternationalExportWorkspace({
       orders: 0,
       purchases: 0,
       reservations: 0,
+      packings: 0,
       invoices: 0,
     });
 
@@ -1762,6 +2035,11 @@ function InternationalExportWorkspace({
       reservations:
         getArrayLength(
           "uk-exim-export-reservations"
+        ),
+
+      packings:
+        getArrayLength(
+          "uk-exim-export-packings"
         ),
 
       invoices:
@@ -1908,6 +2186,17 @@ function InternationalExportWorkspace({
         />
 
         <ExportWorkspaceCard
+          title="Packing"
+          value={exportData.packings}
+          icon="📦"
+          onClick={() =>
+            onOpen(
+              "export-packing"
+            )
+          }
+        />
+
+        <ExportWorkspaceCard
           title="Commercial Invoices"
           value={exportData.invoices}
           icon="🧾"
@@ -1949,7 +2238,7 @@ function InternationalExportWorkspace({
           style={{
             display: "grid",
             gridTemplateColumns:
-              "repeat(9, minmax(0, 1fr))",
+              "repeat(10, minmax(0, 1fr))",
             gap: "8px",
           }}
         >
@@ -2231,6 +2520,45 @@ function InternationalExportWorkspace({
             style={actionButton}
             onClick={() =>
               onOpen(
+                "export-packing"
+              )
+            }
+          >
+            <div
+              style={{
+                fontSize: "18px",
+              }}
+            >
+              📦
+            </div>
+
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#374151",
+              }}
+            >
+              Export Packing
+            </div>
+
+            <div
+              style={{
+                marginTop: "2px",
+                fontSize: "9px",
+                color: "#6b7280",
+              }}
+            >
+              Record actual packing
+            </div>
+          </button>
+
+          <button
+            type="button"
+            style={actionButton}
+            onClick={() =>
+              onOpen(
                 "export-stock"
               )
             }
@@ -2402,7 +2730,11 @@ function InternationalExportWorkspace({
           <WorkflowStep
             number="6"
             title="Packing"
-            disabled
+            onClick={() =>
+              onOpen(
+                "export-packing"
+              )
+            }
           />
 
           <WorkflowArrow />
@@ -2450,9 +2782,9 @@ function InternationalExportWorkspace({
           <strong>
             Current Stage:
           </strong>{" "}
-          Reservation module completed and
-          integrated. Packing and Shipment will
-          be developed next in sequence.
+          Packing module completed and
+          integrated. Shipment will be
+          developed next in sequence.
         </div>
       </div>
 
@@ -2738,6 +3070,7 @@ function DashboardMainCard({
   color,
   cardStyle,
   suffix,
+  onClick,
 }: {
   title: string;
   value: string;
@@ -2745,15 +3078,18 @@ function DashboardMainCard({
   color: string;
   cardStyle: React.CSSProperties;
   suffix?: string;
+  onClick?: () => void;
 }) {
   return (
     <div
+      onClick={onClick}
       style={{
         ...cardStyle,
         display: "flex",
         flexDirection: "column",
         justifyContent:
           "space-between",
+        cursor: onClick ? "pointer" : "default",
       }}
     >
       <div
