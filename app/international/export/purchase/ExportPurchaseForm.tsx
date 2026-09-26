@@ -496,28 +496,58 @@ export default function ExportPurchaseForm({
            *
            * No fixed package weight is assumed.
            */
-          if (
-            patch.packageQty !==
-              undefined ||
-            patch.netWeightPerPackage !==
-              undefined
-          ) {
-            const packageQty =
-              Number(
-                next.packageQty || 0
+          /*
+           * Packing calculation:
+           *
+           * If Packing Type contains a numeric weight, such as:
+           *   25 kg PP Bag
+           *   50 KG Bag
+           *   1.5 MT Bag
+           * the first numeric value is used as Net Weight / Package.
+           *
+           * This prevents a package description like "25 kg PP Bag"
+           * from being treated as a free-text value while the user
+           * separately enters an incorrect per-package weight.
+           */
+          if (patch.packingType !== undefined) {
+            const packingText = String(
+              next.packingType || ""
+            ).trim();
+
+            const weightMatch = packingText.match(
+              /(\d+(?:\.\d+)?)/
+            );
+
+            if (weightMatch) {
+              const parsedWeight = Number(
+                weightMatch[1]
               );
 
-            const weightPerPackage =
-              Number(
-                next.netWeightPerPackage ||
-                  0
-              );
+              if (Number.isFinite(parsedWeight) && parsedWeight > 0) {
+                next.netWeightPerPackage = parsedWeight;
+              }
+            }
+          }
+
+          /*
+           * Total Net Weight = Package Qty × Net Weight / Package.
+           */
+          if (
+            patch.packageQty !== undefined ||
+            patch.netWeightPerPackage !== undefined ||
+            patch.packingType !== undefined
+          ) {
+            const packageQty = Number(
+              next.packageQty || 0
+            );
+
+            const weightPerPackage = Number(
+              next.netWeightPerPackage || 0
+            );
 
             next.netWeight =
-              packageQty > 0 &&
-              weightPerPackage > 0
-                ? packageQty *
-                  weightPerPackage
+              packageQty > 0 && weightPerPackage > 0
+                ? packageQty * weightPerPackage
                 : 0;
           }
 

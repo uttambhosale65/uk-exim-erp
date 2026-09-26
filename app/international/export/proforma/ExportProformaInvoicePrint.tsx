@@ -91,16 +91,16 @@ export default function ExportProformaInvoicePrint({
          * This allows the complete document to fit inside
          * one physical A4 page while keeping text readable.
          */
-        .pi-paper {
-          width: 244.2mm;
-          min-height: 345.3mm;
-          margin: 0 auto;
-          padding: 6.5mm;
-          background: #ffffff;
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
-          zoom: 0.86;
-        }
-
+       .pi-paper {
+  width: 297mm;
+  min-height: 0;
+  height: 290mm;
+  margin: 0;
+  padding: 8mm;
+  box-shadow: none;
+  zoom: 0.95;
+  overflow: hidden;
+}
         .pi-header {
           display: flex;
           justify-content: space-between;
@@ -385,51 +385,57 @@ export default function ExportProformaInvoicePrint({
           }
         }
 
-        @media print {
-          @page {
-            size: A4;
-            margin: 0;
-          }
+       @media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
 
-          html,
-          body {
-            width: 210mm;
-            height: 297mm;
-            margin: 0;
-            padding: 0;
-            background: #ffffff;
-          }
+  html,
+  body {
+    width: 297mm;
+    height: 210mm;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+  }
 
-          .pi-print-page {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 0;
-            margin: 0;
-          }
+  .pi-print-page {
+    position: relative;
+    width: 297mm;
+    height: 210mm;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
 
-          .pi-print-actions {
-            display: none !important;
-          }
+  .pi-print-actions {
+    display: none !important;
+  }
 
-          .pi-paper {
-            width: 244.2mm;
-            min-height: 345.3mm;
-            margin: 0;
-            padding: 6.5mm;
-            box-shadow: none;
-            zoom: 0.86;
-          }
+  .pi-paper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 297mm;
+    height: 210mm;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 6mm;
+    box-sizing: border-box;
+    box-shadow: none;
+    zoom: 0.90;
+    overflow: hidden;
+  }
 
-          .pi-box {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-
-          .pi-table tr {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-        }
+  .pi-box,
+  .pi-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
       `}</style>
 
       <div className="pi-print-actions">

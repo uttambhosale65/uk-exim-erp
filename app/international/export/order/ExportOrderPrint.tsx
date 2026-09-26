@@ -97,9 +97,10 @@ export default function ExportOrderPrint({
           min-height: 297mm;
           margin: 0 auto;
           background: #ffffff;
-          padding: 5.5mm;
+          padding: 2mm;
           box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-          font-size: 6.2px;
+          font-size: 5.8px;
+          zoom: 0.95;
         }
 
         .eo-company-header {
@@ -152,12 +153,12 @@ export default function ExportOrderPrint({
         }
 
         .eo-section {
-          margin-top: 3px;
+          margin-top: 2px;
           border: 1px solid #9ca3af;
         }
 
         .eo-section-title {
-          padding: 2.5px 4px;
+          padding: 2px 3px;
           background: #f1f5f9;
           border-bottom: 1px solid #9ca3af;
           font-size: 6.2px;
@@ -182,8 +183,8 @@ export default function ExportOrderPrint({
         }
 
         .eo-field {
-          min-height: 21px;
-          padding: 2.5px 4px;
+          min-height: 15px;
+          padding: 1.5px 3px;
           border-right: 1px solid #d1d5db;
           border-bottom: 1px solid #d1d5db;
         }
@@ -234,8 +235,8 @@ export default function ExportOrderPrint({
         }
 
         .eo-party {
-          min-height: 58px;
-          padding: 4px 5px;
+          min-height: 40px;
+          padding: 2px 3px;
         }
 
         .eo-party:first-child {
@@ -268,7 +269,7 @@ export default function ExportOrderPrint({
         }
 
         .eo-table th {
-          padding: 2.5px 2px;
+          padding: 1.5px 1.5px;
           background: #f8fafc;
           border-right: 1px solid #9ca3af;
           border-bottom: 1px solid #9ca3af;
@@ -279,7 +280,7 @@ export default function ExportOrderPrint({
         }
 
         .eo-table td {
-          padding: 2.5px 2px;
+          padding: 1.5px 2px;
           border-right: 1px solid #d1d5db;
           border-bottom: 1px solid #d1d5db;
           font-size: 6.2px;
@@ -327,7 +328,7 @@ export default function ExportOrderPrint({
         .eo-summary-row {
           display: grid;
           grid-template-columns: 1fr 28mm;
-          min-height: 16px;
+          min-height: 13px;
           border-bottom: 1px solid #d1d5db;
         }
 
@@ -355,14 +356,14 @@ export default function ExportOrderPrint({
 
         .eo-notes {
           padding: 4px 5px;
-          min-height: 28px;
-          font-size: 6.5px;
+          min-height: 20px;
+          font-size: 6.2px;
           line-height: 1.45;
           white-space: pre-wrap;
         }
 
         .eo-terms {
-          padding: 4px 5px;
+          padding: 1px 3px;
         }
 
         .eo-terms-grid {
@@ -375,8 +376,8 @@ export default function ExportOrderPrint({
           display: flex;
           gap: 5px;
           font-size: 6.2px;
-          line-height: 1.15;
-          margin-bottom: 1.5px;
+          line-height: 0.95;
+          margin-bottom: 0px;
         }
 
         .eo-term-number {
@@ -388,12 +389,12 @@ export default function ExportOrderPrint({
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 20px;
-          margin-top: 18px;
+          margin-top: -8px;
         }
 
         .eo-signature-box {
-          min-height: 34px;
-          padding-top: 15px;
+          min-height: 8px;
+          padding-top: 2px;
           border-top: 1px solid #6b7280;
           font-size: 6.2px;
           line-height: 1.4;
@@ -404,8 +405,8 @@ export default function ExportOrderPrint({
         }
 
         .eo-footer {
-          margin-top: 5px;
-          padding-top: 3px;
+margin-top: -15px;
+padding-top: 0;
           border-top: 1px solid #9ca3af;
           text-align: center;
           font-size: 5.8px;
@@ -443,33 +444,73 @@ export default function ExportOrderPrint({
 
           .eo-print-paper {
             width: 210mm;
-            min-height: 297mm;
+            min-height: 0;
             height: auto;
             margin: 0;
-            padding: 5.5mm;
+            padding: 2mm;
             box-shadow: none;
             page-break-after: avoid;
             break-after: avoid;
             overflow: visible;
           }
 
+          /* Compact print layout: keep the complete Export Order on one A4 page. */
           .eo-section {
+            margin-top: 1.5px;
             break-inside: avoid;
             page-break-inside: avoid;
           }
 
-          .eo-table {
-            break-inside: auto;
+          .eo-field {
+            min-height: 13px;
+            padding: 1px 3px;
           }
 
-          .eo-table tr {
-            break-inside: avoid;
-            page-break-inside: avoid;
+          .eo-party {
+            min-height: 36px;
+            padding: 1.5px 3px;
+          }
+
+          .eo-table th {
+            padding: 1px 1.5px;
+          }
+
+          .eo-table td {
+            padding: 1px 1.5px;
+          }
+
+          .eo-summary-row {
+            min-height: 11px;
+          }
+
+          .eo-summary-label,
+          .eo-summary-value {
+            padding: 2px 3px;
+          }
+
+          .eo-notes {
+            min-height: 16px;
+            padding: 2.5px 4px;
+          }
+
+          .eo-term {
+            line-height: 0.9;
           }
 
           .eo-signature {
+            margin-top: -12px;
             break-inside: avoid;
             page-break-inside: avoid;
+          }
+
+          .eo-signature-box {
+            min-height: 7px;
+            padding-top: 1px;
+          }
+
+          .eo-footer {
+            margin-top: -30px !important;
+            padding-top: 0;
           }
         }
       `}</style>
@@ -1369,9 +1410,6 @@ export default function ExportOrderPrint({
               ? ` Country of Origin: ${order.countryOfOrigin}.`
               : ""}
 
-           {order.countryOfOrigin
-  ? ` Country of Origin: ${order.countryOfOrigin}.`
-  : ""}
           </div>
         </div>
 

@@ -7,6 +7,8 @@ import {
 } from "./ExportEnquiryTypes";
 import { ExportCustomer } from "../customer/ExportCustomerTypes";
 import { loadExportCustomers } from "../customer/ExportCustomerStorage";
+import { Product } from "../../../product/components/ProductTypes";
+import { loadProducts } from "../../../product/components/ProductStorage";
 
 type ExportEnquiryFormProps = {
   enquiries: ExportEnquiry[];
@@ -149,6 +151,10 @@ export default function ExportEnquiryForm({
     ExportCustomer[]
   >([]);
 
+  const [products, setProducts] = useState<
+    Product[]
+  >([]);
+
   const [enquiry, setEnquiry] =
     useState<ExportEnquiry>(() =>
       createEmptyEnquiry(
@@ -166,6 +172,11 @@ export default function ExportEnquiryForm({
 
   useEffect(() => {
     setCustomers(loadExportCustomers());
+    setProducts(
+      loadProducts().filter(
+        (product) => product.active
+      )
+    );
   }, []);
 
   useEffect(() => {
@@ -238,6 +249,45 @@ export default function ExportEnquiryForm({
       contactPerson: customer.contactPerson,
       currency: customer.currency,
     }));
+  }
+
+  function handleProductChange(
+    index: number,
+    productCode: string
+  ) {
+    const product = products.find(
+      (item) => item.code === productCode
+    );
+
+    setEnquiry((prev) => {
+      const items = [...prev.items];
+
+      if (!product) {
+        items[index] = {
+          ...items[index],
+          productCode: "",
+          productName: "",
+          unit: "KG",
+        };
+
+        return {
+          ...prev,
+          items,
+        };
+      }
+
+      items[index] = {
+        ...items[index],
+        productCode: product.code,
+        productName: product.name,
+        unit: product.unit,
+      };
+
+      return {
+        ...prev,
+        items,
+      };
+    });
   }
 
   function handleItemChange(
@@ -389,6 +439,7 @@ export default function ExportEnquiryForm({
     const invalidItem =
       enquiry.items.some(
         (item) =>
+          !item.productCode.trim() ||
           !item.productName.trim() ||
           item.qty <= 0 ||
           !item.unit.trim()
@@ -396,7 +447,7 @@ export default function ExportEnquiryForm({
 
     if (invalidItem) {
       alert(
-        "Please enter Product, Quantity and Unit for all rows."
+        "Please select Product, enter Quantity and confirm Unit for all rows."
       );
       return;
     }
@@ -868,7 +919,7 @@ export default function ExportEnquiryForm({
           style={{
             display: "grid",
             gridTemplateColumns:
-              "120px minmax(220px, 1fr) 110px 100px minmax(220px, 1fr) 45px",
+              "170px minmax(220px, 1fr) 110px 100px minmax(220px, 1fr) 45px",
             gap: 8,
             padding:
               "8px 10px",
@@ -909,7 +960,7 @@ export default function ExportEnquiryForm({
               style={{
                 display: "grid",
                 gridTemplateColumns:
-                  "120px minmax(220px, 1fr) 110px 100px minmax(220px, 1fr) 45px",
+                  "170px minmax(220px, 1fr) 110px 100px minmax(220px, 1fr) 45px",
                 gap: 8,
                 padding:
                   "8px 10px",
@@ -921,37 +972,51 @@ export default function ExportEnquiryForm({
                   "center",
               }}
             >
-              <input
+              {/* PRODUCT CODE */}
+              <select
                 value={
                   item.productCode
                 }
                 onChange={(e) =>
-                  handleItemChange(
+                  handleProductChange(
                     index,
-                    "productCode",
                     e.target.value
                   )
                 }
-                placeholder="Code"
                 style={inputStyle}
-              />
+              >
+                <option value="">
+                  Select Product
+                </option>
 
+                {products.map(
+                  (product) => (
+                    <option
+                      key={product.id}
+                      value={
+                        product.code
+                      }
+                    >
+                      {product.code} -{" "}
+                      {product.name}
+                    </option>
+                  )
+                )}
+              </select>
+
+              {/* PRODUCT NAME */}
               <input
                 value={
                   item.productName
                 }
-                onChange={(e) =>
-                  handleItemChange(
-                    index,
-                    "productName",
-                    e.target.value
-                  )
+                readOnly
+                placeholder="Auto"
+                style={
+                  readOnlyInputStyle
                 }
-                placeholder="Product Name"
-                style={inputStyle}
-                required
               />
 
+              {/* QUANTITY */}
               <input
                 type="number"
                 min="0"
@@ -975,34 +1040,16 @@ export default function ExportEnquiryForm({
                 required
               />
 
-              <select
+              {/* UNIT */}
+              <input
                 value={item.unit}
-                onChange={(e) =>
-                  handleItemChange(
-                    index,
-                    "unit",
-                    e.target.value
-                  )
+                readOnly
+                style={
+                  readOnlyInputStyle
                 }
-                style={inputStyle}
-              >
-                <option value="KG">
-                  KG
-                </option>
-                <option value="Gram">
-                  Gram
-                </option>
-                <option value="Pkt">
-                  Pkt
-                </option>
-                <option value="MT">
-                  MT
-                </option>
-                <option value="Nos">
-                  Nos
-                </option>
-              </select>
+              />
 
+              {/* CUSTOMER REQUIREMENT */}
               <input
                 value={
                   item.customerRequirement
@@ -1018,6 +1065,7 @@ export default function ExportEnquiryForm({
                 style={inputStyle}
               />
 
+              {/* REMOVE */}
               <button
                 type="button"
                 onClick={() =>

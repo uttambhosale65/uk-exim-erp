@@ -30,7 +30,6 @@ export default function ExportQuotationTable({
   onDelete,
 }: ExportQuotationTableProps) {
   const [search, setSearch] = useState("");
-
   const [printingQuotation, setPrintingQuotation] =
     useState<ExportQuotation | null>(null);
 
@@ -89,17 +88,25 @@ export default function ExportQuotationTable({
   }
 
   /*
-   * PRINT PREVIEW
+   * Professional quotation print/preview screen
    *
-   * Register मधील एखाद्या quotation चा Print button
-   * click केल्यावर selected quotation इथे येईल.
-   *
-   * Existing Register data delete किंवा modify होत नाही.
+   * The actual professional document is handled by
+   * ExportQuotationPrint.tsx.
    */
   if (printingQuotation) {
     return (
       <div className="mt-6">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              Export Quotation Preview
+            </div>
+
+            <div className="mt-1 text-lg font-semibold text-gray-800">
+              {printingQuotation.quotationNo}
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={() => setPrintingQuotation(null)}
@@ -107,15 +114,9 @@ export default function ExportQuotationTable({
           >
             ← Back to Quotation Register
           </button>
-
-          <div className="text-sm font-medium text-gray-600">
-            Preview: {printingQuotation.quotationNo}
-          </div>
         </div>
 
-        <ExportQuotationPrint
-          quotation={printingQuotation}
-        />
+        <ExportQuotationPrint quotation={printingQuotation} />
       </div>
     );
   }
@@ -137,9 +138,7 @@ export default function ExportQuotationTable({
           <input
             type="text"
             value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
+            onChange={(event) => setSearch(event.target.value)}
             placeholder="Search quotation, customer, product..."
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
           />
@@ -304,16 +303,12 @@ export default function ExportQuotationTable({
 
                   <td className="border-b px-3 py-3 text-right align-top whitespace-nowrap">
                     {quotation.currency}{" "}
-                    {formatAmount(
-                      quotation.totalGoodsValue
-                    )}
+                    {formatAmount(quotation.totalGoodsValue)}
                   </td>
 
                   <td className="border-b px-3 py-3 text-right align-top whitespace-nowrap font-semibold">
                     {quotation.currency}{" "}
-                    {formatAmount(
-                      quotation.totalQuotationValue
-                    )}
+                    {formatAmount(quotation.totalQuotationValue)}
                   </td>
 
                   <td className="border-b px-3 py-3 align-top whitespace-nowrap">

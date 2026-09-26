@@ -1022,21 +1022,36 @@ export default function ExportQuotationPrint({
             display: none !important;
           }
 
+          /*
+           * Keep the complete quotation on one A4 page.
+           *
+           * The screen layout is intentionally left unchanged.
+           * For printing, Chrome was pushing the signature section
+           * to page 2 because the full document was slightly taller
+           * than the printable A4 area. A small print-only CSS zoom
+           * gives the document enough vertical room while keeping
+           * the same professional layout and all sections visible.
+           */
           .quotation-document {
+            position: relative !important;
             width: 100% !important;
             max-width: none !important;
-            min-height: 286mm !important;
-            height: 286mm !important;
+            min-height: 0 !important;
+            height: auto !important;
             margin: 0 !important;
             border: 1px solid #cbd5e1 !important;
-            overflow: hidden !important;
+            overflow: visible !important;
             box-shadow: none !important;
             page-break-after: avoid !important;
             break-after: avoid !important;
+
+            /* Keep natural print scale for readability. */
+            zoom: 0.96 !important;
           }
 
           .quotation-content {
-            flex: 1 0 auto !important;
+            flex: 0 1 auto !important;
+            min-height: 0 !important;
           }
 
           .quotation-top-accent {
@@ -1044,17 +1059,17 @@ export default function ExportQuotationPrint({
           }
 
           .quotation-header {
-            padding: 14px 18px 12px !important;
-            gap: 16px !important;
+            padding: 11px 18px 9px !important;
+            gap: 14px !important;
           }
 
           .quotation-logo {
-            width: 56px !important;
-            height: 56px !important;
+            width: 50px !important;
+            height: 50px !important;
           }
 
           .quotation-company-name {
-            font-size: 20px !important;
+            font-size: 21px !important;
           }
 
           .quotation-company-address {
@@ -1073,60 +1088,60 @@ export default function ExportQuotationPrint({
           }
 
           .quotation-title-small {
-            font-size: 6.5px !important;
+            font-size: 7px !important;
           }
 
           .quotation-title {
-            font-size: 23px !important;
+            font-size: 24px !important;
           }
 
           .quotation-title-sub {
-            font-size: 8px !important;
+            font-size: 8.5px !important;
           }
 
           .quotation-title-line {
             width: 75px !important;
             height: 2px !important;
-            margin-top: 7px !important;
+            margin-top: 5px !important;
           }
 
           .quotation-section-heading {
-            padding: 6px 18px !important;
+            padding: 5px 18px !important;
           }
 
           .quotation-section-heading-title {
-            font-size: 6.5px !important;
+            font-size: 7px !important;
           }
 
           .quotation-section-heading-note {
-            font-size: 6px !important;
+            font-size: 6.2px !important;
           }
 
           .quotation-meta-item {
-            min-height: 43px !important;
-            padding: 7px 9px !important;
+            min-height: 40px !important;
+            padding: 6px 9px !important;
           }
 
           .quotation-label {
-            font-size: 6px !important;
+            font-size: 6.2px !important;
           }
 
           .quotation-value {
             margin-top: 3px !important;
-            font-size: 8px !important;
+            font-size: 8.5px !important;
           }
 
           .quotation-info-box {
-            padding: 8px 18px !important;
+            padding: 6px 18px !important;
           }
 
           .quotation-section-title {
-            margin-bottom: 5px !important;
-            font-size: 6px !important;
+            margin-bottom: 4px !important;
+            font-size: 6.2px !important;
           }
 
           .quotation-buyer-name {
-            font-size: 11px !important;
+            font-size: 12px !important;
           }
 
           .quotation-small-line {
@@ -1140,7 +1155,7 @@ export default function ExportQuotationPrint({
 
           .quotation-commercial-label,
           .quotation-shipping-label {
-            font-size: 6px !important;
+            font-size: 6.2px !important;
           }
 
           .quotation-commercial-value,
@@ -1149,17 +1164,17 @@ export default function ExportQuotationPrint({
           }
 
           .quotation-shipping-item {
-            min-height: 38px !important;
-            padding: 7px 18px !important;
+            min-height: 28px !important;
+            padding: 5px 18px !important;
           }
 
           .quotation-products {
-            padding: 9px 18px 0 !important;
+            padding: 7px 18px 0 !important;
           }
 
           .quotation-products-title {
-            margin-bottom: 5px !important;
-            font-size: 6.5px !important;
+            margin-bottom: 4px !important;
+            font-size: 7px !important;
           }
 
           .quotation-table {
@@ -1167,151 +1182,155 @@ export default function ExportQuotationPrint({
           }
 
           .quotation-table th {
-            padding: 5px 4px !important;
-            font-size: 6.5px !important;
+            padding: 4px 4px !important;
+            font-size: 7px !important;
           }
 
           .quotation-table td {
-            padding: 4.5px 4px !important;
+            padding: 4px 4px !important;
           }
 
           .quotation-product-name {
-            font-size: 7.5px !important;
+            font-size: 8px !important;
           }
 
           .quotation-product-code,
           .quotation-requirement {
-            font-size: 6px !important;
+            font-size: 6.2px !important;
           }
 
           .quotation-summary-grid {
             grid-template-columns: 1fr 250px !important;
             gap: 9px !important;
-            padding: 9px 18px 0 !important;
+            padding: 7px 18px 0 !important;
           }
 
           .quotation-remarks-box {
-            min-height: 84px !important;
-            padding: 8px 9px !important;
+            min-height: 70px !important;
+            padding: 6px 9px !important;
           }
 
           .quotation-remarks-text {
-            font-size: 6.8px !important;
+            font-size: 7px !important;
           }
 
           .quotation-total-row {
-            padding: 5px 8px !important;
+            padding: 4px 8px !important;
             font-size: 7px !important;
           }
 
           .quotation-grand-total {
-            padding: 8px !important;
+            padding: 6px !important;
           }
 
           .quotation-grand-total-label {
-            font-size: 6.5px !important;
+            font-size: 7px !important;
           }
 
           .quotation-grand-total-value {
-            font-size: 11px !important;
+            font-size: 12px !important;
           }
 
           .quotation-commercial-terms {
-            margin-top: 8px !important;
+            margin-top: 6px !important;
             padding: 0 18px !important;
           }
 
           .quotation-commercial-terms-header {
-            padding: 5px 8px !important;
-            font-size: 6.5px !important;
+            padding: 4px 8px !important;
+            font-size: 7px !important;
           }
 
           .quotation-commercial-term {
-            min-height: 39px !important;
-            padding: 6px 7px !important;
+            min-height: 28px !important;
+            padding: 4px 7px !important;
           }
 
           .quotation-commercial-term-label {
-            font-size: 5.7px !important;
+            font-size: 6.2px !important;
           }
 
           .quotation-commercial-term-value {
             margin-top: 2px !important;
-            font-size: 6.5px !important;
+            font-size: 7px !important;
           }
 
           .quotation-terms-box {
-            margin-top: 8px !important;
+            margin-top: 6px !important;
             padding: 0 18px !important;
           }
 
           .quotation-terms-header {
-            padding: 5px 8px !important;
-            font-size: 6.5px !important;
+            padding: 4px 8px !important;
+            font-size: 7px !important;
           }
 
           .quotation-terms-list {
-            padding: 6px 9px 6px 22px !important;
-            column-gap: 20px !important;
-            font-size: 6px !important;
-            line-height: 1.3 !important;
+            padding: 5px 9px 5px 22px !important;
+            column-gap: 18px !important;
+            font-size: 6.2px !important;
+            line-height: 1.25 !important;
           }
 
           .quotation-terms-list li {
-            margin-bottom: 2.5px !important;
+            margin-bottom: 2px !important;
           }
 
           .quotation-bank-section {
-            margin-top: 7px !important;
+            margin-top: 5px !important;
             padding: 0 18px !important;
           }
 
           .quotation-bank-header {
-            padding: 5px 8px !important;
-            font-size: 6.5px !important;
+            padding: 4px 8px !important;
+            font-size: 7px !important;
           }
 
           .quotation-bank-item {
-            min-height: 32px !important;
-            padding: 5px 7px !important;
+            min-height: 29px !important;
+            padding: 4px 7px !important;
           }
 
           .quotation-bank-label {
-            font-size: 5.7px !important;
+            font-size: 6.2px !important;
           }
 
           .quotation-bank-value {
             margin-top: 2px !important;
-            font-size: 6.5px !important;
+            font-size: 7px !important;
           }
 
           .quotation-identifiers {
             margin: 6px 18px 0 !important;
             padding: 4px 7px !important;
-            font-size: 5.8px !important;
+            font-size: 6.2px !important;
           }
 
           .quotation-signature {
-            gap: 40px !important;
-            padding: 8px 18px 7px !important;
+            gap: 30px !important;
+            padding: 4px 18px 3px !important;
           }
 
           .quotation-signature-box {
-            min-height: 39px !important;
+            min-height: 28px !important;
           }
 
           .quotation-signature-title {
-            font-size: 6.5px !important;
+            font-size: 7px !important;
           }
 
           .quotation-signature-line {
-            margin-top: 17px !important;
-            padding-top: 3px !important;
-            font-size: 6px !important;
+            margin-top: 10px !important;
+            padding-top: 2px !important;
+            font-size: 6.2px !important;
           }
 
           .quotation-footer {
-            padding: 7px 18px 8px !important;
+            padding: 2px 18px 3px !important;
+          }
+
+          .quotation-footer {
+            margin-top: 0 !important;
           }
 
           .quotation-footer-company {
@@ -1320,7 +1339,7 @@ export default function ExportQuotationPrint({
 
           .quotation-footer-details {
             margin-top: 2px !important;
-            font-size: 5.5px !important;
+            font-size: 5.6px !important;
           }
 
           .quotation-top-accent,
