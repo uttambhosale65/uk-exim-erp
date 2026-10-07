@@ -47,6 +47,7 @@ import InternationalExportStockMaster from "./international/export/stock/Interna
 import ExportCommercialInvoiceMaster from "./international/export/invoice/ExportCommercialInvoiceMaster";
 import ExportReservationMaster from "./international/export/reservation/ExportReservationMaster";
 import PackingMaster from "./international/export/packing/PackingMaster";
+import ShipmentMaster from "./international/export/shipment/ShipmentMaster";
 
 /* =========================================================
    MAIN HOME
@@ -460,6 +461,24 @@ case "export-stock":
             }
           >
             <PackingMaster />
+          </InternationalModuleWrapper>
+        );
+
+      /* ---------------------------------------------------
+         INTERNATIONAL EXPORT SHIPMENT
+      --------------------------------------------------- */
+
+      case "export-shipment":
+        return (
+          <InternationalModuleWrapper
+            title="🌍 Export Shipment"
+            onBack={() =>
+              setActivePage(
+                "international-export"
+              )
+            }
+          >
+            <ShipmentMaster />
           </InternationalModuleWrapper>
         );
 
@@ -1526,6 +1545,8 @@ case "export-stock":
               activePage ===
                 "export-packing" ||
               activePage ===
+                "export-shipment" ||
+              activePage ===
                 "export-invoice"
                 ? activeMenu
                 : menuItem
@@ -1962,6 +1983,7 @@ function InternationalExportWorkspace({
       | "export-stock"
       | "export-reservation"
       | "export-packing"
+      | "export-shipment"
       | "export-invoice"
   ) => void;
 }) {
@@ -1976,6 +1998,7 @@ function InternationalExportWorkspace({
       reservations: 0,
       packings: 0,
       invoices: 0,
+      shipments: 0,
     });
 
   useEffect(() => {
@@ -2045,6 +2068,11 @@ function InternationalExportWorkspace({
       invoices:
         getArrayLength(
           "uk-exim-export-commercial-invoices"
+        ),
+
+      shipments:
+        getArrayLength(
+          "uk-exim-export-shipments"
         ),
     });
   }, []);
@@ -2192,6 +2220,17 @@ function InternationalExportWorkspace({
           onClick={() =>
             onOpen(
               "export-packing"
+            )
+          }
+        />
+
+        <ExportWorkspaceCard
+          title="Shipments"
+          value={exportData.shipments}
+          icon="🚢"
+          onClick={() =>
+            onOpen(
+              "export-shipment"
             )
           }
         />
@@ -2598,6 +2637,45 @@ function InternationalExportWorkspace({
             style={actionButton}
             onClick={() =>
               onOpen(
+                "export-shipment"
+              )
+            }
+          >
+            <div
+              style={{
+                fontSize: "18px",
+              }}
+            >
+              🚢
+            </div>
+
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#374151",
+              }}
+            >
+              Export Shipment
+            </div>
+
+            <div
+              style={{
+                marginTop: "2px",
+                fontSize: "9px",
+                color: "#6b7280",
+              }}
+            >
+              Manage export shipment
+            </div>
+          </button>
+
+          <button
+            type="button"
+            style={actionButton}
+            onClick={() =>
+              onOpen(
                 "export-invoice"
               )
             }
@@ -2742,7 +2820,11 @@ function InternationalExportWorkspace({
           <WorkflowStep
             number="7"
             title="Shipment"
-            disabled
+            onClick={() =>
+              onOpen(
+                "export-shipment"
+              )
+            }
           />
 
           <WorkflowArrow />
@@ -2782,9 +2864,8 @@ function InternationalExportWorkspace({
           <strong>
             Current Stage:
           </strong>{" "}
-          Packing module completed and
-          integrated. Shipment will be
-          developed next in sequence.
+          Shipment module is now available
+          after Packing.
         </div>
       </div>
 

@@ -2,6 +2,8 @@ export type ExportReservationItem = {
   productCode: string;
   productName: string;
 
+  hsCode: string;
+
   lotBatchNo: string;
 
   orderQty: number;

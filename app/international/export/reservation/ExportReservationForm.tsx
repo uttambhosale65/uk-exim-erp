@@ -13,6 +13,8 @@ import {
 
 import { loadExportOrders } from "../order/ExportOrderStorage";
 
+import { loadProducts } from "../../../product/components/ProductStorage";
+
 import {
   ExportReservation,
   ExportReservationItem,
@@ -411,6 +413,9 @@ export default function ExportReservationForm({
   const [orders, setOrders] =
     useState<ExportOrder[]>([]);
 
+  const [productHSNMap, setProductHSNMap] =
+    useState<Record<string, string>>({});
+
   const [stock, setStock] =
     useState<
       InternationalExportStock[]
@@ -430,6 +435,17 @@ export default function ExportReservationForm({
     setOrders(
       loadExportOrders()
     );
+
+    const productMap: Record<string, string> = {};
+
+    for (const product of loadProducts()) {
+      const code = (product.code || "").trim().toLowerCase();
+      if (code) {
+        productMap[code] = product.hsn || "";
+      }
+    }
+
+    setProductHSNMap(productMap);
 
     setStock(
       loadInternationalExportStock()
@@ -679,11 +695,16 @@ export default function ExportReservationForm({
         );
 
       return {
-        productCode:
-          orderItem.productCode || "",
+       productCode:
+        orderItem.productCode || "",
 
-        productName:
-          orderItem.productName || "",
+productName:
+        orderItem.productName || "",
+
+hsCode:
+        getProductHSN(
+          orderItem.productCode
+        ),
 
         lotBatchNo:
           selectedStock?.lotBatchNo ||
@@ -959,6 +980,16 @@ export default function ExportReservationForm({
       stockByProduct.get(
         productCode
       ) || [];
+
+  const getProductHSN = (
+    productCode: string
+  ): string => {
+    const key = (productCode || "")
+      .trim()
+      .toLowerCase();
+
+    return key ? productHSNMap[key] || "" : "";
+  };
 
   const getCurrentItemReservable =
     (
@@ -1949,6 +1980,10 @@ export default function ExportReservationForm({
                       </th>
 
                       <th>
+                        HSN Code
+                      </th>
+
+                      <th>
                         Order Qty
                       </th>
 
@@ -2121,6 +2156,19 @@ export default function ExportReservationForm({
                                 {
                                   item.productCode
                                 }
+                              </div>
+                            </td>
+
+                            <td>
+                              <div
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {getProductHSN(
+                                  item.productCode
+                                ) || "-"}
                               </div>
                             </td>
 

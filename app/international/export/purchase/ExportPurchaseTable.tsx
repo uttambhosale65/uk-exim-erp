@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ExportPurchase } from "./ExportPurchaseTypes";
+import { loadProducts } from "../../../product/components/ProductStorage";
 
 type ExportPurchaseTableProps = {
   purchases: ExportPurchase[];
@@ -20,6 +21,27 @@ export default function ExportPurchaseTable({
   onDelete,
 }: ExportPurchaseTableProps) {
   const [search, setSearch] = useState("");
+  const [productHSNMap, setProductHSNMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const products = loadProducts();
+
+    const map: Record<string, string> = {};
+
+    products.forEach((product) => {
+      const code = String(product.code || "").trim().toLowerCase();
+      if (code) {
+        map[code] = product.hsn || "";
+      }
+    });
+
+    setProductHSNMap(map);
+  }, []);
+
+  const getProductHSN = (productCode: string): string => {
+    const code = String(productCode || "").trim().toLowerCase();
+    return productHSNMap[code] || "";
+  };
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -42,7 +64,7 @@ export default function ExportPurchaseTable({
           purchase.status,
           ...purchase.items.map(
             (item) =>
-              `${item.productCode} ${item.productName} ${item.lotBatchNo} ${item.unit}`
+              `${item.productCode} ${item.productName} ${getProductHSN(item.productCode)} ${item.lotBatchNo} ${item.unit}`
           ),
         ]
           .join(" ")
@@ -100,7 +122,7 @@ export default function ExportPurchaseTable({
         <table
           style={{
             width: "100%",
-            minWidth: "1450px",
+            minWidth: "1520px",
             borderCollapse:
               "collapse",
             fontSize: "9px",
@@ -119,6 +141,7 @@ export default function ExportPurchaseTable({
                 "Contact",
                 "Supplier Invoice",
                 "Products / Lots",
+                "HSN Code",
                 "Currency",
                 "Goods Value",
                 "Purchase Value",
@@ -148,7 +171,7 @@ export default function ExportPurchaseTable({
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={13}
+                  colSpan={14}
                   style={{
                     padding: "30px",
                     textAlign: "center",
@@ -316,6 +339,28 @@ export default function ExportPurchaseTable({
                             </div>
                           )
                         )}
+                      </td>
+
+                      <td
+                        style={{
+                          padding:
+                            "7px 6px",
+                          borderBottom:
+                            "1px solid #f1f5f9",
+                          verticalAlign: "top",
+                        }}
+                      >
+                        {purchase.items.map((item) => (
+                          <div
+                            key={`${item.productCode}-${item.lotBatchNo}-hsn`}
+                            style={{
+                              marginBottom: "3px",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {getProductHSN(item.productCode) || "-"}
+                          </div>
+                        ))}
                       </td>
 
                       <td

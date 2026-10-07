@@ -455,10 +455,36 @@ export default function PackingForm({
     ExportOrder[]
   >(() => loadOrders());
 
-  const [reservations] =
+ const [reservations, setReservations] =
     useState<
       ExportReservation[]
     >(() => loadReservations());
+
+useEffect(() => {
+  const refreshReservations = () => {
+    setReservations(loadReservations());
+  };
+
+  refreshReservations();
+
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === RESERVATION_KEY) {
+      refreshReservations();
+    }
+  };
+
+  const handleFocus = () => {
+    refreshReservations();
+  };
+
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener("focus", handleFocus);
+
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener("focus", handleFocus);
+  };
+}, []);
 
   const [packingNo, setPackingNo] =
     useState("");
@@ -1284,6 +1310,9 @@ export default function PackingForm({
             <select
               value={exportOrderNo}
               disabled
+              onFocus={() => {
+  setReservations(loadReservations());
+}}
               onChange={(event) =>
                 setExportOrderNo(
                   event.target.value

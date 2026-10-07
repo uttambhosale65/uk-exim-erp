@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import {
   ExportReservation,
 } from "./ExportReservationTypes";
+
+import { loadProducts } from "../../../product/components/ProductStorage";
 
 type ExportReservationTableProps = {
   reservations: ExportReservation[];
@@ -27,6 +29,28 @@ export default function ExportReservationTable({
 }: ExportReservationTableProps) {
   const [search, setSearch] =
     useState("");
+
+  const [productHSNMap, setProductHSNMap] =
+    useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const products = loadProducts();
+    const map: Record<string, string> = {};
+
+    products.forEach((product) => {
+      const code = String(product.code || "").trim().toLowerCase();
+      if (code) {
+        map[code] = product.hsn || "";
+      }
+    });
+
+    setProductHSNMap(map);
+  });
+
+  const getProductHSN = (productCode: string): string => {
+    const code = String(productCode || "").trim().toLowerCase();
+    return productHSNMap[code] || "";
+  };
 
   const filteredReservations =
     useMemo(() => {
@@ -55,7 +79,7 @@ export default function ExportReservationTable({
             (reservation.items || [])
               .map(
                 (item) =>
-                  `${item.productName} ${item.productCode} ${item.lotBatchNo}`
+                  `${item.productName} ${item.productCode} ${getProductHSN(item.productCode)} ${item.lotBatchNo}`
               )
               .join(" ");
 
@@ -179,7 +203,7 @@ export default function ExportReservationTable({
 
         .ert-table {
           width: 100%;
-          min-width: 1250px;
+          min-width: 1330px;
           border-collapse: collapse;
           font-size: 11px;
         }
@@ -389,6 +413,10 @@ export default function ExportReservationTable({
               </th>
 
               <th>
+                HSN Code
+              </th>
+
+              <th>
                 Reserved Qty
               </th>
 
@@ -423,7 +451,7 @@ export default function ExportReservationTable({
               0 && (
               <tr>
                 <td
-                  colSpan={13}
+                  colSpan={14}
                   className="ert-empty"
                 >
                   {search
@@ -538,6 +566,21 @@ export default function ExportReservationTable({
                             {
                               item.unit
                             }
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </td>
+
+                  <td>
+                    {(reservation.items || []).map(
+                      (item, index) => (
+                        <div
+                          className="ert-product"
+                          key={`${reservation.id}-${item.productCode}-${index}-hsn`}
+                        >
+                          <div className="ert-product-meta">
+                            {getProductHSN(item.productCode) || "-"}
                           </div>
                         </div>
                       )

@@ -1,3 +1,4 @@
+
 export type ExportCustomer = {
   id: string;
   code: string;
@@ -7,6 +8,29 @@ export type ExportCustomer = {
   contactPerson: string;
   mobile: string;
   email: string;
+
+  // Business Details
+  businessRole?:
+    | "Importer"
+    | "Exporter"
+    | "Importer & Exporter"
+    | "Manufacturer"
+    | "Trader"
+    | "Distributor"
+    | "Agent/Broker"
+    | "Service Provider"
+    | "Other";
+
+  industry?:
+    | "Food & Agriculture"
+    | "Spices"
+    | "Engineering"
+    | "Textiles & Garments"
+    | "Chemicals"
+    | "Pharmaceuticals"
+    | "Packaging"
+    | "Consumer Goods"
+    | "Other";
 
   // International Details
   country: string;
@@ -23,6 +47,12 @@ export type ExportCustomer = {
 
   // Commercial Terms
   paymentTerms: string;
+
+  // Source / Event
+  sourceEvent?: string;
+
+  // Interested Products
+  interestedProducts?: string;
 
   // Status
   status: "Active" | "Inactive";

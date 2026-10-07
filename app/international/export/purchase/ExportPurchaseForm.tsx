@@ -20,6 +20,7 @@ type ProductOption = {
   code: string;
   name: string;
   unit: string;
+  hsn: string;
   active?: boolean;
 };
 
@@ -353,6 +354,8 @@ export default function ExportPurchaseForm({
           name: product.name,
           unit:
             product.unit || "KG",
+          hsn:
+            product.hsn || "",
           active:
             product.active,
         }))
@@ -443,6 +446,18 @@ export default function ExportPurchaseForm({
       ),
     0
   );
+
+  const getProductHSN = (productCode: string): string => {
+    if (!productCode) return "";
+
+    const product = products.find(
+      (option) =>
+        option.code.trim().toLowerCase() ===
+        productCode.trim().toLowerCase()
+    );
+
+    return product?.hsn || "";
+  };
 
   const updateItem = (
     index: number,
@@ -1989,6 +2004,7 @@ export default function ExportPurchaseForm({
               >
                 {[
                   "Product",
+                  "HSN Code",
                   "Lot / Batch *",
                   "Qty *",
                   "Received Qty",
@@ -2093,6 +2109,28 @@ export default function ExportPurchaseForm({
                           )
                         )}
                       </select>
+                    </td>
+
+                    <td
+                      style={{
+                        border:
+                          "1px solid #e5e7eb",
+                        padding:
+                          "4px",
+                      }}
+                    >
+                      <input
+                        value={
+                          getProductHSN(item.productCode)
+                        }
+                        readOnly
+                        placeholder="-"
+                        style={{
+                          ...inputStyle,
+                          width: "90px",
+                          background: "#f9fafb",
+                        }}
+                      />
                     </td>
 
                     <td

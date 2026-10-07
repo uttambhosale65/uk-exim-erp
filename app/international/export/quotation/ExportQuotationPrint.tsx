@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ExportQuotation } from "./ExportQuotationTypes";
+import { loadProducts } from "../../../product/components/ProductStorage";
 
 type CompanySettings = {
   companyName: string;
@@ -127,6 +128,10 @@ export default function ExportQuotationPrint({
       defaultInternational
     );
 
+  const [products, setProducts] = useState<
+    ReturnType<typeof loadProducts>
+  >([]);
+
   useEffect(() => {
     setCompany(
       loadSettings(
@@ -141,6 +146,8 @@ export default function ExportQuotationPrint({
         defaultInternational
       )
     );
+
+    setProducts(loadProducts());
   }, []);
 
   const totals = useMemo(() => {
@@ -230,6 +237,18 @@ export default function ExportQuotationPrint({
 
   const adCode =
     international.adCode || "";
+
+  function getProductHSN(productCode: string): string {
+    if (!productCode) return "";
+
+    const product = products.find(
+      (item) =>
+        item.code.trim().toLowerCase() ===
+        productCode.trim().toLowerCase()
+    );
+
+    return product?.hsn || "";
+  }
 
   return (
     <>
@@ -616,23 +635,29 @@ export default function ExportQuotationPrint({
         .quotation-table th:nth-child(3),
         .quotation-table td:nth-child(3) {
           width: 65px;
-          text-align: right;
+          text-align: center;
         }
 
         .quotation-table th:nth-child(4),
         .quotation-table td:nth-child(4) {
-          width: 48px;
-          text-align: center;
+          width: 65px;
+          text-align: right;
         }
 
         .quotation-table th:nth-child(5),
         .quotation-table td:nth-child(5) {
-          width: 90px;
-          text-align: right;
+          width: 48px;
+          text-align: center;
         }
 
         .quotation-table th:nth-child(6),
         .quotation-table td:nth-child(6) {
+          width: 90px;
+          text-align: right;
+        }
+
+        .quotation-table th:nth-child(7),
+        .quotation-table td:nth-child(7) {
           width: 105px;
           text-align: right;
         }
@@ -1642,6 +1667,7 @@ export default function ExportQuotationPrint({
                   <tr>
                     <th>Sr.</th>
                     <th>Product Description</th>
+                    <th>HSN Code</th>
                     <th>Qty</th>
                     <th>Unit</th>
                     <th>Unit Price</th>
@@ -1685,6 +1711,10 @@ export default function ExportQuotationPrint({
                                 }
                               </div>
                             )}
+                          </td>
+
+                          <td>
+                            {getProductHSN(item.productCode) || "-"}
                           </td>
 
                           <td>

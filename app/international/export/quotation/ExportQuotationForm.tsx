@@ -8,6 +8,7 @@ import {
 import { ExportEnquiry } from "../enquiry/ExportEnquiryTypes";
 import { loadExportCustomers } from "../customer/ExportCustomerStorage";
 import { ExportCustomer } from "../customer/ExportCustomerTypes";
+import { loadProducts } from "../../../product/components/ProductStorage";
 
 type ExportQuotationFormProps = {
   quotations: ExportQuotation[];
@@ -164,12 +165,14 @@ export default function ExportQuotationForm({
     useState<ExportQuotation["status"]>("Draft");
 
   const [customers, setCustomers] = useState<ExportCustomer[]>([]);
+  const [products, setProducts] = useState<ReturnType<typeof loadProducts>>([]);
   const [error, setError] = useState("");
 
   const isEditMode = Boolean(editingQuotation);
 
   useEffect(() => {
     setCustomers(loadExportCustomers());
+    setProducts(loadProducts());
   }, []);
 
   const nextQuotationNo = useMemo(() => {
@@ -251,6 +254,18 @@ export default function ExportQuotationForm({
     setStatus("Draft");
     setError("");
   }, [editingQuotation, nextQuotationNo]);
+
+  function getProductHSN(productCode: string): string {
+    if (!productCode) return "";
+
+    const product = products.find(
+      (item) =>
+        item.code.trim().toLowerCase() ===
+        productCode.trim().toLowerCase()
+    );
+
+    return product?.hsn || "";
+  }
 
   function handleEnquiryChange(selectedEnquiryNo: string) {
     setEnquiryNo(selectedEnquiryNo);
@@ -808,7 +823,7 @@ export default function ExportQuotationForm({
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-gray-200">
-          <table className="min-w-[1100px] w-full border-collapse text-sm">
+          <table className="min-w-[1200px] w-full border-collapse text-sm">
             <thead>
               <tr className="bg-gray-100 text-left">
                 <th className="border-b px-3 py-3">
@@ -817,6 +832,10 @@ export default function ExportQuotationForm({
 
                 <th className="border-b px-3 py-3">
                   Product
+                </th>
+
+                <th className="border-b px-3 py-3">
+                  HSN Code
                 </th>
 
                 <th className="border-b px-3 py-3">
@@ -860,6 +879,16 @@ export default function ExportQuotationForm({
                     <div className="text-xs text-gray-500">
                       {item.productCode || "-"}
                     </div>
+                  </td>
+
+                  <td className="border-b px-3 py-3">
+                    <input
+                      type="text"
+                      value={getProductHSN(item.productCode)}
+                      readOnly
+                      placeholder="-"
+                      className="w-32 rounded-lg border border-gray-300 bg-gray-50 px-2 py-2 text-sm"
+                    />
                   </td>
 
                   <td className="border-b px-3 py-3">

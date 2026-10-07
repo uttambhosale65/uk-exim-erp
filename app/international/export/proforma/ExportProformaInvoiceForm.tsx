@@ -13,6 +13,7 @@ import {
 import { loadExportQuotations } from "../quotation/ExportQuotationStorage";
 import { loadExportCustomers } from "../customer/ExportCustomerStorage";
 import { ExportCustomer } from "../customer/ExportCustomerTypes";
+import { loadProducts } from "../../../product/components/ProductStorage";
 
 type ExportProformaInvoiceFormProps = {
   invoiceNo: string;
@@ -474,19 +475,28 @@ export default function ExportProformaInvoiceForm({
 
   const [quotations, setQuotations] = useState<ExportQuotation[]>([]);
   const [customers, setCustomers] = useState<ExportCustomer[]>([]);
+  const [products, setProducts] = useState<ReturnType<typeof loadProducts>>([]);
   const [selectedQuotationNo, setSelectedQuotationNo] =
     useState<string>(initialData?.quotationNo || "");
 
   useEffect(() => {
     setQuotations(loadExportQuotations());
     setCustomers(loadExportCustomers());
+    setProducts(loadProducts());
   }, []);
 
   useEffect(() => {
     if (initialData) {
       const normalised = normaliseExistingInvoice(initialData);
 
-      setForm(normalised);
+      const itemsWithHSN = applyProductHSNToItems(
+        normalised.items
+      );
+
+      setForm({
+        ...normalised,
+        items: itemsWithHSN,
+      });
       setSelectedQuotationNo(normalised.quotationNo || "");
     } else {
       setForm(createEmptyInvoice(invoiceNo));
@@ -674,6 +684,43 @@ export default function ExportProformaInvoiceForm({
     });
   };
 
+  const getProductHSN = (productCode: string): string => {
+    const code = String(productCode || "").trim();
+
+    if (!code) {
+      return "";
+    }
+
+    const product = products.find(
+      (item) => String(item.code || "").trim() === code
+    );
+
+    return String(product?.hsn || "").trim();
+  };
+
+  const applyProductHSNToItems = (
+    items: ExportProformaInvoiceItem[]
+  ): ExportProformaInvoiceItem[] => {
+    return items.map((item: ExportProformaInvoiceItem) => {
+      const existingHSN = String(item.hsCode || "").trim();
+
+      if (existingHSN) {
+        return item;
+      }
+
+      const productHSN = getProductHSN(item.productCode);
+
+      if (!productHSN) {
+        return item;
+      }
+
+      return {
+        ...item,
+        hsCode: productHSN,
+      };
+    });
+  };
+
   const handleQuotationChange = (
     quotationNo: string
   ) => {
@@ -698,7 +745,11 @@ export default function ExportProformaInvoiceForm({
     const quotationItems =
       Array.isArray(quotation.items) &&
       quotation.items.length > 0
-        ? quotation.items.map(quotationItemToProformaItem)
+        ? applyProductHSNToItems(
+            quotation.items.map((item) =>
+              quotationItemToProformaItem(item)
+            )
+          )
         : [createEmptyItem()];
 
     const customerCountry =
@@ -866,6 +917,20 @@ export default function ExportProformaInvoiceForm({
     if (!hasValidItem) {
       alert(
         "The selected quotation does not contain a valid product line."
+      );
+      return;
+    }
+
+    const itemsMissingHSN = form.items.filter(
+      (item) =>
+        item.productName.trim() &&
+        Number(item.qty) > 0 &&
+        !String(item.hsCode || "").trim()
+    );
+
+    if (itemsMissingHSN.length > 0) {
+      alert(
+        "HSN Code is required for every valid product line. Please maintain the correct HSN in Product Master and select the quotation again."
       );
       return;
     }

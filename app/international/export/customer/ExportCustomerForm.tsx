@@ -26,6 +26,16 @@ export default function ExportCustomerForm({
     mobile: "",
     email: "",
 
+    // Business Details
+    businessRole: undefined,
+    industry: undefined,
+
+    // Source / Event
+    sourceEvent: "",
+
+    // Interested Products
+    interestedProducts: "",
+
     // International Details
     country: "",
     currency: "USD",
@@ -86,11 +96,6 @@ export default function ExportCustomerForm({
       return;
     }
 
-    if (!customer.contactPerson.trim()) {
-      alert("Please enter Contact Person");
-      return;
-    }
-
     if (!customer.country.trim()) {
       alert("Please enter Country");
       return;
@@ -101,14 +106,18 @@ export default function ExportCustomerForm({
       return;
     }
 
-    if (
-      customer.mobile &&
-      !/^[0-9]{10}$/.test(customer.mobile)
-    ) {
-      alert(
-        "Please enter a valid 10 digit Mobile Number"
-      );
-      return;
+    if (customer.mobile.trim()) {
+      const phone = customer.mobile.trim();
+      const digitsOnly = phone.replace(/\D/g, "");
+
+      if (
+        !/^[+()\-\s\d.]+$/.test(phone) ||
+        digitsOnly.length < 7 ||
+        digitsOnly.length > 15
+      ) {
+        alert("Please enter a valid international phone number");
+        return;
+      }
     }
 
     onSave(customer);
@@ -278,8 +287,7 @@ export default function ExportCustomerForm({
               name="mobile"
               value={customer.mobile}
               onChange={handleChange}
-              maxLength={10}
-              placeholder="Mobile Number"
+              placeholder="e.g. +971 50 123 4567"
               style={inputStyle}
             />
           </div>
@@ -456,6 +464,89 @@ export default function ExportCustomerForm({
               onChange={handleChange}
               maxLength={12}
               placeholder="Postal Code"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        {/* ======================================
+            BUSINESS DETAILS
+        ======================================= */}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1.3fr 1.3fr 1.8fr 2fr",
+            gap: "10px",
+            marginBottom: "12px",
+          }}
+        >
+          {/* BUSINESS ROLE */}
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Business Role</label>
+            <select
+              name="businessRole"
+              value={customer.businessRole || ""}
+              onChange={handleChange}
+              style={inputStyle}
+            >
+              <option value="">Select Business Role</option>
+              <option value="Importer">Importer</option>
+              <option value="Exporter">Exporter</option>
+              <option value="Importer & Exporter">Importer &amp; Exporter</option>
+              <option value="Manufacturer">Manufacturer</option>
+              <option value="Trader">Trader</option>
+              <option value="Distributor">Distributor</option>
+              <option value="Agent/Broker">Agent/Broker</option>
+              <option value="Service Provider">Service Provider</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          {/* INDUSTRY */}
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Industry</label>
+            <select
+              name="industry"
+              value={customer.industry || ""}
+              onChange={handleChange}
+              style={inputStyle}
+            >
+              <option value="">Select Industry</option>
+              <option value="Food & Agriculture">Food &amp; Agriculture</option>
+              <option value="Spices">Spices</option>
+              <option value="Engineering">Engineering</option>
+              <option value="Textiles & Garments">Textiles &amp; Garments</option>
+              <option value="Chemicals">Chemicals</option>
+              <option value="Pharmaceuticals">Pharmaceuticals</option>
+              <option value="Packaging">Packaging</option>
+              <option value="Consumer Goods">Consumer Goods</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          {/* SOURCE / EVENT */}
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Source / Event</label>
+            <input
+              type="text"
+              name="sourceEvent"
+              value={customer.sourceEvent || ""}
+              onChange={handleChange}
+              placeholder="e.g. Kolhapur Buyers-Sellers Meet"
+              style={inputStyle}
+            />
+          </div>
+
+          {/* INTERESTED PRODUCTS */}
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Interested Products</label>
+            <input
+              type="text"
+              name="interestedProducts"
+              value={customer.interestedProducts || ""}
+              onChange={handleChange}
+              placeholder="Products of interest"
               style={inputStyle}
             />
           </div>
