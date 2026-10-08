@@ -36,6 +36,19 @@ type ReservationItem = {
   marksNumbers: string;
 };
 
+type CommercialInvoice = {
+  invoiceNo: string;
+  invoiceDate: string;
+  orderNo: string;
+  shipmentNo: string;
+  customerCode: string;
+  customerName: string;
+  buyerCountry: string;
+  currency: string;
+  totalInvoiceValue: number;
+  status: string;
+};
+
 type Reservation = {
   reservationNo: string;
   reservationDate: string;
@@ -144,6 +157,46 @@ const CERTIFICATE_TYPES = [
   "Other",
 ];
 
+function formatDateForDisplay(value: string): string {
+  if (!value) return "";
+
+  const parts = value.split("-");
+
+  if (parts.length === 3 && parts[0].length === 4) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+
+  return value;
+}
+
+function formatDateForStorage(value: string): string {
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+  if (!match) return "";
+
+  const [, day, month, year] = match;
+  const date = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day)
+  );
+
+  if (
+    date.getFullYear() !== Number(year) ||
+    date.getMonth() !== Number(month) - 1 ||
+    date.getDate() !== Number(day)
+  ) {
+    return "";
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
+function isValidDateDisplay(value: string): boolean {
+  if (!value.trim()) return false;
+  return Boolean(formatDateForStorage(value));
+}
+
 function createId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random()
     .toString(36)
@@ -179,6 +232,113 @@ function loadReservations(): Reservation[] {
   } catch {
     return [];
   }
+}
+
+function loadCommercialInvoices(): CommercialInvoice[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(
+      "uk-exim-export-commercial-invoices"
+    );
+
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function findMatchingCommercialInvoice(
+  invoices: CommercialInvoice[],
+  orderNo: string,
+  customerCode: string,
+  customerName: string,
+  shipmentNo: string = ""
+): CommercialInvoice | undefined {
+  const normalizedOrder = orderNo.trim().toLowerCase();
+  const normalizedCode = customerCode.trim().toLowerCase();
+  const normalizedName = customerName.trim().toLowerCase();
+  const normalizedShipment = shipmentNo.trim().toLowerCase();
+
+  const validInvoices = invoices.filter(
+    (invoice) =>
+      invoice.status !== "Cancelled" &&
+      Boolean(invoice.invoiceNo)
+  );
+
+  if (normalizedShipment) {
+    const byShipment = validInvoices.find(
+      (invoice) =>
+        String(invoice.shipmentNo || "")
+          .trim()
+          .toLowerCase() === normalizedShipment
+    );
+
+    if (byShipment) {
+      return byShipment;
+    }
+  }
+
+  if (normalizedOrder) {
+    const byOrder = validInvoices.find(
+      (invoice) =>
+        String(invoice.orderNo || "")
+          .trim()
+          .toLowerCase() === normalizedOrder &&
+        (!normalizedCode ||
+          String(invoice.customerCode || "")
+            .trim()
+            .toLowerCase() === normalizedCode)
+    );
+
+    if (byOrder) {
+      return byOrder;
+    }
+
+    const byOrderOnly = validInvoices.find(
+      (invoice) =>
+        String(invoice.orderNo || "")
+          .trim()
+          .toLowerCase() === normalizedOrder
+    );
+
+    if (byOrderOnly) {
+      return byOrderOnly;
+    }
+  }
+
+  if (normalizedCode) {
+    const byCustomerCode = validInvoices.find(
+      (invoice) =>
+        String(invoice.customerCode || "")
+          .trim()
+          .toLowerCase() === normalizedCode &&
+        (!normalizedName ||
+          String(invoice.customerName || "")
+            .trim()
+            .toLowerCase() === normalizedName)
+    );
+
+    if (byCustomerCode) {
+      return byCustomerCode;
+    }
+  }
+
+  return validInvoices.find(
+    (invoice) =>
+      normalizedName &&
+      String(invoice.customerName || "")
+        .trim()
+        .toLowerCase() === normalizedName
+  );
 }
 
 function emptyCargo(): ShipmentCargoItem {
@@ -387,6 +547,9 @@ export default function ShipmentForm({
     ExportPacking[]
   >([]);
 
+  const [commercialInvoices, setCommercialInvoices] =
+    useState<CommercialInvoice[]>([]);
+
   const [form, setForm] = useState<Shipment>(() =>
     initialData
       ? {
@@ -411,12 +574,14 @@ export default function ShipmentForm({
   useEffect(() => {
     setReservations(loadReservations());
     setPackings(loadPackings());
+    setCommercialInvoices(loadCommercialInvoices());
   }, []);
 
   useEffect(() => {
     const refresh = () => {
       setReservations(loadReservations());
       setPackings(loadPackings());
+      setCommercialInvoices(loadCommercialInvoices());
     };
 
     window.addEventListener(
@@ -461,6 +626,56 @@ export default function ShipmentForm({
       ),
     [packings, form.packingNo]
   );
+
+  const matchingCommercialInvoices = useMemo(() => {
+    const orderNo = form.exportOrderNo.trim().toLowerCase();
+    const customerCode = form.customerCode.trim().toLowerCase();
+    const customerName = form.customerName.trim().toLowerCase();
+
+    const matches = commercialInvoices.filter((invoice) => {
+      if (invoice.status === "Cancelled") {
+        return false;
+      }
+
+      const invoiceOrder = String(invoice.orderNo || "")
+        .trim()
+        .toLowerCase();
+      const invoiceCode = String(invoice.customerCode || "")
+        .trim()
+        .toLowerCase();
+      const invoiceName = String(invoice.customerName || "")
+        .trim()
+        .toLowerCase();
+
+      if (orderNo && invoiceOrder === orderNo) {
+        return !customerCode || invoiceCode === customerCode;
+      }
+
+      return Boolean(customerCode)
+        ? invoiceCode === customerCode
+        : Boolean(customerName) && invoiceName === customerName;
+    });
+
+    if (form.commercialInvoiceNo && !matches.some(
+      (invoice) => invoice.invoiceNo === form.commercialInvoiceNo
+    )) {
+      const selected = commercialInvoices.find(
+        (invoice) => invoice.invoiceNo === form.commercialInvoiceNo
+      );
+
+      if (selected) {
+        return [selected, ...matches];
+      }
+    }
+
+    return matches;
+  }, [
+    commercialInvoices,
+    form.exportOrderNo,
+    form.customerCode,
+    form.customerName,
+    form.commercialInvoiceNo,
+  ]);
 
   const totalPackages = useMemo(
     () =>
@@ -676,6 +891,14 @@ export default function ShipmentForm({
         })
       );
 
+    const matchingInvoice = findMatchingCommercialInvoice(
+      commercialInvoices,
+      reservation.exportOrderNo || "",
+      reservation.customerCode || "",
+      reservation.customerName || "",
+      form.shipmentNo
+    );
+
     setForm((current) => ({
       ...current,
 
@@ -693,6 +916,21 @@ export default function ShipmentForm({
 
       country:
         reservation.buyerCountry || "",
+
+      commercialInvoiceNo:
+        matchingInvoice?.invoiceNo ||
+        current.commercialInvoiceNo ||
+        "",
+
+      invoiceAmount:
+        matchingInvoice
+          ? toNumber(matchingInvoice.totalInvoiceValue)
+          : current.invoiceAmount,
+
+      currency:
+        matchingInvoice?.currency ||
+        current.currency ||
+        "USD",
 
       cargoItems: cargo,
 
@@ -760,6 +998,14 @@ export default function ShipmentForm({
         })
       );
 
+    const matchingInvoice = findMatchingCommercialInvoice(
+      commercialInvoices,
+      packing.exportOrderNo || form.exportOrderNo || "",
+      packing.customerCode || form.customerCode || "",
+      packing.customerName || form.customerName || "",
+      form.shipmentNo
+    );
+
     setForm((current) => ({
       ...current,
 
@@ -785,6 +1031,21 @@ export default function ShipmentForm({
       country:
         packing.buyerCountry ||
         current.country,
+
+      commercialInvoiceNo:
+        matchingInvoice?.invoiceNo ||
+        current.commercialInvoiceNo ||
+        "",
+
+      invoiceAmount:
+        matchingInvoice
+          ? toNumber(matchingInvoice.totalInvoiceValue)
+          : current.invoiceAmount,
+
+      currency:
+        matchingInvoice?.currency ||
+        current.currency ||
+        "USD",
 
       cargoItems: cargo,
 
@@ -1178,22 +1439,15 @@ export default function ShipmentForm({
             </div>
 
             <div>
-              <label className={labelClass}>
-                Shipment Date *
-              </label>
-
-              <input
-                type="date"
-                value={
-                  form.shipmentDate
-                }
-                onChange={(e) =>
+              <DateField
+                label="Shipment Date *"
+                value={form.shipmentDate}
+                onChange={(value) =>
                   updateField(
                     "shipmentDate",
-                    e.target.value
+                    value
                   )
                 }
-                className={inputClass}
               />
             </div>
 
@@ -1320,19 +1574,60 @@ export default function ShipmentForm({
                 Commercial Invoice No.
               </label>
 
-              <input
-                value={
-                  form.commercialInvoiceNo
-                }
-                onChange={(e) =>
-                  updateField(
-                    "commercialInvoiceNo",
-                    e.target.value
+              <select
+                value={form.commercialInvoiceNo}
+                onChange={(e) => {
+                  const invoice = commercialInvoices.find(
+                    (item) => item.invoiceNo === e.target.value
+                  );
+
+                  if (!invoice) {
+                    updateField(
+                      "commercialInvoiceNo",
+                      ""
+                    );
+                    return;
+                  }
+
+                  setForm((current) => ({
+                    ...current,
+                    commercialInvoiceNo: invoice.invoiceNo,
+                    invoiceAmount: toNumber(
+                      invoice.totalInvoiceValue
+                    ),
+                    currency:
+                      invoice.currency || current.currency,
+                    updatedAt: new Date().toISOString(),
+                  }));
+                }}
+                onFocus={() =>
+                  setCommercialInvoices(
+                    loadCommercialInvoices()
                   )
                 }
                 className={inputClass}
-                placeholder="Enter Invoice No."
-              />
+              >
+                <option value="">
+                  {matchingCommercialInvoices.length === 0
+                    ? "No Invoice Found"
+                    : "Select Commercial Invoice"}
+                </option>
+
+                {matchingCommercialInvoices.map(
+                  (invoice) => (
+                    <option
+                      key={invoice.invoiceNo}
+                      value={invoice.invoiceNo}
+                    >
+                      {invoice.invoiceNo} - {invoice.customerName}
+                    </option>
+                  )
+                )}
+              </select>
+
+              <p className="mt-1 text-[10px] text-gray-500">
+                Order / Customer शी संबंधित Commercial Invoice auto-linked होईल.
+              </p>
             </div>
 
             <div>
@@ -3319,18 +3614,60 @@ export default function ShipmentForm({
           />
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <Field
-              label="Commercial Invoice No."
-              value={
-                form.commercialInvoiceNo
-              }
-              onChange={(value) =>
-                updateField(
-                  "commercialInvoiceNo",
-                  value
-                )
-              }
-            />
+            <div>
+              <label className={labelClass}>
+                Commercial Invoice No.
+              </label>
+              <select
+                value={form.commercialInvoiceNo}
+                onChange={(e) => {
+                  const invoice = commercialInvoices.find(
+                    (item) => item.invoiceNo === e.target.value
+                  );
+
+                  if (!invoice) {
+                    updateField(
+                      "commercialInvoiceNo",
+                      ""
+                    );
+                    return;
+                  }
+
+                  setForm((current) => ({
+                    ...current,
+                    commercialInvoiceNo: invoice.invoiceNo,
+                    invoiceAmount: toNumber(
+                      invoice.totalInvoiceValue
+                    ),
+                    currency:
+                      invoice.currency || current.currency,
+                    updatedAt: new Date().toISOString(),
+                  }));
+                }}
+                onFocus={() =>
+                  setCommercialInvoices(
+                    loadCommercialInvoices()
+                  )
+                }
+                className={inputClass}
+              >
+                <option value="">
+                  {matchingCommercialInvoices.length === 0
+                    ? "No Invoice Found"
+                    : "Select Commercial Invoice"}
+                </option>
+                {matchingCommercialInvoices.map(
+                  (invoice) => (
+                    <option
+                      key={invoice.invoiceNo}
+                      value={invoice.invoiceNo}
+                    >
+                      {invoice.invoiceNo} - {invoice.customerName}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
 
             <NumberField
               label="Invoice Amount"
@@ -3807,20 +4144,118 @@ function DateField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const [textValue, setTextValue] = useState(
+    formatDateForDisplay(value)
+  );
+  const [pickerValue, setPickerValue] = useState(
+    value || ""
+  );
+  const pickerRef = React.useRef<HTMLInputElement | null>(
+    null
+  );
+
+  useEffect(() => {
+    setTextValue(formatDateForDisplay(value));
+    setPickerValue(value || "");
+  }, [value]);
+
+  const handleTextChange = (nextValue: string) => {
+    setTextValue(nextValue);
+
+    if (
+      nextValue.length === 10 &&
+      isValidDateDisplay(nextValue)
+    ) {
+      const storageDate = formatDateForStorage(nextValue);
+      setPickerValue(storageDate);
+      onChange(storageDate);
+    } else if (!nextValue) {
+      setPickerValue("");
+      onChange("");
+    }
+  };
+
+  const handleTextBlur = () => {
+    if (!textValue.trim()) {
+      onChange("");
+      return;
+    }
+
+    const storageDate = formatDateForStorage(textValue);
+
+    if (storageDate) {
+      setTextValue(formatDateForDisplay(storageDate));
+      setPickerValue(storageDate);
+      onChange(storageDate);
+      return;
+    }
+
+    setTextValue(formatDateForDisplay(value));
+    setPickerValue(value || "");
+  };
+
+  const handlePickerChange = (nextValue: string) => {
+    setPickerValue(nextValue);
+    setTextValue(formatDateForDisplay(nextValue));
+    onChange(nextValue);
+  };
+
   return (
     <div>
-      <label className="mb-1 block text-xs font-semibold text-gray-600">
-        {label}
-      </label>
+      {label ? (
+        <label className="mb-1 block text-xs font-semibold text-gray-600">
+          {label}
+        </label>
+      ) : null}
 
-      <input
-        type="date"
-        value={value}
-        onChange={(e) =>
-          onChange(e.target.value)
-        }
-        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
-      />
+      <div className="relative">
+        <input
+          type="text"
+          value={textValue}
+          onChange={(e) =>
+            handleTextChange(e.target.value)
+          }
+          onBlur={handleTextBlur}
+          placeholder="DD/MM/YYYY"
+          inputMode="numeric"
+          maxLength={10}
+          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 pr-11 text-sm text-gray-800 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+        />
+
+        <button
+          type="button"
+          aria-label={`Select ${label || "date"}`}
+          title="Select date"
+          onClick={() => {
+            const picker = pickerRef.current;
+
+            if (!picker) return;
+
+            if (
+              typeof picker.showPicker === "function"
+            ) {
+              picker.showPicker();
+            } else {
+              picker.focus();
+            }
+          }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-700 hover:bg-gray-100"
+        >
+          📅
+        </button>
+
+        <input
+          ref={pickerRef}
+          type="date"
+          value={pickerValue}
+          onChange={(e) =>
+            handlePickerChange(e.target.value)
+          }
+          tabIndex={-1}
+          aria-hidden="true"
+          className="pointer-events-none absolute h-px w-px opacity-0"
+        />
+      </div>
     </div>
   );
 }
