@@ -554,6 +554,7 @@ case "export-stock":
               >
                 UK EXIM ENTERPRISES ERP Overview
               </div>
+
             </div>
 
             {/* =============================================
@@ -1627,7 +1628,7 @@ case "export-stock":
                   paddingLeft:
                     "100%",
                   animation:
-                    "ukEximFooterMove 18s linear infinite",
+                    "ukEximFooterMove 28s linear infinite",
                   fontSize: "10px",
                   color: "#6b7280",
                 }}
@@ -1636,36 +1637,60 @@ case "export-stock":
                   src="/uklogo.png"
                   alt="UK EXIM Logo"
                   style={{
-                    width: "30px",
-                    height: "30px",
+                    width: "64px",
+                    height: "64px",
                     objectFit:
                       "contain",
                     flexShrink: 0,
                   }}
                 />
 
-                <span>
-                  Designed and Developed by{" "}
+                <span style={{ fontSize: "15px", whiteSpace: "nowrap" }}>
+                  Designed & Developed by{" "}
                   <strong
                     style={{
                       color: "#14532d",
-                      fontSize: "11px",
+                      fontSize: "17px",
+                      fontWeight: 900,
                     }}
                   >
                     Uttam Bhosale
                   </strong>
                 </span>
 
-                <span
-                  style={{
-                    color: "#9ca3af",
-                    fontSize: "11px",
-                  }}
-                >
+                <span style={{ color: "#9ca3af", fontSize: "16px", fontWeight: 800 }}>
                   •
                 </span>
 
-                <span>
+                <strong
+                  style={{
+                    color: "#14532d",
+                    fontSize: "18px",
+                    fontWeight: 900,
+                    letterSpacing: "0.4px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  BUILT FOR BUSINESS.
+                </strong>
+
+                <strong
+                  style={{
+                    color: "#b58a32",
+                    fontSize: "18px",
+                    fontWeight: 900,
+                    letterSpacing: "0.4px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  DESIGNED FOR TRUST.
+                </strong>
+
+                <span style={{ color: "#9ca3af", fontSize: "16px", fontWeight: 800 }}>
+                  •
+                </span>
+
+                <span style={{ fontSize: "13px", whiteSpace: "nowrap" }}>
                   UK EXIM ERP Version 1.0
                 </span>
               </div>
