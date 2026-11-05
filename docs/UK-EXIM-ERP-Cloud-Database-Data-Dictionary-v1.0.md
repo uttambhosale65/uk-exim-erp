@@ -1,13 +1,13 @@
 # UK EXIM ERP – Cloud Database Data Dictionary v1.0
 
 **Document status:** Source-derived draft for architecture and migration planning  
-**Source baseline:** `UK-EXIM-ERP-V1-SOURCE-AUDIT.zip` (138 files)  
+**Source baseline:** Current repository checkout at Git commit `29db49d` (UK EXIM ERP Version 1.0 source).
 **Application stack in source:** Next.js / React / TypeScript  
 **Important:** This document records fields present in the supplied TypeScript source. Proposed database design notes are clearly labelled; they are not existing application fields.
 
 ## 1. Scope and interpretation
 
-- The exact field names and TypeScript types below are copied from the `*Types.ts` files in the supplied Source Audit ZIP.
+- The exact field names and TypeScript types below are copied from the `*Types.ts` files in the current repository checkout recorded above.
 - `string`, `number`, `boolean`, literal unions, optional fields (`?`) and arrays are preserved as authored.
 - Nested `items`, `cargoItems`, `containers`, `documents`, `certificates`, and `timeline` are currently TypeScript arrays. The source does not itself prove whether they must be separate SQL tables or JSONB; the proposed relational mapping is described later.
 - The source contains no `company_id` field in the business types. `company_id` is a **new SaaS tenancy field to be added during migration**, not an existing field.
@@ -27,7 +27,7 @@
 | `uk-exim-export-commercial-invoices` | `app/international/export/invoice/ExportCommercialInvoiceStorage.ts` |
 | `uk-exim-export-orders` | `app/international/export/order/ExportOrderStorage.ts` |
 | `uk-exim-export-packings` | `app/international/export/packing/PackingStorage.ts` |
-| `uk-exim-export-reservations` | `app/international/export/packing/PackingStorage.ts` |
+| `uk-exim-export-reservations` | `app/international/export/reservation/ExportReservationStorage.ts` |
 | `uk-exim-export-proforma-invoices` | `app/international/export/proforma/ExportProformaInvoiceStorage.ts` |
 | `uk-exim-export-purchases` | `app/international/export/purchase/ExportPurchaseStorage.ts` |
 | `uk-exim-export-quotations` | `app/international/export/quotation/ExportQuotationStorage.ts` |
@@ -44,7 +44,7 @@
 
 ### Backup coverage finding
 
-`app/utils/ERPBackup.ts` defines `BACKUP_KEYS` with these 9 keys:
+`app/utils/ERPBackup.ts` currently defines `BACKUP_KEYS` with all 22 source-identified keys:
 
 - `uk-exim-products`
 - `uk-exim-customers`
@@ -55,10 +55,6 @@
 - `uk-exim-company-settings`
 - `uk-exim-invoice-settings`
 - `uk-exim-bank-settings`
-
-The source scan found 13 additional localStorage keys not listed in this backup allowlist. This means this specific backup utility does not include those keys in `createERPBackup()`. This must be addressed in a separate backup design review before any production migration. **Do not use Restore as part of this migration exercise.**
-
-Additional keys not listed in `BACKUP_KEYS`:
 - `uk-exim-export-customers`
 - `uk-exim-export-enquiries`
 - `uk-exim-export-commercial-invoices`
@@ -72,6 +68,8 @@ Additional keys not listed in `BACKUP_KEYS`:
 - `uk-exim-international-export-stock`
 - `uk-exim-international-settings`
 - `uk-exim-sales-numbering-v2`
+
+**Source comparison:** All 22 keys in the inventory above are included in the current `BACKUP_KEYS` allowlist. There are no inventory keys currently missing from that allowlist. `createERPBackup()` reads only listed keys that exist and attempts to JSON-parse their values; this statement describes source code and is not a backup or restore test. The current restore implementation accepts recognized keys, snapshots values for those keys, writes supplied recognized entries, and attempts rollback if a write fails. Do not use Restore for migration testing. Backup and recovery reliability, backup file validation, and operational procedures remain unverified and require separate review before migration.
 
 ## 3. Source-derived business entities and exact fields
 
@@ -1724,7 +1722,7 @@ These are proposed SaaS tables only. They must not be confused with existing fie
 - Document numbering generation and whether numbers are globally unique or company/financial-year scoped.
 - Whether stock quantities are derived from transactions or persisted as current balances in each module.
 - Exact relationships between Export documents, currently represented by document number strings in source types.
-- The current backup allowlist excludes multiple discovered Export/International keys; backup coverage must be designed and tested before live migration.
+- The current source allowlist covers all 22 inventoried keys. Backup and recovery reliability, restore behavior under real browser conditions, and operational procedures have not been tested in this documentation audit; review those separately before migration. Do not test against the owner's live Chrome LocalStorage.
 
 ## 9. Source files reviewed
 
