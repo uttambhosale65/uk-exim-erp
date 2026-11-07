@@ -2,6 +2,12 @@ import { Stock } from "./StockTypes";
 import { loadProducts } from "../../product/components/ProductStorage";
 import { loadPurchases } from "../customer/purchase/PurchaseStorage";
 import { loadSales } from "../customer/sales/SalesStorage";
+import {
+  applyMovementLedger,
+  getStockMovementRecords,
+  isStockMovementCutoverActive,
+  loadProtectedStockBaseline,
+} from "./StockMovementStorage";
 
 const STORAGE_KEY = "uk-exim-stock";
 
@@ -42,14 +48,12 @@ function loadStoredStock(): Stock[] {
 
    IMPORTANT:
 
-   Every normal Stock read is reconciled from:
+   Before cutover, normal Stock reads retain the existing
+   transaction rebuild behavior.
 
-   Opening Stock
-   + Purchase / GRN
-   - Sales
-
-   This prevents stale uk-exim-stock data from
-   becoming the source of truth.
+   At/after cutover, the stored stock rows become the
+   protected legacy baseline and new movement-ledger totals
+   are projected without writing those rows.
 ========================================================= */
 
 export function loadStock(): Stock[] {
@@ -58,6 +62,12 @@ export function loadStock(): Stock[] {
   }
 
   try {
+    if (isStockMovementCutoverActive()) {
+      return applyMovementLedger(
+        loadProtectedStockBaseline(),
+        getStockMovementRecords()
+      );
+    }
     return rebuildStockFromTransactions();
   } catch (error) {
     console.error(
@@ -82,6 +92,10 @@ export function saveStock(stock: Stock[]): void {
   if (typeof window === "undefined") {
     return;
   }
+
+  // After cutover the legacy stock rows are immutable. New activity lives in
+  // the separate stock movement ledger and is projected by loadStock().
+  if (isStockMovementCutoverActive()) return;
 
   try {
     localStorage.setItem(
@@ -266,7 +280,9 @@ export function updateStock(
   void unit;
   void qty;
 
-  rebuildStockFromTransactions();
+  if (!isStockMovementCutoverActive()) {
+    rebuildStockFromTransactions();
+  }
 }
 
 /* =========================================================
@@ -289,7 +305,9 @@ export function reversePurchaseStock(
   void productCode;
   void qty;
 
-  rebuildStockFromTransactions();
+  if (!isStockMovementCutoverActive()) {
+    rebuildStockFromTransactions();
+  }
 }
 
 /* =========================================================
@@ -312,7 +330,9 @@ export function reduceStock(
   void productCode;
   void qty;
 
-  rebuildStockFromTransactions();
+  if (!isStockMovementCutoverActive()) {
+    rebuildStockFromTransactions();
+  }
 }
 
 /* =========================================================
@@ -322,6 +342,7 @@ export function reduceStock(
 export function deleteStock(
   id: string
 ): Stock[] {
+  if (isStockMovementCutoverActive()) return loadStock();
   const updatedStock =
     loadStoredStock().filter(
       (item) => item.id !== id
@@ -346,6 +367,7 @@ export function deleteStock(
 export function deleteStockByProductCode(
   productCode: string
 ): void {
+  if (isStockMovementCutoverActive()) return;
   const stock = loadStoredStock();
 
   const updatedStock =
@@ -380,7 +402,9 @@ export function getCurrentStock(
   const stock = loadStock();
 
   const stockProductCode =
-    getStockTargetCode(productCode);
+    isStockMovementCutoverActive()
+      ? String(productCode || "").trim()
+      : getStockTargetCode(productCode);
 
   const item = stock.find(
     (s) =>
@@ -401,7 +425,7 @@ export function setOpeningStock(
   productCode: string,
   openingStock: number
 ): void {
-  if (!productCode) {
+  if (!productCode || isStockMovementCutoverActive()) {
     return;
   }
 
@@ -445,6 +469,7 @@ export function setOpeningStock(
 export function setOpeningStockBulk(
   openingStockMap: Record<string, number>
 ): void {
+  if (isStockMovementCutoverActive()) return;
   const stock =
     loadStoredStock();
 
@@ -486,6 +511,8 @@ export function resetStock(): void {
     return;
   }
 
+  if (isStockMovementCutoverActive()) return;
+
   try {
     localStorage.removeItem(
       STORAGE_KEY
@@ -526,7 +553,7 @@ export function syncProductToStock(
     stock: number;
   }
 ): void {
-  if (!product?.code) {
+  if (!product?.code || isStockMovementCutoverActive()) {
     return;
   }
 
@@ -578,14 +605,14 @@ export function syncProductToStock(
    REBUILD STOCK FROM TRANSACTIONS
 =========================================================
 
-   SOURCE OF TRUTH:
+   LEGACY SOURCE OF TRUTH (PRE-CUTOVER ONLY):
 
    Opening Stock
    + Purchase / GRN
    - Sales
 
    Existing stored Purchase Qty and Sales Qty
-   are NOT trusted.
+   are NOT trusted by the pre-cutover rebuild.
 
    Only Opening Stock is preserved from existing
    stock records.
@@ -597,6 +624,12 @@ export function syncProductToStock(
 export function rebuildStockFromTransactions(): Stock[] {
   if (typeof window === "undefined") {
     return [];
+  }
+
+  // Never replay historical transactions through mutable product mappings
+  // after the cutover. The stored stock rows are the protected baseline.
+  if (isStockMovementCutoverActive()) {
+    return loadProtectedStockBaseline();
   }
 
   const existingStock =

@@ -20,17 +20,22 @@ import {
   getCurrentStock,
   convertToStockQty,
 } from "../components/stock/StockStorage";
+import {
+  commitStockMovementTransaction,
+  findInsufficientStock,
+  getMovementRecord,
+  getStockMovementRecords,
+  isStockMovementLedgerHealthy,
+  isPostCutoverTimestamp,
+  isStockMovementCutoverActive,
+  movementRecordForTransaction,
+  saleMovementForLine,
+  type StockMovementLine,
+} from "../components/stock/StockMovementStorage";
 
 import TransactionConfirmModal, {
   TransactionConfirmMode,
 } from "../components/common/TransactionConfirmModal";
-
-/* =====================================================
-   SALES NUMBER MIGRATION
-===================================================== */
-
-const SALES_NUMBER_VERSION =
-  "uk-exim-sales-numbering-v2";
 
 /* =====================================================
    GET STOCK IMPACT
@@ -52,6 +57,21 @@ function getStockImpact(
   stockProductCode: string;
   stockQty: number;
 } {
+  if (isStockMovementCutoverActive()) {
+    const product = loadProducts().find((candidate) => candidate.code === productCode);
+    const movement = saleMovementForLine({
+      lineId: "validation",
+      productCode,
+      qty,
+      unit: product?.unit || "KG",
+    }, product);
+    if (!movement) return { stockProductCode: productCode, stockQty: 0 };
+    return {
+      stockProductCode: movement.stockCode,
+      stockQty: movement.quantityKg,
+    };
+  }
+
   const product =
     loadProducts().find(
       (p) =>
@@ -65,20 +85,9 @@ function getStockImpact(
     };
   }
 
-  const stockProductCode =
-    product.stockBaseCode ||
-    (
-      product.unit === "Pkt"
-        ? "P0006"
-        : product.code
-    );
+  const stockProductCode = product.stockBaseCode || (product.unit === "Pkt" ? "P0006" : product.code);
 
-  const stockQty =
-    convertToStockQty(
-      qty,
-      product.unit,
-      product.netWeight
-    );
+  const stockQty = convertToStockQty(qty, product.unit, product.netWeight);
 
   return {
     stockProductCode,
@@ -86,52 +95,36 @@ function getStockImpact(
   };
 }
 
-/* =====================================================
-   REPAIR OLD SALES NUMBERS
-===================================================== */
+function createPostedSale(
+  sale: Sales,
+  previousSale: Sales | null
+): { sale: Sales; movements: StockMovementLine[] } {
+  const postedAt = previousSale?.postedAt || new Date().toISOString();
+  const items = sale.items.map((item, index) => {
+    let lineId = item.lineId || previousSale?.items?.[index]?.lineId || crypto.randomUUID();
+    if (sale.items.slice(0, index).some((prior, priorIndex) =>
+      (prior.lineId || previousSale?.items?.[priorIndex]?.lineId) === lineId
+    )) lineId = crypto.randomUUID();
+    const product = loadProducts().find((candidate) => candidate.code === item.productCode);
+    const movement = sale.status === "Cancelled"
+      ? null
+      : saleMovementForLine({ ...item, lineId, unit: product?.unit || item.unit }, product);
 
-function migrateSalesNumbers(
-  sales: Sales[]
-): Sales[] {
-  if (
-    typeof window === "undefined" ||
-    sales.length === 0
-  ) {
-    return sales;
-  }
+    return {
+      item: { ...item, lineId },
+      movement,
+    };
+  });
 
-  const alreadyMigrated =
-    localStorage.getItem(
-      SALES_NUMBER_VERSION
-    );
-
-  if (
-    alreadyMigrated === "done"
-  ) {
-    return sales;
-  }
-
-  const correctedSales =
-    sales.map(
-      (sale, index) => ({
-        ...sale,
-        salesNo:
-          `SAL-${String(
-            index + 1
-          ).padStart(4, "0")}`,
-      })
-    );
-
-  saveSales(
-    correctedSales
-  );
-
-  localStorage.setItem(
-    SALES_NUMBER_VERSION,
-    "done"
-  );
-
-  return correctedSales;
+  const movements = items
+    .map((entry) => entry.movement)
+    .filter((movement): movement is StockMovementLine => Boolean(
+      movement && movement.quantityKg > 0 && Number.isFinite(movement.quantityKg)
+    ));
+  return {
+    sale: { ...sale, postedAt, items: items.map((entry) => entry.item), stockMovements: movements },
+    movements,
+  };
 }
 
 /* =====================================================
@@ -176,10 +169,7 @@ export default function SalesPage() {
     const loadedSales =
       loadSales();
 
-    const correctedSales =
-      migrateSalesNumbers(
-        loadedSales
-      );
+    const correctedSales = loadedSales;
 
     setSales(
       correctedSales
@@ -203,12 +193,52 @@ export default function SalesPage() {
     sale: Sales
   ): boolean => {
 
+    if (sale.status === "Cancelled") return true;
+
     const stockItems =
       Array.isArray(
         sale.items
       )
         ? sale.items
         : [];
+
+    if (isStockMovementCutoverActive()) {
+      getStockMovementRecords();
+      if (!isStockMovementLedgerHealthy()) {
+        alert("Stock movement ledger is unavailable. Sale posting is blocked to prevent an incorrect balance.");
+        return false;
+      }
+      const requiredByStock = new Map<string, number>();
+      stockItems.forEach((item) => {
+        if (!item.productCode || Number(item.qty) <= 0) return;
+        const impact = getStockImpact(item.productCode, Number(item.qty));
+        requiredByStock.set(
+          impact.stockProductCode,
+          (requiredByStock.get(impact.stockProductCode) || 0) + impact.stockQty
+        );
+      });
+
+      const oldMovements = editingSale?.postedAt && isPostCutoverTimestamp(editingSale.postedAt)
+        ? getMovementRecord("sale", editingSale.id)?.movements || editingSale.stockMovements || []
+        : [];
+      const availableByStock = new Map<string, number>();
+      requiredByStock.forEach((_required, stockCode) => {
+        const available = getCurrentStock(stockCode) + oldMovements
+          .filter((movement) => movement.stockCode === stockCode && movement.direction === "out")
+          .reduce((sum, movement) => sum + movement.quantityKg, 0);
+        availableByStock.set(stockCode, available);
+      });
+      const shortage = findInsufficientStock(requiredByStock, availableByStock);
+      if (shortage) {
+        alert(
+          `❌ Insufficient Stock\n\nStock Product: ${shortage.stockCode}\n` +
+          `Available Stock: ${shortage.available.toFixed(3)} KG\n` +
+          `Required Quantity: ${shortage.required.toFixed(3)} KG\n\nSale cannot be saved.`
+        );
+        return false;
+      }
+      return true;
+    }
 
     for (
       const item of stockItems
@@ -316,9 +346,66 @@ export default function SalesPage() {
      manual stock +/- करू नये.
   ===================================================== */
 
-  const processConfirmedSale = (
+  const processConfirmedSale = async (
     sale: Sales
   ) => {
+
+    if (isStockMovementCutoverActive()) {
+      const previous = editingSale;
+      if (!previous && loadSales().some((entry) => entry.id === sale.id)) {
+        alert("This sale has already been posted.");
+        return;
+      }
+      if (previous && !isPostCutoverTimestamp(previous.postedAt)) {
+        alert("Historical sales are protected and cannot be edited after the stock cutover.");
+        return;
+      }
+
+      const created = createPostedSale(sale, previous);
+      const finalSale: Sales = {
+        ...created.sale,
+        id: previous?.id || sale.id || crypto.randomUUID(),
+        salesNo: previous?.salesNo || sale.salesNo,
+      };
+      const record = movementRecordForTransaction(
+        "sale", finalSale.id, finalSale.postedAt!, created.movements
+      );
+      if (finalSale.status === "Cancelled") {
+        record.state = "voided";
+        record.movements = [];
+      }
+
+      const committed = await commitStockMovementTransaction(
+        "sale",
+        finalSale.id,
+        finalSale,
+        record,
+        () => {
+          const latestSales = loadSales();
+          if (previous) {
+            if (!latestSales.some((item) => item.id === previous.id)) return false;
+            return saveSales(latestSales.map((item) =>
+              item.id === previous.id ? finalSale : item
+            ));
+          }
+          if (latestSales.some((item) => item.id === finalSale.id)) return false;
+          return saveSales([...latestSales, finalSale]);
+        }
+      );
+      if (committed !== "committed" && committed !== "movement-pending") {
+        alert(`Sale was not saved: ${committed}. No stock movement was posted.`);
+        return;
+      }
+      const savedSales = loadSales();
+      setSales(savedSales);
+      setSalesNo(getNextSalesNo(savedSales));
+      setEditingSale(null);
+      setPendingSale(null);
+      if (committed === "movement-pending") {
+        alert("Sale was saved. Its stock movement remains in the recovery journal and is included in available stock; do not repost this sale.");
+      }
+      return;
+    }
 
     /* =================================================
        EDIT EXISTING SALE
@@ -529,8 +616,8 @@ export default function SalesPage() {
 
      ONLY this button causes actual save.
   ===================================================== */
-const handleConfirmSale =
-  () => {
+  const handleConfirmSale =
+  async () => {
 
     console.log("CONFIRM SALE CLICKED", pendingSale);
 
@@ -540,7 +627,7 @@ const handleConfirmSale =
       return;
     }
 
-    processConfirmedSale(
+    await processConfirmedSale(
       pendingSale
     );
   };
@@ -568,6 +655,11 @@ const handleConfirmSale =
     sale: Sales
   ) => {
 
+    if (isStockMovementCutoverActive() && !isPostCutoverTimestamp(sale.postedAt)) {
+      alert("Historical sales are protected and cannot be edited after the stock cutover.");
+      return;
+    }
+
     setEditingSale(
       sale
     );
@@ -590,13 +682,13 @@ const handleConfirmSale =
      DELETE SALE
   ===================================================== */
 
-  const handleDelete = (
+  const handleDelete = async (
     id: string
   ) => {
 
     const confirmed =
       window.confirm(
-        "Are you sure you want to delete this sales record?\n\nStock will be recalculated."
+        "Are you sure you want to delete this sales record?\n\nEligible post-cutover stock movement will be reversed."
       );
 
     if (
@@ -617,15 +709,47 @@ const handleConfirmSale =
       return;
     }
 
+    const updatedSales = sales.filter((sale) => sale.id !== id);
+
+    if (isStockMovementCutoverActive()) {
+      if (!isPostCutoverTimestamp(saleToDelete.postedAt)) {
+        alert("Historical sales are protected and cannot be deleted after the stock cutover.");
+        return;
+      }
+      const tombstone = movementRecordForTransaction(
+        "sale", saleToDelete.id, saleToDelete.postedAt!, []
+      );
+      const voided = { ...tombstone, state: "voided" as const, movements: [] };
+      const committed = await commitStockMovementTransaction(
+        "sale",
+        saleToDelete.id,
+        null,
+        voided,
+        () => {
+          const latestSales = loadSales();
+          if (!latestSales.some((item) => item.id === saleToDelete.id)) return false;
+          return saveSales(latestSales.filter((item) => item.id !== saleToDelete.id));
+        }
+      );
+      if (committed !== "committed" && committed !== "movement-pending") {
+        alert(`Sale was not deleted: ${committed}. No stock movement changed.`);
+        return;
+      }
+      const savedSales = loadSales();
+      setSales(savedSales);
+      setSalesNo(getNextSalesNo(savedSales));
+      if (selectedSale?.id === id) setSelectedSale(null);
+      if (pendingSale?.id === id) setPendingSale(null);
+      if (editingSale?.id === id) setEditingSale(null);
+      if (committed === "movement-pending") {
+        alert("Sale deletion was saved. Its stock movement is pending recovery and is excluded from available stock.");
+      }
+      return;
+    }
+
     /* -----------------------------------------------
        DELETE SALE FIRST
     ------------------------------------------------ */
-
-    const updatedSales =
-      sales.filter(
-        (sale) =>
-          sale.id !== id
-      );
 
     saveSales(
       updatedSales

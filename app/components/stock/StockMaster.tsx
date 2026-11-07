@@ -12,6 +12,7 @@ import {
   resetStock,
   setOpeningStockBulk,
 } from "./StockStorage";
+import { isStockMovementCutoverActive } from "./StockMovementStorage";
 
 export default function StockMaster() {
   const [stock, setStock] = useState<Stock[]>([]);
@@ -40,6 +41,10 @@ export default function StockMaster() {
   ===================================================== */
 
   const handleResetStock = () => {
+    if (isStockMovementCutoverActive()) {
+      window.alert("Protected legacy stock cannot be reset after the stock cutover.");
+      return;
+    }
     const confirmed = window.confirm(
       "Are you sure you want to reset all stock?\n\n" +
         "This will clear the current stock records."
@@ -57,6 +62,10 @@ export default function StockMaster() {
   ===================================================== */
 
   const handleOpenOpeningEditor = () => {
+    if (isStockMovementCutoverActive()) {
+      window.alert("Protected legacy opening balances cannot be edited after the stock cutover.");
+      return;
+    }
     const currentStock = loadStock();
 
     const values: Record<string, string> = {};

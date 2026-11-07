@@ -36,6 +36,14 @@ import {
   saveStock,
   reversePurchaseStock,
 } from "../components/stock/StockStorage";
+import {
+  commitStockMovementTransaction,
+  isPostCutoverTimestamp,
+  isStockMovementCutoverActive,
+  movementRecordForTransaction,
+  purchaseMovementForLine,
+  type StockMovementLine,
+} from "../components/stock/StockMovementStorage";
 
 export default function PurchasePage() {
 
@@ -92,29 +100,6 @@ export default function PurchasePage() {
     );
 
   }, []);
-
-  /* =====================================================
-     SAVE PURCHASES
-
-     This saves the Purchase Register whenever
-     the actual confirmed purchase is added/updated.
-  ===================================================== */
-
-  useEffect(() => {
-
-    savePurchases(
-      purchases
-    );
-
-    setPurchaseNo(
-      getNextPurchaseNo(
-        purchases
-      )
-    );
-
-  }, [
-    purchases,
-  ]);
 
   /* =====================================================
      GET PURCHASE STOCK IMPACT
@@ -176,6 +161,35 @@ export default function PurchasePage() {
     };
   }
 
+  function createPostedPurchase(
+    purchase: Purchase,
+    previous: Purchase | null
+  ): { purchase: Purchase; movements: StockMovementLine[] } {
+    const postedAt = previous?.postedAt || new Date().toISOString();
+    const movements: StockMovementLine[] = [];
+    const items = purchase.items.map((item, index) => {
+      let lineId = item.lineId || previous?.items?.[index]?.lineId || crypto.randomUUID();
+      if (purchase.items.slice(0, index).some((prior, priorIndex) =>
+        (prior.lineId || previous?.items?.[priorIndex]?.lineId) === lineId
+      )) lineId = crypto.randomUUID();
+      const product = loadProducts().find((candidate) => candidate.code === item.productCode);
+      const movement = purchaseMovementForLine({ ...item, lineId, unit: product?.unit || item.unit }, product);
+      if (movement && movement.quantityKg > 0 && Number.isFinite(movement.quantityKg)) {
+        movements.push(movement);
+      }
+      return { item: { ...item, lineId } };
+    });
+    return {
+      purchase: {
+        ...purchase,
+        postedAt,
+        items: items.map((entry) => entry.item),
+        stockMovements: movements,
+      },
+      movements,
+    };
+  }
+
   /* =====================================================
      ACTUAL SAVE / UPDATE PURCHASE
 
@@ -184,9 +198,59 @@ export default function PurchasePage() {
      user clicks Confirm GRN / Update GRN.
   ===================================================== */
 
-  function processPurchase(
+  async function processPurchase(
     purchase: Purchase
   ) {
+
+    if (isStockMovementCutoverActive()) {
+      const previous = editingPurchase;
+      if (!previous && loadPurchases().some((entry) => entry.id === purchase.id)) {
+        alert("This purchase has already been posted.");
+        return;
+      }
+      if (previous && !isPostCutoverTimestamp(previous.postedAt)) {
+        alert("Historical purchases are protected and cannot be edited after the stock cutover.");
+        return;
+      }
+      const created = createPostedPurchase(purchase, previous);
+      const finalPurchase: Purchase = {
+        ...created.purchase,
+        id: previous?.id || purchase.id || crypto.randomUUID(),
+      };
+      const record = movementRecordForTransaction(
+        "purchase", finalPurchase.id, finalPurchase.postedAt!, created.movements
+      );
+      const committed = await commitStockMovementTransaction(
+        "purchase",
+        finalPurchase.id,
+        finalPurchase,
+        record,
+        () => {
+          const latestPurchases = loadPurchases();
+          if (previous) {
+            if (!latestPurchases.some((item) => item.id === previous.id)) return false;
+            return savePurchases(latestPurchases.map((item) =>
+              item.id === previous.id ? finalPurchase : item
+            ));
+          }
+          if (latestPurchases.some((item) => item.id === finalPurchase.id)) return false;
+          return savePurchases([...latestPurchases, finalPurchase]);
+        }
+      );
+      if (committed !== "committed" && committed !== "movement-pending") {
+        alert(`Purchase was not saved: ${committed}. No stock movement was posted.`);
+        return;
+      }
+      const savedPurchases = loadPurchases();
+      setPurchases(savedPurchases);
+      setPurchaseNo(getNextPurchaseNo(savedPurchases));
+      setEditingPurchase(null);
+      setPendingPurchase(null);
+      if (committed === "movement-pending") {
+        alert("Purchase was saved. Its stock movement remains in the recovery journal and is included in available stock; do not repost this purchase.");
+      }
+      return;
+    }
 
     /* ===================================================
        EDIT EXISTING PURCHASE
@@ -290,15 +354,14 @@ export default function PurchasePage() {
         updatedStock
       );
 
-      setPurchases(
-        (prev) =>
-          prev.map(
-            (p) =>
-              p.id === purchase.id
-                ? purchase
-                : p
-          )
-      );
+      const updatedPurchases = purchases.map((p) => p.id === purchase.id ? purchase : p);
+      if (!savePurchases(updatedPurchases)) {
+        alert("Purchase could not be saved.");
+        return;
+      }
+
+      setPurchases(updatedPurchases);
+      setPurchaseNo(getNextPurchaseNo(updatedPurchases));
 
       setEditingPurchase(
         null
@@ -394,12 +457,14 @@ export default function PurchasePage() {
       updatedStock
     );
 
-    setPurchases(
-      (prev) => [
-        ...prev,
-        purchase,
-      ]
-    );
+    const updatedPurchases = [...purchases, purchase];
+    if (!savePurchases(updatedPurchases)) {
+      alert("Purchase could not be saved.");
+      return;
+    }
+
+    setPurchases(updatedPurchases);
+    setPurchaseNo(getNextPurchaseNo(updatedPurchases));
 
     setEditingPurchase(
       null
@@ -433,7 +498,7 @@ function addPurchase(
      CONFIRM GRN
   ===================================================== */
 
-  function handleConfirmPurchase() {
+  async function handleConfirmPurchase() {
 
     if (
       !pendingPurchase
@@ -441,7 +506,7 @@ function addPurchase(
       return;
     }
 
-    processPurchase(
+    await processPurchase(
       pendingPurchase
     );
   }
@@ -465,6 +530,11 @@ function addPurchase(
     purchase: Purchase
   ) {
 
+    if (isStockMovementCutoverActive() && !isPostCutoverTimestamp(purchase.postedAt)) {
+      alert("Historical purchases are protected and cannot be edited after the stock cutover.");
+      return;
+    }
+
     setEditingPurchase(
       purchase
     );
@@ -482,7 +552,7 @@ function addPurchase(
      DELETE PURCHASE
   ===================================================== */
 
-  function handleDeletePurchase(
+  async function handleDeletePurchase(
     id: string
   ) {
 
@@ -503,6 +573,38 @@ function addPurchase(
     if (!purchase) {
       return;
     }
+
+    if (isStockMovementCutoverActive()) {
+      if (!isPostCutoverTimestamp(purchase.postedAt)) {
+        alert("Historical purchases are protected and cannot be deleted after the stock cutover.");
+        return;
+      }
+      const voided = {
+        ...movementRecordForTransaction("purchase", purchase.id, purchase.postedAt!, []),
+        state: "voided" as const,
+      };
+      const committed = await commitStockMovementTransaction(
+        "purchase", purchase.id, null, voided,
+        () => {
+          const latestPurchases = loadPurchases();
+          if (!latestPurchases.some((item) => item.id === id)) return false;
+          return savePurchases(latestPurchases.filter((item) => item.id !== id));
+        }
+      );
+      if (committed !== "committed" && committed !== "movement-pending") {
+        alert(`Purchase was not deleted: ${committed}. No stock movement changed.`);
+        return;
+      }
+      const savedPurchases = loadPurchases();
+      setPurchases(savedPurchases);
+      setPurchaseNo(getNextPurchaseNo(savedPurchases));
+      if (committed === "movement-pending") {
+        alert("Purchase deletion was saved. Its stock movement is pending recovery and is excluded from available stock.");
+      }
+      return;
+    }
+
+    const updatedPurchases = purchases.filter((item) => item.id !== id);
 
     purchase.items.forEach(
       (item) => {
@@ -527,13 +629,12 @@ function addPurchase(
       }
     );
 
-    setPurchases(
-      (prev) =>
-        prev.filter(
-          (item) =>
-            item.id !== id
-        )
-    );
+    if (!savePurchases(updatedPurchases)) {
+      alert("Purchase deletion could not be saved.");
+      return;
+    }
+    setPurchases(updatedPurchases);
+    setPurchaseNo(getNextPurchaseNo(updatedPurchases));
 
     if (
       editingPurchase?.id ===

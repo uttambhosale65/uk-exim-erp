@@ -1,4 +1,4 @@
-import {
+import type {
   Purchase,
   PurchaseItem,
 } from "./PurchaseTypes";
@@ -26,6 +26,8 @@ function normalizePurchase(
     const items: PurchaseItem[] =
       purchase.items.map(
         (item: PurchaseItem) => ({
+          lineId:
+            item.lineId,
           productCode:
             item.productCode ?? "",
 
@@ -62,6 +64,12 @@ function normalizePurchase(
       id:
         purchase.id ??
         crypto.randomUUID(),
+
+      postedAt:
+        purchase.postedAt,
+
+      stockMovements:
+        purchase.stockMovements,
 
       purchaseNo:
         purchase.purchaseNo ?? "",
@@ -134,6 +142,8 @@ function normalizePurchase(
   ------------------------------------------------------- */
 
   const oldItem: PurchaseItem = {
+    lineId:
+      purchase.lineId,
     productCode:
       purchase.productCode ?? "",
 
@@ -169,6 +179,12 @@ function normalizePurchase(
     id:
       purchase.id ??
       crypto.randomUUID(),
+
+    postedAt:
+      purchase.postedAt,
+
+    stockMovements:
+      purchase.stockMovements,
 
     purchaseNo:
       purchase.purchaseNo ?? "",
@@ -257,17 +273,43 @@ export function loadPurchases(): Purchase[] {
 
 export function savePurchases(
   purchases: Purchase[]
-): void {
+): boolean {
   if (
     typeof window === "undefined"
   ) {
-    return;
+    return false;
   }
+  try {
+    const existingRaw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    const existing: Record<string, unknown>[] = Array.isArray(existingRaw)
+      ? existingRaw.filter(isRecord)
+      : [];
+    const byId = new Map<string, Record<string, unknown>>(
+      existing
+        .filter((item) => item.id)
+        .map((item) => [String(item.id), item])
+    );
+    const preserved = purchases.map((purchase, index) => {
+      const raw = byId.get(String(purchase.id)) || existing[index];
+      if (!raw) return purchase;
+      const normalized: Record<string, unknown> = { ...normalizePurchase(raw) };
+      const incoming: Record<string, unknown> = { ...purchase };
+      if (!raw.id) {
+        delete normalized.id;
+        delete incoming.id;
+      }
+      return JSON.stringify(normalized) === JSON.stringify(incoming) ? raw : purchase;
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(preserved));
+    return true;
+  } catch (error) {
+    console.error("Failed to save purchases:", error);
+    return false;
+  }
+}
 
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(purchases)
-  );
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /* =========================================================

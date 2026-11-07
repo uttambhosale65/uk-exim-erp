@@ -17,6 +17,15 @@ import {
 import {
   loadStock,
 } from "../../stock/StockStorage";
+import { loadProducts } from "../../../product/components/ProductStorage";
+import {
+  commitStockMovementTransaction,
+  isPostCutoverTimestamp,
+  isStockMovementCutoverActive,
+  movementRecordForTransaction,
+  purchaseMovementForLine,
+  type StockMovementLine,
+} from "../../stock/StockMovementStorage";
 
 import TransactionConfirmModal, {
   TransactionConfirmMode,
@@ -68,9 +77,72 @@ export default function PurchaseMaster() {
      confirms the GRN in the confirmation window.
   ================================================== */
 
-  const processConfirmedPurchase = (
+  const processConfirmedPurchase = async (
     purchase: Purchase
   ) => {
+
+    if (isStockMovementCutoverActive()) {
+      const previous = editingPurchase;
+      if (!previous && loadPurchases().some((entry) => entry.id === purchase.id)) {
+        alert("This purchase has already been posted.");
+        return;
+      }
+      if (previous && !isPostCutoverTimestamp(previous.postedAt)) {
+        alert("Historical purchases are protected and cannot be edited after the stock cutover.");
+        return;
+      }
+      const postedAt = previous?.postedAt || new Date().toISOString();
+      const movements: StockMovementLine[] = [];
+      const items = purchase.items.map((item, index) => {
+        let lineId = item.lineId || previous?.items?.[index]?.lineId || crypto.randomUUID();
+        if (purchase.items.slice(0, index).some((prior, priorIndex) =>
+          (prior.lineId || previous?.items?.[priorIndex]?.lineId) === lineId
+        )) lineId = crypto.randomUUID();
+        const product = loadProducts().find((candidate) => candidate.code === item.productCode);
+        const movement = purchaseMovementForLine({ ...item, lineId, unit: product?.unit || item.unit }, product);
+        if (movement && movement.quantityKg > 0 && Number.isFinite(movement.quantityKg)) {
+          movements.push(movement);
+        }
+        return { ...item, lineId };
+      });
+      const finalPurchase: Purchase = {
+        ...purchase,
+        id: previous?.id || purchase.id || crypto.randomUUID(),
+        postedAt,
+        items,
+        stockMovements: movements,
+      };
+      const record = movementRecordForTransaction(
+        "purchase", finalPurchase.id, postedAt, movements
+      );
+      const result = await commitStockMovementTransaction(
+        "purchase", finalPurchase.id, finalPurchase, record,
+        () => {
+          const latestPurchases = loadPurchases();
+          if (previous) {
+            if (!latestPurchases.some((item) => item.id === previous.id)) return false;
+            return savePurchases(latestPurchases.map((item) =>
+              item.id === previous.id ? finalPurchase : item
+            ));
+          }
+          if (latestPurchases.some((item) => item.id === finalPurchase.id)) return false;
+          return savePurchases([...latestPurchases, finalPurchase]);
+        }
+      );
+      if (result !== "committed" && result !== "movement-pending") {
+        alert(`Purchase was not saved: ${result}. No stock movement was posted.`);
+        return;
+      }
+      const savedPurchases = loadPurchases();
+      setPurchases(savedPurchases);
+      setPurchaseNo(getNextPurchaseNo(savedPurchases));
+      setEditingPurchase(null);
+      setPendingPurchase(null);
+      if (result === "movement-pending") {
+        alert("Purchase was saved. Its stock movement remains in the recovery journal and is included in available stock; do not repost this purchase.");
+      }
+      return;
+    }
 
     /* =================================================
        EDIT EXISTING GRN
@@ -195,13 +267,13 @@ export default function PurchaseMaster() {
      CONFIRM GRN
   ================================================== */
 
-  const handleConfirmPurchase = () => {
+  const handleConfirmPurchase = async () => {
 
     if (!pendingPurchase) {
       return;
     }
 
-    processConfirmedPurchase(
+    await processConfirmedPurchase(
       pendingPurchase
     );
   };
@@ -225,6 +297,11 @@ export default function PurchaseMaster() {
     purchase: Purchase
   ) => {
 
+    if (isStockMovementCutoverActive() && !isPostCutoverTimestamp(purchase.postedAt)) {
+      alert("Historical purchases are protected and cannot be edited after the stock cutover.");
+      return;
+    }
+
     setEditingPurchase(
       purchase
     );
@@ -242,7 +319,7 @@ export default function PurchaseMaster() {
      DELETE GRN
   ================================================== */
 
-  const handleDelete = (
+  const handleDelete = async (
     id: string
   ) => {
 
@@ -265,15 +342,44 @@ export default function PurchaseMaster() {
       return;
     }
 
+    if (isStockMovementCutoverActive()) {
+      if (!isPostCutoverTimestamp(purchaseToDelete.postedAt)) {
+        alert("Historical purchases are protected and cannot be deleted after the stock cutover.");
+        return;
+      }
+      const voided = {
+        ...movementRecordForTransaction("purchase", purchaseToDelete.id, purchaseToDelete.postedAt!, []),
+        state: "voided" as const,
+      };
+      const result = await commitStockMovementTransaction(
+        "purchase", purchaseToDelete.id, null, voided,
+        () => {
+          const latestPurchases = loadPurchases();
+          if (!latestPurchases.some((purchase) => purchase.id === id)) return false;
+          return savePurchases(latestPurchases.filter((purchase) => purchase.id !== id));
+        }
+      );
+      if (result !== "committed" && result !== "movement-pending") {
+        alert(`Purchase was not deleted: ${result}. No stock movement changed.`);
+        return;
+      }
+      const savedPurchases = loadPurchases();
+      setPurchases(savedPurchases);
+      setPurchaseNo(getNextPurchaseNo(savedPurchases));
+      if (editingPurchase?.id === id) setEditingPurchase(null);
+      if (printPurchase?.id === id) setPrintPurchase(null);
+      if (pendingPurchase?.id === id) setPendingPurchase(null);
+      if (result === "movement-pending") {
+        alert("Purchase deletion was saved. Its stock movement is pending recovery and is excluded from available stock.");
+      }
+      return;
+    }
+
+    const updatedPurchases = purchases.filter((purchase) => purchase.id !== id);
+
     /* -----------------------------------------------
        DELETE GRN FIRST
     ------------------------------------------------ */
-
-    const updatedPurchases =
-      purchases.filter(
-        (purchase) =>
-          purchase.id !== id
-      );
 
     setPurchases(
       updatedPurchases

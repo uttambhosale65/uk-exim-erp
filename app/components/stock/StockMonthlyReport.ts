@@ -15,6 +15,15 @@ import {
   loadSales,
 } from "../customer/sales/SalesStorage";
 
+import {
+  applyMovementToMonthlyValues,
+  getStockMovementRecords,
+  isPostCutoverTimestamp,
+  isStockMovementCutoverActive,
+  loadProtectedStockBaseline,
+  cutoverTimestampMs,
+} from "./StockMovementStorage";
+
 /* =========================================================
    MONTHLY STOCK REPORT
 
@@ -88,6 +97,7 @@ export type MonthlyStockRow = {
   purchaseQty: number;
   salesQty: number;
   closingStock: number;
+  includeInQuantityTotals?: boolean;
 };
 
 export type MonthlyStockSummary = {
@@ -948,17 +958,21 @@ export function getStockMonthlyReport(
      LOAD DATA
   ------------------------------------------------------- */
 
-  const purchases =
-    loadPurchases();
-
-  const sales =
-    loadSales();
+  const allPurchases = loadPurchases();
+  const allSales = loadSales();
+  const purchases = allPurchases.filter(
+    (purchase) => !isPostCutoverTimestamp(purchase?.postedAt)
+  );
+  const sales = allSales.filter(
+    (sale) => !isPostCutoverTimestamp(sale?.postedAt)
+  );
 
   const products =
     loadProducts();
 
-  const stockRecords =
-    loadStock();
+  const stockRecords = isStockMovementCutoverActive()
+    ? loadProtectedStockBaseline()
+    : loadStock();
 
   /* -------------------------------------------------------
      MONTH RANGE
@@ -1474,6 +1488,71 @@ export function getStockMonthlyReport(
     }
   );
 
+  // At and after cutover, monthly stock starts from the exact stored legacy
+  // current quantities, with one row per existing stock code. Earlier months
+  // continue through the unchanged legacy report calculation above.
+  if (
+    isStockMovementCutoverActive() &&
+    monthStart.getTime() >= cutoverTimestampMs()
+  ) {
+    rowsMap.clear();
+    stockRecords.forEach((stockItem) => {
+      const code = String(stockItem.productCode || "").trim();
+      if (!code) return;
+      const product = productsMap.get(code);
+      const current = Number(stockItem.currentStock);
+      const opening = Number.isFinite(current)
+        ? current
+        : Number(stockItem.openingStock || 0) + Number(stockItem.purchaseQty || 0) - Number(stockItem.salesQty || 0);
+      rowsMap.set(code, {
+        productCode: code,
+        productName: String(product?.name || stockItem.productName || code),
+        unit: String(product?.unit || stockItem.unit || "KG"),
+        openingStock: opening,
+        purchaseQty: 0,
+        salesQty: 0,
+        closingStock: opening,
+        includeInQuantityTotals: String(product?.unit || stockItem.unit || "KG") === "KG",
+      });
+    });
+  }
+
+  // Post-cutover stock is reported from immutable transaction snapshots. It is
+  // grouped by actual posting month, not mutable product mappings or entered dates.
+  getStockMovementRecords().forEach((record) => {
+    if (record.state !== "posted" || !isPostCutoverTimestamp(record.postedAt)) return;
+    if (!Number.isFinite(Date.parse(record.postedAt))) return;
+    record.movements.forEach((movement) => {
+      if (!Number.isFinite(movement.quantityKg) || movement.quantityKg <= 0) return;
+      let row = rowsMap.get(movement.stockCode);
+      if (!row) {
+        const product = productsMap.get(movement.stockCode);
+        row = {
+          productCode: movement.stockCode,
+          productName: String(product?.name || movement.stockCode),
+          unit: String(product?.unit || "KG"),
+          openingStock: 0,
+          purchaseQty: 0,
+          salesQty: 0,
+          closingStock: 0,
+          includeInQuantityTotals: String(product?.unit || "KG") === "KG",
+        };
+        rowsMap.set(movement.stockCode, row);
+      }
+      applyMovementToMonthlyValues(
+        row,
+        movement,
+        record.postedAt,
+        monthStart.getTime(),
+        nextMonthStart.getTime()
+      );
+      row.openingStock = round3(row.openingStock);
+      row.purchaseQty = round3(row.purchaseQty);
+      row.salesQty = round3(row.salesQty);
+      row.closingStock = round3(row.closingStock);
+    });
+  });
+
   /* =======================================================
      REMOVE COMPLETELY EMPTY ROWS
   ======================================================= */
@@ -1520,7 +1599,7 @@ export function getStockMonthlyReport(
           row
         ) =>
           total +
-          row.openingStock,
+          (row.includeInQuantityTotals === false ? 0 : row.openingStock),
         0
       )
     );
@@ -1533,7 +1612,7 @@ export function getStockMonthlyReport(
           row
         ) =>
           total +
-          row.purchaseQty,
+          (row.includeInQuantityTotals === false ? 0 : row.purchaseQty),
         0
       )
     );
@@ -1546,7 +1625,7 @@ export function getStockMonthlyReport(
           row
         ) =>
           total +
-          row.salesQty,
+          (row.includeInQuantityTotals === false ? 0 : row.salesQty),
         0
       )
     );
@@ -1559,7 +1638,7 @@ export function getStockMonthlyReport(
           row
         ) =>
           total +
-          row.closingStock,
+          (row.includeInQuantityTotals === false ? 0 : row.closingStock),
         0
       )
     );
@@ -1607,17 +1686,28 @@ export function getCurrentStockMonthlyReport():
 export function getStockReportMonths():
   string[] {
 
-  const purchases =
-    loadPurchases();
+  const purchases = loadPurchases().filter(
+    (purchase) => !isPostCutoverTimestamp(purchase?.postedAt)
+  );
 
-  const sales =
-    loadSales();
+  const sales = loadSales().filter(
+    (sale) => !isPostCutoverTimestamp(sale?.postedAt)
+  );
 
-  const stockRecords =
-    loadStock();
+  const stockRecords = isStockMovementCutoverActive()
+    ? loadProtectedStockBaseline()
+    : loadStock();
 
   const months =
     new Set<string>();
+
+  getStockMovementRecords().forEach((record) => {
+    if (record.state !== "posted" || !isPostCutoverTimestamp(record.postedAt)) return;
+    const date = new Date(record.postedAt);
+    if (!Number.isFinite(date.getTime())) return;
+    const key = createMonthKey(date);
+    if (key) months.add(key);
+  });
 
   /* -------------------------------------------------------
      PURCHASE MONTHS

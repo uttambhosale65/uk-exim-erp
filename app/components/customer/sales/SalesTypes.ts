@@ -1,4 +1,5 @@
 export type SalesItem = {
+  lineId?: string;
   productCode: string;
   productName: string;
 
@@ -24,6 +25,8 @@ export type SalesItem = {
 
 export type Sales = {
   id: string;
+  postedAt?: string;
+  stockMovements?: import("../../stock/StockMovementStorage").StockMovementLine[];
 
   // Sales Details
   salesNo: string;

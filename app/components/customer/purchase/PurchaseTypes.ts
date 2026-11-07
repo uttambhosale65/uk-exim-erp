@@ -9,6 +9,7 @@
 ========================================================= */
 
 export type PurchaseItem = {
+  lineId?: string;
   productCode: string;
   productName: string;
 
@@ -36,6 +37,8 @@ export type Purchase = {
   ------------------------------------------------------- */
 
   id: string;
+  postedAt?: string;
+  stockMovements?: import("../../stock/StockMovementStorage").StockMovementLine[];
 
   purchaseNo: string;
   purchaseDate: string;

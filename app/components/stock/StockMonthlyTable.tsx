@@ -224,7 +224,7 @@ export default function StockMonthlyTable({
                 rows.reduce(
                   (total, row) =>
                     total +
-                    row.openingStock,
+                    (row.includeInQuantityTotals === false ? 0 : row.openingStock),
                   0
                 )
               )}
@@ -237,7 +237,7 @@ export default function StockMonthlyTable({
                 rows.reduce(
                   (total, row) =>
                     total +
-                    row.purchaseQty,
+                    (row.includeInQuantityTotals === false ? 0 : row.purchaseQty),
                   0
                 )
               )}
@@ -250,7 +250,7 @@ export default function StockMonthlyTable({
                 rows.reduce(
                   (total, row) =>
                     total +
-                    row.salesQty,
+                    (row.includeInQuantityTotals === false ? 0 : row.salesQty),
                   0
                 )
               )}
@@ -267,7 +267,7 @@ export default function StockMonthlyTable({
                 rows.reduce(
                   (total, row) =>
                     total +
-                    row.closingStock,
+                    (row.includeInQuantityTotals === false ? 0 : row.closingStock),
                   0
                 )
               )}

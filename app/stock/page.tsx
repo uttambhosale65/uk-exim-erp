@@ -13,6 +13,7 @@ import {
   loadStock,
   saveStock,
 } from "../components/stock/StockStorage";
+import { isStockMovementCutoverActive } from "../components/stock/StockMovementStorage";
 
 export default function StockPage() {
   const [stock, setStock] = useState<Stock[]>([]);
@@ -67,6 +68,10 @@ export default function StockPage() {
     id: string,
     value: number
   ) => {
+    if (isStockMovementCutoverActive()) {
+      window.alert("Protected legacy stock cannot be edited after the stock cutover.");
+      return;
+    }
     setStock((currentStock) =>
       currentStock.map((item) => {
         if (item.id !== id) {

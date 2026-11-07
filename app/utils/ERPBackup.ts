@@ -8,6 +8,8 @@ const BACKUP_KEYS = [
   "uk-exim-purchases",
   "uk-exim-sales",
   "uk-exim-stock",
+  "uk-exim-stock-movements-v1",
+  "uk-exim-stock-movement-journal-v1",
   "uk-exim-company-settings",
   "uk-exim-invoice-settings",
   "uk-exim-bank-settings",

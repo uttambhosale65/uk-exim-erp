@@ -40,9 +40,9 @@ export function loadSales(): Sales[] {
 
 export function saveSales(
   sales: Sales[]
-): void {
+): boolean {
   if (typeof window === "undefined") {
-    return;
+    return false;
   }
 
   try {
@@ -50,11 +50,13 @@ export function saveSales(
       STORAGE_KEY,
       JSON.stringify(sales)
     );
+    return true;
   } catch (error) {
     console.error(
       "Error saving sales:",
       error
     );
+    return false;
   }
 }
 
