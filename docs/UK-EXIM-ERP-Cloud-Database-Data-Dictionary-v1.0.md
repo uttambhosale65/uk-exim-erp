@@ -1,7 +1,7 @@
 # UK EXIM ERP – Cloud Database Data Dictionary v1.0
 
-**Document status:** Source-derived draft for architecture and migration planning  
-**Source baseline:** Current repository checkout at Git commit `29db49d` (UK EXIM ERP Version 1.0 source).
+**Document status:** Stage 0 source-derived field inventory and migration mapping; PostgreSQL details remain proposals.
+**Source baseline:** Repository checkout at Git commit `8eba53d2a76b68f9da6780b75b1f0e8449b97738` (UK EXIM ERP Version 1.0 source), verified on branch `codex/loose-haldi-stock-cutover`.
 **Application stack in source:** Next.js / React / TypeScript  
 **Important:** This document records fields present in the supplied TypeScript source. Proposed database design notes are clearly labelled; they are not existing application fields.
 
@@ -10,7 +10,7 @@
 - The exact field names and TypeScript types below are copied from the `*Types.ts` files in the current repository checkout recorded above.
 - `string`, `number`, `boolean`, literal unions, optional fields (`?`) and arrays are preserved as authored.
 - Nested `items`, `cargoItems`, `containers`, `documents`, `certificates`, and `timeline` are currently TypeScript arrays. The source does not itself prove whether they must be separate SQL tables or JSONB; the proposed relational mapping is described later.
-- The source contains no `company_id` field in the business types. `company_id` is a **new SaaS tenancy field to be added during migration**, not an existing field.
+- The source contains no `company_id` field in the business types. `company_id` is a proposed ownership boundary for the single-company online database, not an existing application field or authorization to build SaaS subscriptions.
 - The source types use string IDs. Do not convert them blindly to UUID until existing ID values and all references are inspected.
 
 ## 2. Existing localStorage keys found in source
@@ -38,13 +38,16 @@
 | `uk-exim-invoice-settings` | `app/components/settings/Settings.tsx` |
 | `uk-exim-bank-settings` | `app/components/settings/Settings.tsx` |
 | `uk-exim-international-settings` | `app/components/settings/Settings.tsx` |
-| `uk-exim-sales-numbering-v2` | `app/sales/page.tsx` |
+| `uk-exim-stock-movements-v1` | `app/components/stock/StockMovementStorage.ts` |
+| `uk-exim-stock-movement-journal-v1` | `app/components/stock/StockMovementStorage.ts` |
 
-**Keys found:** 22
+**Active persisted keys found:** 23.
+
+`uk-exim-sales-numbering-v2` is present in `ERPBackup.ts`'s allowlist, but source search found no active application read/write use. Treat it as a backup-only legacy marker, not as an active key. The string `uk-exim-stock-movement-ledger-v1` in `StockMovementStorage.ts` is a Web Lock name, not a LocalStorage key. React state and computed report values are transient/derived, not persisted keys.
 
 ### Backup coverage finding
 
-`app/utils/ERPBackup.ts` currently defines `BACKUP_KEYS` with all 22 source-identified keys:
+`app/utils/ERPBackup.ts` currently defines `BACKUP_KEYS` with 24 entries: all 23 active keys listed above plus the backup-only legacy marker `uk-exim-sales-numbering-v2`:
 
 - `uk-exim-products`
 - `uk-exim-customers`
@@ -52,6 +55,8 @@
 - `uk-exim-purchases`
 - `uk-exim-sales`
 - `uk-exim-stock`
+- `uk-exim-stock-movements-v1`
+- `uk-exim-stock-movement-journal-v1`
 - `uk-exim-company-settings`
 - `uk-exim-invoice-settings`
 - `uk-exim-bank-settings`
@@ -67,9 +72,41 @@
 - `uk-exim-export-shipments`
 - `uk-exim-international-export-stock`
 - `uk-exim-international-settings`
-- `uk-exim-sales-numbering-v2`
+- `uk-exim-sales-numbering-v2` (backup-only legacy marker; no active application read/write found)
 
-**Source comparison:** All 22 keys in the inventory above are included in the current `BACKUP_KEYS` allowlist. There are no inventory keys currently missing from that allowlist. `createERPBackup()` reads only listed keys that exist and attempts to JSON-parse their values; this statement describes source code and is not a backup or restore test. The current restore implementation accepts recognized keys, snapshots values for those keys, writes supplied recognized entries, and attempts rollback if a write fails. Do not use Restore for migration testing. Backup and recovery reliability, backup file validation, and operational procedures remain unverified and require separate review before migration.
+**Source comparison:** All 23 active keys are in the allowlist. The 24th entry is the legacy sales-numbering marker noted above. `createERPBackup()` reads only listed keys that exist and attempts to JSON-parse their values; this is source inspection, not a backup test. Restore writes recognized supplied keys and attempts rollback if a write fails; this is not a tested recovery guarantee. Never use Restore for migration testing.
+
+### 2.1 Active key structure and source read/write summary
+
+All rows below describe code-defined shapes and paths only. They do not describe actual values saved in Chrome. The detailed fields, dates, numeric properties, optional properties and nested arrays for typed records are preserved in §3 under the corresponding source type.
+
+| Key | Module / declared source | Type and top-level shape | Read/write and default behavior |
+|---|---|---|---|
+| `uk-exim-products` | Product / `app/product/components/ProductStorage.ts` | `Product[]`; record key `id`, business code `code` | Load parses array and normalizes records; missing/invalid data returns `[]`; save normalizes array; clear removes key. Product form defaults are in `ProductForm.tsx`; no actual defaults in existing records are known. |
+| `uk-exim-customers` | Domestic customers / `app/components/customer/CustomerStorage.ts` | `Customer[]`; `id`, `code` | Load absent/invalid returns `[]`; save JSON array. |
+| `uk-exim-suppliers` | Domestic suppliers / `app/components/supplier/SupplierStorage.ts` | `Supplier[]`; `id`, `code` | Load absent/invalid returns `[]`; save/delete helpers operate on key. |
+| `uk-exim-purchases` | Domestic purchase/GRN / `app/components/customer/purchase/PurchaseStorage.ts` | `Purchase[]` with nested `items: PurchaseItem[]`; `id`, `purchaseNo`, optional `postedAt`, optional `stockMovements` | Load normalizes supported legacy shapes; confirmed save/update/delete paths persist array. After cutover, posting master coordinates transaction and movement journal; migration must preserve existing source snapshots. |
+| `uk-exim-sales` | Domestic sales / `app/components/customer/sales/SalesStorage.ts` | `Sales[]` with nested `items: SalesItem[]`; `id`, `salesNo`, optional `postedAt`, optional `stockMovements` | Load/save/delete helpers persist array. Post-cutover sale posting writes through movement commit flow. |
+| `uk-exim-stock` | Domestic stock / `app/components/stock/StockStorage.ts` | `Stock[]`; `id`, product code/name, opening/purchase/sales/current quantities | Before cutover, source rebuild behavior can save recalculated rows. At/after cutover `loadStock()` uses stored rows as protected baseline and projects movements in memory; `saveStock()` returns without writing. Do not invoke rebuild in migration. |
+| `uk-exim-stock-movements-v1` | Domestic stock ledger / `app/components/stock/StockMovementStorage.ts` | `StockMovementRecord[]`, each with nested `movements: StockMovementLine[]`; transaction type/id, `postedAt`, `state` | Read/append/update/void through ledger helpers; writes coordinated with transaction journal. Each movement has source and normalized quantities; cutover uses posting timestamp. |
+| `uk-exim-stock-movement-journal-v1` | Domestic recovery / `app/components/stock/StockMovementStorage.ts` | Journal payload `LedgerJournal`: `transactionType`, `transactionId`, `expectedTransaction` (Purchase/Sales or null), `movementRecord` | Written before transaction/ledger commit and cleared after successful recovery/commit paths. Recovery may update the key and related transaction/stock keys; never run it against live LocalStorage for Stage 0. |
+| `uk-exim-company-settings` | Company settings / `app/components/settings/Settings.tsx` | One `CompanySettings` object | Read on mount; defaults merged when present/absent; saved/reset by settings UI. Inline fields are listed below. |
+| `uk-exim-invoice-settings` | Invoice settings / `app/components/settings/Settings.tsx` | One `InvoiceSettings` object | Read on mount; defaults merged; saved/reset. `nextInvoiceNumber` is string; online allocation must be atomic. |
+| `uk-exim-bank-settings` | Bank settings / `app/components/settings/Settings.tsx` | One `BankSettings` object | Read on mount; defaults merged; saved/reset. Includes account and UPI fields; restrict future access. |
+| `uk-exim-international-settings` | International settings / `app/components/settings/Settings.tsx` | One `InternationalSettings` object | Read on mount; defaults merged; saved/reset. Contains business identifiers and default export terms. |
+| `uk-exim-export-customers` | Export customer / `app/international/export/customer/ExportCustomerStorage.ts` | `ExportCustomer[]`; `id`, `code` | Load absent/invalid returns `[]`; save writes full array. |
+| `uk-exim-export-enquiries` | Export enquiry / `app/international/export/enquiry/ExportEnquiryStorage.ts` | `ExportEnquiry[]` with `items: ExportEnquiryItem[]`; `id`, `enquiryNo` | Load absent/invalid returns `[]`; save writes full array. |
+| `uk-exim-export-quotations` | Export quotation / `app/international/export/quotation/ExportQuotationStorage.ts` | `ExportQuotation[]` with item snapshots; `id`, `quotationNo` | Load absent/invalid returns `[]`; save writes full array. |
+| `uk-exim-export-proforma-invoices` | Proforma invoice / `app/international/export/proforma/ExportProformaInvoiceStorage.ts` | `ExportProformaInvoice[]` with item/terms arrays; `id`, `proformaInvoiceNo` | Load absent/invalid returns `[]`; save writes full array. |
+| `uk-exim-export-orders` | Export order / `app/international/export/order/ExportOrderStorage.ts` | `ExportOrder[]` with `items`, `termsAndConditions`; `id`, `exportOrderNo` | Load absent/invalid returns `[]`; save writes full array. |
+| `uk-exim-export-purchases` | Export purchase / `app/international/export/purchase/ExportPurchaseStorage.ts` | `ExportPurchase[]` with items; `id`, `purchaseNo` | Load absent/invalid returns `[]`; save writes array; associated export stock rebuild operates on separate export stock key. |
+| `uk-exim-international-export-stock` | Export stock / `app/international/export/stock/InternationalExportStockStorage.ts` | `InternationalExportStock[]`; item `id`, product code, `lotBatchNo`, quantities/source/references | Load/save array. Rebuild uses export purchases and preserves manual Opening Stock records, but is distinct from domestic stock. Do not run in Stage 0. |
+| `uk-exim-export-reservations` | Export reservation / `app/international/export/reservation/ExportReservationStorage.ts` | `ExportReservation[]` with nested reservation items; `id`, `reservationNo` | Load/save; reserve/release/replace/cancel paths also update export stock. `reservedStockId` references export stock row ID in source logic. |
+| `uk-exim-export-packings` | Export packing / `app/international/export/packing/PackingStorage.ts` | `ExportPacking[]` with nested items; `id`, `packingNo` | Load/save; source sync updates reservation status and storage. Reads order/reservation keys; it is not domestic stock deduction. |
+| `uk-exim-export-shipments` | Shipment / `app/international/export/shipment/ShipmentStorage.ts` | `Shipment[]` with nested cargo, containers, documents, certificates and timeline; header and child IDs | Load/save/add/update/delete; forms read related reservation/commercial invoice data. Attachments are names/metadata in source types, not proof file bytes are stored in this key. |
+| `uk-exim-export-commercial-invoices` | Export commercial invoices / `app/international/export/invoice/ExportCommercialInvoiceStorage.ts` | `ExportCommercialInvoice[]` with nested invoice items; `id`, `invoiceNo` | Load/save full array. Snapshot fields include parties, shipping, banking, values and payment. |
+
+`Settings.tsx` inline record fields are: `CompanySettings { companyName, address, gstin, fssai, iec, mobile, email, website, logo }`; `InvoiceSettings { invoicePrefix, nextInvoiceNumber, terms1, terms2, terms3, terms4, terms5 }`; `BankSettings { bankName, branch, accountName, accountNumber, ifsc, upiId, qrImage }`; `InternationalSettings { pan, udyam, iecIssueDate, adCode, swiftBic, exportAccount, defaultCurrency, defaultIncoterm, defaultPortOfLoading, defaultPaymentTerms, defaultShipmentMode, countryOfOrigin }`. These are all declared `string`; defaults are established in source code and do not establish actual saved values.
 
 ## 3. Source-derived business entities and exact fields
 
@@ -282,6 +319,38 @@ export type Stock = {
   currentStock: number;
 };
 ```
+
+### `app/components/stock/StockMovementStorage.ts` (source-defined ledger structures)
+
+```ts
+export type StockMovementLine = {
+  lineId: string;
+  productCode: string;
+  stockCode: string;
+  direction: "in" | "out";
+  quantityKg: number;
+  unit: string;
+  sourceQuantity: number;
+  netWeightGrams: number;
+};
+
+export type StockMovementRecord = {
+  transactionType: "sale" | "purchase";
+  transactionId: string;
+  postedAt: string;
+  state: "posted" | "voided";
+  movements: StockMovementLine[];
+};
+
+type LedgerJournal = {
+  transactionType: "sale" | "purchase";
+  transactionId: string;
+  expectedTransaction: Sales | Purchase | null;
+  movementRecord: StockMovementRecord;
+};
+```
+
+`MovementProduct` is a transient calculation input, not a persisted key. The journal is one recovery payload under `uk-exim-stock-movement-journal-v1`; a journal's actual presence/content is unknown. The Web Lock name `uk-exim-stock-movement-ledger-v1` is not persisted data.
 
 ### `app/components/supplier/SupplierTypes.ts`
 
@@ -1607,7 +1676,7 @@ export type Product = {
 
 ## 4. Proposed PostgreSQL mapping (design proposal, not existing code)
 
-### 4.1 Common SaaS columns to add
+### 4.1 Common online ownership and audit columns to add
 
 | Proposed column | PostgreSQL type | Purpose |
 |---|---|---|
@@ -1624,45 +1693,52 @@ Do not rename or remove existing source fields during first migration. Prefer sn
 | Source type | Candidate SQL table | Notes |
 |---|---|---|
 | `Customer` | `customers` | Main entity candidate; add company_id and tenant-scoped constraints. |
-| `PurchaseItem` | `purchaseitems` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
+| `PurchaseItem` | `purchase_items` | Embedded in `Purchase.items`; relational child table proposed to support reporting and stock movement linking. Preserve line snapshots. |
 | `Purchase` | `purchases` | Main entity candidate; add company_id and tenant-scoped constraints. |
-| `SalesItem` | `salesitems` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
-| `Sales` | `saless` | Main entity candidate; add company_id and tenant-scoped constraints. |
-| `Stock` | `stocks` | Main entity candidate; add company_id and tenant-scoped constraints. |
+| `SalesItem` | `sales_items` | Embedded in `Sales.items`; relational child table proposed to support reporting and stock movement linking. Preserve line snapshots. |
+| `Sales` | `sales` | Main entity candidate; add company_id and tenant-scoped constraints. |
+| `Stock` | `stock_baselines` | Proposed protected imported baseline; source type has no separate database concept. Do not rebuild from historical transactions. |
+| `StockMovementRecord` | `stock_movement_transactions` | New representation of `uk-exim-stock-movements-v1`; append-only transaction-level movement state. |
+| `StockMovementLine` | `stock_movements` | New child rows; preserve line/product/stock codes, direction, converted quantity and source-unit snapshot. |
+| `LedgerJournal` | `stock_movement_recovery_journal` | New recovery intent record corresponding to the journal LocalStorage key; include expected transaction snapshot and movement record. Exact JSON shape is source-defined in `StockMovementStorage.ts`. |
+| `CompanySettings` | `company_settings` | Inline type in Settings.tsx; one row per company in the proposed online model. |
+| `InvoiceSettings` | `invoice_settings` | Inline type in Settings.tsx; numbering behavior requires locking/transaction handling online. |
+| `BankSettings` | `bank_settings` | Inline type in Settings.tsx; protect account details and limit access. |
+| `InternationalSettings` | `international_settings` | Inline type in Settings.tsx. |
 | `Supplier` | `suppliers` | Main entity candidate; add company_id and tenant-scoped constraints. |
 | `ExportCustomer` | `export_customers` | Main entity candidate; add company_id and tenant-scoped constraints. |
-| `ExportEnquiryItem` | `exportenquiryitems` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
-| `ExportEnquiry` | `export_enquirys` | Main entity candidate; add company_id and tenant-scoped constraints. |
-| `ExportCommercialInvoiceItem` | `exportcommercialinvoiceitems` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
+| `ExportEnquiryItem` | `export_enquiry_items` | Embedded child rows; preserve item snapshots. |
+| `ExportEnquiry` | `export_enquiries` | Main entity candidate; company-owned. |
+| `ExportCommercialInvoiceItem` | `export_commercial_invoice_items` | Embedded child rows; preserve item snapshots. |
 | `ExportCommercialInvoiceStatus` | `(enum / check constraint candidate)` | Preserve exact literal values from source. |
 | `ExportCommercialInvoice` | `export_commercial_invoices` | Main entity candidate; add company_id and tenant-scoped constraints. |
-| `ExportOrderItem` | `exportorderitems` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
+| `ExportOrderItem` | `export_order_items` | Embedded child rows; preserve item snapshots. |
 | `ExportOrderStatus` | `(enum / check constraint candidate)` | Preserve exact literal values from source. |
 | `ExportOrder` | `export_orders` | Main entity candidate; add company_id and tenant-scoped constraints. |
 | `ExportPackingStatus` | `(enum / check constraint candidate)` | Preserve exact literal values from source. |
-| `ExportPackingItem` | `exportpackingitems` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
+| `ExportPackingItem` | `export_packing_items` | Embedded child rows; preserve item snapshots. |
 | `ExportPacking` | `export_packings` | Main entity candidate; add company_id and tenant-scoped constraints. |
-| `ExportProformaInvoiceItem` | `exportproformainvoiceitems` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
+| `ExportProformaInvoiceItem` | `export_proforma_invoice_items` | Embedded child rows; preserve item snapshots. |
 | `ExportProformaInvoiceStatus` | `(enum / check constraint candidate)` | Preserve exact literal values from source. |
 | `ExportProformaInvoice` | `export_proforma_invoices` | Main entity candidate; add company_id and tenant-scoped constraints. |
-| `ExportPurchaseItem` | `exportpurchaseitems` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
+| `ExportPurchaseItem` | `export_purchase_items` | Embedded child rows; preserve item and received quantity snapshots. |
 | `ExportPurchaseStatus` | `(enum / check constraint candidate)` | Preserve exact literal values from source. |
 | `ExportPurchase` | `export_purchases` | Main entity candidate; add company_id and tenant-scoped constraints. |
-| `ExportQuotationItem` | `exportquotationitems` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
+| `ExportQuotationItem` | `export_quotation_items` | Embedded child rows; preserve item snapshots. |
 | `ExportQuotation` | `export_quotations` | Main entity candidate; add company_id and tenant-scoped constraints. |
-| `ExportReservationItem` | `exportreservationitems` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
+| `ExportReservationItem` | `export_reservation_items` | Embedded child rows; preserve reserved stock references and quantities. |
 | `ExportReservationStatus` | `(enum / check constraint candidate)` | Preserve exact literal values from source. |
 | `ExportReservation` | `export_reservations` | Main entity candidate; add company_id and tenant-scoped constraints. |
 | `ShipmentStatus` | `(enum / check constraint candidate)` | Preserve exact literal values from source. |
 | `ShipmentMode` | `(enum / check constraint candidate)` | Preserve exact literal values from source. |
-| `ShipmentCargoItem` | `shipmentcargoitems` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
-| `ShipmentContainer` | `shipmentcontainers` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
-| `ShipmentDocument` | `shipmentdocuments` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
-| `ShipmentCertificate` | `shipmentcertificates` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
-| `ShipmentTimelineItem` | `shipmenttimelineitems` | Nested source structure; decide separate child table vs JSONB after checking how UI queries/updates it. |
+| `ShipmentCargoItem` | `shipment_cargo_items` | Embedded child rows; preserve cargo snapshots. |
+| `ShipmentContainer` | `shipment_containers` | Embedded child rows. |
+| `ShipmentDocument` | `shipment_documents` | Embedded metadata rows; attachment files are separate private objects. |
+| `ShipmentCertificate` | `shipment_certificates` | Embedded metadata rows; attachment files are separate private objects. |
+| `ShipmentTimelineItem` | `shipment_timeline_items` | Embedded event history; preserve dates and status values. |
 | `Shipment` | `shipments` | Main entity candidate; add company_id and tenant-scoped constraints. |
 | `InternationalExportStockSource` | `(enum / check constraint candidate)` | Preserve exact literal values from source. |
-| `InternationalExportStock` | `international_export_stocks` | Main entity candidate; add company_id and tenant-scoped constraints. |
+| `InternationalExportStock` | `international_export_stock` | Separate export inventory table; preserve lot/batch and source references; do not merge with domestic stock. |
 | `ProductUnit` | `(enum / check constraint candidate)` | Preserve exact literal values from source. |
 | `Product` | `products` | Main entity candidate; add company_id and tenant-scoped constraints. |
 
@@ -1671,7 +1747,7 @@ Do not rename or remove existing source fields during first migration. Prefer sn
 | TypeScript source type | Suggested PostgreSQL type | Caution |
 |---|---|---|
 | `string` | `text` initially | For date-like strings, inspect actual values and UI format before choosing `date` / `timestamptz`. |
-| `number` | `numeric(18, 4)` candidate | Do not use floating-point for currency/quantity totals without reviewing precision and calculations. Choose precision per field. |
+| `number` | PostgreSQL `numeric` candidate; precision/scale unresolved per field | JavaScript numbers are binary floating point. Review each amount, rate, percentage, weight and quantity's permitted range and rounding before choosing precision/scale. Preserve stored historical totals; do not recompute them on import. |
 | `boolean` | `boolean` | Preserve true/false semantics. |
 | literal union | `text` + `CHECK` or PostgreSQL enum | Keep exact spelling/case/spaces; statuses may evolve. |
 | `T[]` nested arrays | child table or `jsonb` | Prefer child tables for independently searched, joined, stock-affecting or reportable rows; JSONB only where appropriate. |
@@ -1687,19 +1763,19 @@ These are **inferences**, not enforced relationships in the current source. Exis
 - Export workflow document references: enquiry → quotation → proforma invoice → export order → reservation → packing → shipment → commercial invoice. The source records reference documents mainly by document-number strings; confirm actual linking logic in Storage files before adding foreign keys.
 - `international_export_stock` and reservation items use `lotBatchNo`, `reservedStockId`, and quantity fields; inspect stock mutation logic carefully before relational stock ledger design.
 
-## 6. SaaS control-plane tables (new; not present in current source)
+## 6. Single-company online ownership and future control-plane (proposed)
+
+The immediate online release is for UK EXIM ENTERPRISES only. `companies`, `profiles`, `company_members` and `document_sequences` are proposed foundations for company ownership, login membership and safe numbering. Subscription, plan and SaaS billing tables are explicitly deferred to a later approved phase.
 
 | Proposed table | Core columns (proposal) |
 |---|---|
 | `companies` | `id uuid`, `name`, `slug`, `status`, `created_at` |
 | `profiles` | `id uuid` (auth user id), `full_name`, `email`, `created_at` |
 | `company_members` | `id uuid`, `company_id`, `user_id`, `role`, `status`, `created_at` |
-| `plans` | `id`, `code`, `name`, `billing_interval`, `limits_jsonb`, `active` |
-| `subscriptions` | `id`, `company_id`, `plan_id`, `status`, `start_at`, `end_at`, `billing_customer_ref` |
 | `audit_logs` | `id`, `company_id`, `actor_user_id`, `action`, `entity_type`, `entity_id`, `metadata_jsonb`, `created_at` |
 | `document_sequences` | `id`, `company_id`, `document_type`, `financial_year`, `prefix`, `next_number` |
 
-These are proposed SaaS tables only. They must not be confused with existing fields or implemented until access rules and numbering behavior are specified.
+These are proposed new online fields/tables, not current source fields. The owner must approve role definitions, sequence reset/financial-year rules and retention before implementation.
 
 ## 7. Migration rules and safeguards
 
@@ -1714,15 +1790,16 @@ These are proposed SaaS tables only. They must not be confused with existing fie
 9. Keep the existing Version 1.0 project and localStorage data unchanged during development. Perform migration only from an exported copy into a separate test database.
 10. Do not use the existing Restore function for migration testing.
 
-## 8. Items requiring further source inspection before final SQL
+## 8. Remaining questions before final SQL or real-data import
 
-- Actual data values and null/empty-string conventions in localStorage records.
-- Full storage mutation logic, especially Purchase, Sales, Stock, Export Reservation, Packing and Shipment.
-- Company, Invoice, Bank and International Settings object shapes; the audit source stores these in Settings.tsx rather than dedicated `*Types.ts` files.
-- Document numbering generation and whether numbers are globally unique or company/financial-year scoped.
-- Whether stock quantities are derived from transactions or persisted as current balances in each module.
-- Exact relationships between Export documents, currently represented by document number strings in source types.
-- The current source allowlist covers all 22 inventoried keys. Backup and recovery reliability, restore behavior under real browser conditions, and operational procedures have not been tested in this documentation audit; review those separately before migration. Do not test against the owner's live Chrome LocalStorage.
+- Actual record values, shape drift, null/empty-string conventions, duplicates and orphan references remain unknown because browser storage was not accessed.
+- Whether every current source field is populated in existing records remains unknown; interface-required does not prove stored-record validity.
+- Product codes, customer/supplier codes, document numbers and export references have no verified database uniqueness scope yet.
+- Date-only business fields are strings; distinguish local business dates from instants before choosing `date` or `timestamptz`. `postedAt` is an ISO timestamp and cutover comparison uses an explicit IST-equivalent UTC instant.
+- Amount, tax, foreign-currency, exchange-rate and quantity precision/rounding policies are unresolved. Preserve stored totals and compare recomputed totals separately during staging.
+- Settings shapes are inline in `Settings.tsx`; form defaults are source behavior, not database defaults and may differ from actual saved settings.
+- Export document associations are mainly code/number snapshots; exact storage mutation relationships must be retained without inventing foreign keys.
+- Backup allowlist coverage was source-inspected, but runtime backup, restore, encryption, offsite retention and recovery procedures remain untested. Do not test against Chrome LocalStorage.
 
 ## 9. Source files reviewed
 
@@ -1746,6 +1823,8 @@ These are proposed SaaS tables only. They must not be confused with existing fie
 - `app/utils/ERPBackup.ts`
 - `app/components/settings/Settings.tsx`
 - All discovered `*Storage.ts` files for localStorage key declarations.
+- `app/components/stock/StockMovementStorage.ts` for post-cutover movement, journal and lock definitions.
+- Relevant transaction forms/masters and reports for source defaults, write flows and calculations.
 
 ---
-**Status:** This is a source-derived Data Dictionary draft. It is not yet an approved production SQL schema. The next safe deliverable is a field-by-field relational mapping and migration specification, followed by SQL migrations in a separate development environment.
+**Status:** Source field inventories and storage definitions are documented from the specified repository baseline. The companion PostgreSQL proposal is not an approved production schema. Do not create a database or begin migration until the owner approves the next stage.

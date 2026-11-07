@@ -3,18 +3,16 @@
 
 आपण UK EXIM ENTERPRISES साठी UK EXIM ERP Version 1.0 विकसित करत आहोत.
 
-या Project चे पुढील उद्दिष्ट म्हणजे सध्याच्या LocalStorage-Based ERP ला सुरक्षित, Professional, Multi-Tenant Cloud SaaS ERP मध्ये रूपांतरित करण्यासाठी Database Architecture, Data Dictionary, Migration Plan आणि Backend Architecture तयार करणे.
+**Current approved priority (2026-11-07):** प्रथम विद्यमान ERP सुरक्षित server-side persistence सह फक्त UK EXIM ENTERPRISES साठी Online करणे. Commercial multi-tenant SaaS, subscriptions आणि licensing हे नंतरचे टप्पे आहेत; सध्या ते implement करू नयेत. भविष्यात विस्तार शक्य राहावा म्हणून company ownership boundary प्रस्तावित करता येईल.
 
 ### 1. BUSINESS & PRODUCT DIRECTION
 
 - Brand: UK EXIM ERP
 - Business: UK EXIM ENTERPRISES
-- Target Market: India First
-- Deployment: Cloud SaaS
-- Target Customers: Trading, Wholesale, Distribution, Export-Import आणि Manufacturing Businesses.
-- Positioning: Mid-Range Premium.
-- Platform: एक Multi-Tenant Cloud ERP Platform.
-- प्रत्येक Company चा Data पूर्णपणे स्वतंत्र आणि सुरक्षित असला पाहिजे.
+- Initial user: UK EXIM ENTERPRISES only.
+- Immediate objective: secure online use across owner-approved devices.
+- Future market, commercial SaaS, subscriptions, pricing and licensing are deferred and not authorized by Stage 0.
+- Add a company ownership boundary as a future-proof data-model proposal; do not implement SaaS control-plane features now.
 
 ### 2. CURRENT TECHNOLOGY
 
@@ -52,7 +50,7 @@ Project च्या `docs` Folder मध्ये खालील Documents उ
 
 या Documents चा अभ्यास करून त्यांना प्रत्यक्ष Source Code Audit नुसार Update करायचे आहे.
 
-**Documentation reconciliation completed against the current repository checkout (`29db49d`):** the Data Dictionary now lists the 22 source-defined LocalStorage keys, records that all 22 are in the current `ERPBackup.ts` allowlist, and points the Export Reservation key to its actual storage file. The Product Master Cloud Mapping now records source-supported fields and code-level relationships and identifies unresolved behavior. These documents do not establish that a backup was run or tested, and do not establish a cloud database, authentication, multi-tenancy, or migration implementation.
+**Earlier documentation reconciliation (historical):** previous documents referenced commit `29db49d` and 22 LocalStorage keys. Those values are superseded by the verified Stage 0 source inventory below.
 
 ### 5. SOURCE CODE AUDIT – COMPLETED FILES
 
@@ -140,42 +138,43 @@ User ने:
 
 सध्याच्या Domestic ERP साठी Net Weight पुरेसे आहे. Gross Weight चे स्वतंत्र Field आत्ता आवश्यक नाही.
 
-### 8. NEXT AUDIT TASKS
+### 8. SOURCE AUDIT STATUS BEFORE STAGE 0
 
-आधीची खालील audit list ही ऐतिहासिक pending list आहे; तिच्यातील प्रत्येक मुद्दा पूर्ण झाला आहे असे या दस्तऐवजीકરણ reconciliation वरून गृहीत धरू नये. पूर्ण Data Flow आणि सर्व migration-relevant behavior स्वतंत्र source review मधूनच निश्चित करायचे आहे.
+खालील audit list ऐतिहासिक आहे; Stage 0 मध्ये relevant source types, storage helpers, settings shapes, forms, writes, reports/calculations, backup code आणि stock movement flow यांचा पुनरावलोकन केला आहे. Actual saved records तपासलेले नाहीत.
 
-विशेषतः:
-- Purchase Master – Save, Edit, Delete आणि Stock Rebuild.
-- Sales Parent Component – Save, Edit, Delete आणि Stock Rebuild.
-- Stock Opening Balance Entry.
-- Customer आणि Supplier Data Structures.
-- Invoice आणि Company Settings.
-- Reports आणि Export Module मधील संबंधित Data Structures.
+Stage 0 मध्ये source-level वर खालील भाग तपासले गेले:
+- Purchase/Sales storage, form/master posting paths, stock movement snapshots, edit/delete protections and reports.
+- Stock baseline, legacy rebuild boundary, protected cutover, movement ledger and recovery journal source.
+- Customer/Supplier/Product and export entity TypeScript structures and discovered storage helpers.
+- Settings object shapes, backup allowlist and available backup/restore code paths.
+- Export inventory, reservations, packing, shipments and document-number reference patterns.
 
-आधीच दिलेल्या फाइल्स पुन्हा मागू नयेत. Product Master documentation review साठी actual source files तपासले गेले; याचा अर्थ इतर listed data-flow audit tasks पूर्ण झाले असा नाही.
+Actual browser records, backup files and runtime recovery remain uninspected.
 
-### 9. CLOUD DATABASE DESIGN
+Source review म्हणजे production data validation नाही. कोणतेही browser values, runtime backup किंवा restore तपासलेले नाहीत.
+
+### 9. ONLINE DATABASE DESIGN — SINGLE COMPANY FIRST
 
 Source Audit पूर्ण झाल्यानंतर खालील गोष्टी तयार करायच्या आहेत:
 
 1. Final Cloud Database Data Dictionary.
 2. Complete Entity Relationship Diagram (ERD).
 3. PostgreSQL Database Schema.
-4. Multi-Tenant Company Architecture.
-5. Company-wise Data Isolation.
+4. UK EXIM ENTERPRISES ownership boundary (`company_id` proposal); no SaaS subscription platform now.
+5. Server-side company-scoped authorization.
 6. User Authentication आणि Role-Based Access.
 7. Products, Customers, Suppliers Tables.
 8. Purchase आणि Purchase Items Tables.
 9. Sales आणि Sales Items Tables.
 10. Stock Ledger आणि Stock Balance Architecture.
-11. Invoice आणि Payment Tables.
+11. Invoice records; a separate payment ledger only if approved after source/business review (none exists in current domestic types).
 12. Company Settings आणि Bank Settings.
 13. Audit Logs.
 14. Created At / Updated At / Created By / Updated By Fields.
 15. Database Indexing आणि Constraints.
 16. Backup आणि Recovery Architecture.
 
-प्रत्येक Table मध्ये आवश्यकतेनुसार `company_id` वापरून Tenant Isolation सुनिश्चित करायचे आहे.
+Company-owned tables साठी proposed `company_id` वापरायचा. This is a future-proof ownership boundary for the single-company release, not authorization to build a commercial multi-tenant control plane.
 
 ### 10. DATA MIGRATION PLAN
 
@@ -206,15 +205,11 @@ Production Data वर थेट प्रयोग करू नयेत.
 - आवश्यक असल्यास पूर्ण Updated File द्यायची.
 - Code बदलण्याआधी Current File तपासायची.
 
-### 12. IMMEDIATE NEXT OBJECTIVE
+### 12. STAGE 0 COMPLETION AND NEXT GATE
 
-**Completed in this documentation-only step:** reconciled the Data Dictionary against current source for LocalStorage inventory and `ERPBackup.ts` allowlist; corrected the Export Reservation storage path; recorded current repository baseline; and created a source-bounded Product Master Cloud Mapping with unresolved questions clearly identified.
+**Stage 0 documentation completed against repository commit `8eba53d2a76b68f9da6780b75b1f0e8449b97738`:** verified active source key inventory, type/field inventory, storage and transaction relationships, protected stock behavior, current financial calculation evidence, proposed PostgreSQL mapping and owner-controlled migration safeguards. Updated the Data Dictionary, Product Master mapping and this continuation document; added `UK-EXIM-ERP-PostgreSQL-Data-Model-Proposal-v1.0.md`.
 
-**Still pending:** complete the remaining source-code/data-flow audit before approving a cloud schema or migration plan.
-
-त्यानंतर Final Cloud Database Architecture आणि Migration Plan तयार करायचा.
-
-अजून कोणतेही Production Database किंवा Cloud Deployment सुरू करू नये.
+**Next gate:** owner review and explicit approval. Do not start PostgreSQL implementation, authentication, database creation, paid service configuration, deployment or actual-data migration before approval and any separately required authorization.
 
 आपली प्राथमिकता:
 
@@ -226,13 +221,13 @@ UK EXIM ERP चे ध्येय:
 
 आता या Master Continuation Prompt नुसार मागील काम पुढे सुरू करा. आधी पूर्ण झालेल्या कामाची पुनरावृत्ती करू नका आणि पुढचा एकच आवश्यक Step द्या.
 
-### 13. VERIFIED IMPLEMENTATION BOUNDARY AND RECONCILIATION STATUS (2026-11-05)
+### 13. VERIFIED IMPLEMENTATION BOUNDARY AND STAGE 0 STATUS (2026-11-07)
 
-- The current repository source defines 22 LocalStorage keys; `app/utils/ERPBackup.ts` currently lists all 22 in `BACKUP_KEYS`. This is source inspection only. The owner's live Google Chrome LocalStorage remains the business data source and was not accessed, exported, cleared, or modified.
+- The current repository source defines 23 active LocalStorage keys. `app/utils/ERPBackup.ts` lists these 23 plus backup-only legacy marker `uk-exim-sales-numbering-v2`, for 24 allowlist entries. This is source inspection only. The owner's live Google Chrome LocalStorage remains the business data source and was not accessed, exported, cleared, or modified.
 - The backup implementation's code paths were inspected but backup and restore were not run. Runtime reliability, recovery procedures, and actual browser data contents are unverified.
-- The Data Dictionary and Product Master Cloud Mapping are source-derived planning documents, not an approved SQL schema. Existing cloud table and field proposals remain proposals.
-- No database connection, authentication system, multi-tenant enforcement, cloud deployment, or migration has been verified by this reconciliation. These remain pending design, owner decisions, and separate implementation/review.
-- The Product Master source contains 19 `Product` fields. `app/product/page.tsx` and `app/product/components/ProductMaster.tsx` have differing save behavior for packet `stockBaseCode`; the authoritative UI path must be resolved before treating that behavior as a settled business rule.
+- The Data Dictionary, Product Master Cloud Mapping and PostgreSQL Data Model Proposal are source-derived planning documents, not an approved production SQL schema.
+- No database connection, authentication, online persistence, cloud deployment or migration has been verified. Those remain future implementation work requiring owner approval.
+- The Product Master source contains 19 `Product` fields. `/product` (`app/product/page.tsx`) assigns P0006 to packet `stockBaseCode`; the dashboard reusable Product Master path saves the form mapping. Post-cutover stock movement code independently maps P0001–P0005 to P0006 and P0007 to itself. Preserve this distinction in the online implementation.
 - Product cloud mapping unresolved items include product-code uniqueness scope, `stockBaseCode` integrity, `Product.stock` versus live stock meaning, and price/tax currency and precision policies.
 
-The next safe work is to continue the source-code audit and resolve these questions from source and owner decisions. Do not inspect or manipulate the owner's live Chrome LocalStorage as part of that work.
+Remaining unknowns concern actual saved records, duplicates/orphans, field validity, financial precision policy, numbering scope and owner decisions. Resolve these using only a separately approved owner-controlled export into isolated offline/staging validation. Do not inspect or manipulate the owner's live Chrome LocalStorage.
