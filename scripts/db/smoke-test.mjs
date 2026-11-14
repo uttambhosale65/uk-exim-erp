@@ -132,6 +132,7 @@ async function assertSchema(db) {
     "stock_baselines",
     "stock_movement_transactions",
     "stock_movements",
+    "stock_movement_events",
   ];
   const tableResult = await db.query(
     "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'",
@@ -142,11 +143,17 @@ async function assertSchema(db) {
 
   const expectedIndexes = [
     "products_company_code_idx",
-    "customers_company_code_idx",
-    "suppliers_company_code_idx",
+    "customers_company_code_uidx",
+    "suppliers_company_code_uidx",
     "purchases_company_date_idx",
     "sales_company_date_idx",
     "stock_movements_company_stock_idx",
+    "stock_movement_events_company_stock_idx",
+    "purchase_items_line_uidx",
+    "sales_items_line_uidx",
+    "purchases_company_active_date_idx",
+    "sales_company_active_date_idx",
+    "stock_baselines_company_product_uidx",
   ];
   const indexResult = await db.query(
     "SELECT indexname FROM pg_indexes WHERE schemaname = 'public'",
@@ -154,6 +161,30 @@ async function assertSchema(db) {
   const actualIndexes = new Set(indexResult.rows.map(({ indexname }) => indexname));
   const missingIndexes = expectedIndexes.filter((name) => !actualIndexes.has(name));
   if (missingIndexes.length) throw new Error(`Schema indexes missing: ${missingIndexes.join(", ")}`);
+  const customerCodeIndex = indexResult.rows.find(({ indexname }) => indexname === "customers_company_code_uidx");
+  if (!customerCodeIndex) throw new Error("Company-scoped unique customer code index is missing.");
+  const customerCodeDefinition = await db.query(
+    "SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND indexname = $1",
+    ["customers_company_code_uidx"],
+  );
+  if (!customerCodeDefinition.rows[0]?.indexdef.includes("UNIQUE")
+    || !customerCodeDefinition.rows[0]?.indexdef.includes("(company_id, code)")) {
+    throw new Error("Company-scoped customer code uniqueness is missing.");
+  }
+  const supplierCodeDefinition = await db.query(
+    "SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND indexname = $1",
+    ["suppliers_company_code_uidx"],
+  );
+  if (!supplierCodeDefinition.rows[0]?.indexdef.includes("UNIQUE")
+    || !supplierCodeDefinition.rows[0]?.indexdef.includes("(company_id, code)")) {
+    throw new Error("Company-scoped supplier code uniqueness is missing.");
+  }
+  const baselineDefinition=await db.query("SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='stock_baselines_company_product_uidx'");
+  if(!baselineDefinition.rows[0]?.indexdef.includes("UNIQUE")||!baselineDefinition.rows[0]?.indexdef.includes("(company_id, product_code)"))throw new Error("Company-scoped stock baseline uniqueness is missing.");
+  const sourceRecord=await db.query("SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='stock_baselines' AND column_name='source_record' AND data_type='jsonb'");
+  if(!sourceRecord.rowCount)throw new Error("Stock baseline source_record JSONB column is missing.");
+  const verificationColumns=await db.query("SELECT count(*)::int AS n FROM information_schema.columns WHERE table_schema='public' AND table_name='stock_baselines' AND column_name=ANY($1::text[])",[["verification_status","verification_sha256","verified_at"]]);
+  if(verificationColumns.rows[0].n!==3)throw new Error("Stock baseline verification gate columns are missing.");
 
   const foreignKeyResult = await db.query(
     `SELECT conname, pg_get_constraintdef(oid) AS definition
@@ -190,6 +221,21 @@ async function assertSchema(db) {
   const triggerNames = new Set(triggerResult.rows.map(({ tgname }) => tgname));
   if (!triggerNames.has("stock_baselines_no_update")) {
     throw new Error("Stock baseline immutability trigger is missing or disabled.");
+  }
+  const ledgerTrigger = await db.query(
+    `SELECT tgname FROM pg_trigger WHERE tgrelid='stock_movement_events'::regclass
+     AND NOT tgisinternal AND tgenabled <> 'D'`,
+  );
+  if (!ledgerTrigger.rows.some(({ tgname }) => tgname === "stock_movement_events_append_only")) {
+    throw new Error("Append-only stock movement event trigger is missing or disabled.");
+  }
+  const eventConstraintResult = await db.query(
+    "SELECT conname FROM pg_constraint WHERE conrelid='stock_movement_events'::regclass AND contype='c'",
+  );
+  const eventChecks = new Set(eventConstraintResult.rows.map(({ conname }) => conname));
+  if (!eventChecks.has("stock_movement_events_quantity_delta_kg_check")
+    || !eventChecks.has("stock_movement_events_posted_at_check")) {
+    throw new Error("Stock event quantity or cutover check constraints are missing.");
   }
 }
 
@@ -290,4 +336,19 @@ async function assertMovementConstraints(db, companyId) {
   if (movementResult.rows[0]?.quantity_kg !== "0.05") {
     throw new Error("Stock movement numeric quantity did not round-trip exactly.");
   }
+
+  const eventId = randomUUID();
+  await db.query(
+    `INSERT INTO stock_movement_events
+     (id,company_id,transaction_type,transaction_id,revision,event_type,line_id,product_code,stock_code,
+      quantity_delta_kg,source_quantity,unit,net_weight_grams,posted_at,event_key)
+     VALUES ($1,$2,'sale',$3,1,'post','line-1','P0001','P0006',-0.05,1,'Pkt',50,$4,$5)`,
+    [eventId,companyId,`synthetic-event-${randomUUID()}`,validTimestamp,`synthetic:${randomUUID()}`],
+  );
+  const eventValue = await db.query("SELECT quantity_delta_kg::text AS value FROM stock_movement_events WHERE id=$1",[eventId]);
+  if (eventValue.rows[0]?.value !== "-0.05") throw new Error("Stock event decimal did not round-trip exactly.");
+  await expectConstraintError(db,"movement_event_update_check","P0001",
+    "UPDATE stock_movement_events SET quantity_delta_kg=-0.04 WHERE id=$1",[eventId]);
+  await expectConstraintError(db,"movement_event_delete_check","P0001",
+    "DELETE FROM stock_movement_events WHERE id=$1",[eventId]);
 }

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Customer } from "./CustomerTypes";
 
 type CustomerFormProps = {
   customerCode: string;
   editingCustomer?: Customer | null;
-  onSave: (customer: Customer) => void;
+  onSave: (customer: Customer) => Promise<boolean>;
   onCancelEdit?: () => void;
 };
 
@@ -17,7 +17,7 @@ export default function CustomerForm({
   onCancelEdit,
 }: CustomerFormProps) {
   const emptyCustomer = (): Customer => ({
-    id: crypto.randomUUID(),
+    id: "",
     code: customerCode,
 
     // Basic Details
@@ -45,19 +45,9 @@ export default function CustomerForm({
     status: "Active",
   });
 
-  const [customer, setCustomer] =
-    useState<Customer>(emptyCustomer());
-
-  useEffect(() => {
-    if (editingCustomer) {
-      setCustomer(editingCustomer);
-    } else {
-      setCustomer((prev) => ({
-        ...prev,
-        code: customerCode,
-      }));
-    }
-  }, [customerCode, editingCustomer]);
+  const [customer, setCustomer] = useState<Customer>(() => editingCustomer ?? emptyCustomer());
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -76,7 +66,7 @@ export default function CustomerForm({
     }));
   };
 
-  const handleSubmit = (
+  const handleSubmit = async (
     e: React.FormEvent
   ) => {
     e.preventDefault();
@@ -88,20 +78,25 @@ export default function CustomerForm({
 
     if (
       customer.mobile &&
-      !/^[0-9]{10}$/.test(customer.mobile)
+      !/^[0-9]{10}$/.test(customer.mobile) &&
+      (!editingCustomer || customer.mobile !== editingCustomer.mobile)
     ) {
       alert("Please enter a valid 10 digit Mobile Number");
       return;
     }
 
-    onSave(customer);
-
-    setCustomer({
-      ...emptyCustomer(),
-      code: customerCode,
-    });
-
-    onCancelEdit?.();
+    setSaving(true);
+    setSaveError("");
+    try {
+      const saved = await onSave(customer);
+      if (!saved) return;
+      setCustomer(emptyCustomer());
+      onCancelEdit?.();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Customer could not be saved.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -181,6 +176,8 @@ export default function CustomerForm({
         >
           📋 Customer Entry
         </h2>
+
+        {saveError && <p role="alert" style={{ color: "#b91c1c", margin: "0 0 12px" }}>{saveError}</p>}
 
         {/* ======================================
             ROW 1
@@ -520,14 +517,16 @@ export default function CustomerForm({
 
           <button
             type="submit"
+            disabled={saving}
             style={{
               ...buttonStyle,
-              background: "#14532d",
+              background: saving ? "#6b7280" : "#14532d",
               minWidth: "145px",
+              cursor: saving ? "wait" : "pointer",
             }}
           >
             💾{" "}
-            {editingCustomer
+            {saving ? "Saving…" : editingCustomer
               ? "Update Customer"
               : "Save Customer"}
           </button>

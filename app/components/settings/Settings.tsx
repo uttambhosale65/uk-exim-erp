@@ -5,8 +5,11 @@ import {
   downloadERPBackup,
   restoreERPBackup,
 } from "../../utils/ERPBackup";
+import TaxConfigurationPanel from "./TaxConfigurationPanel";
+import PasswordChangeForm from "@/app/components/auth/PasswordChangeForm";
 type CompanySettings = {
   companyName: string;
+  legalProprietor: string;
   address: string;
   gstin: string;
   fssai: string;
@@ -52,13 +55,9 @@ type InternationalSettings = {
   countryOfOrigin: string;
 };
 
-const COMPANY_KEY = "uk-exim-company-settings";
-const INVOICE_KEY = "uk-exim-invoice-settings";
-const BANK_KEY = "uk-exim-bank-settings";
-const INTERNATIONAL_KEY = "uk-exim-international-settings";
-
 const defaultCompany: CompanySettings = {
   companyName: "UK EXIM ENTERPRISES",
+  legalProprietor: "UTTAM MAHADEO BHOSALE",
   address:
     "A-703, Vishnu Greens, City Pride School Road, Jadhavwadi, Chikhali, Pune - 411062, Maharashtra, India",
   gstin: "27AJUPB0025D1ZO",
@@ -121,118 +120,45 @@ export default function Settings() {
     useState<InternationalSettings>(defaultInternational);
 
   const [saved, setSaved] = useState(false);
+  const [settingsStatus, setSettingsStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [settingsError, setSettingsError] = useState("");
+  const [savedCategories, setSavedCategories] = useState<string[]>([]);
 
-  useEffect(() => {
+  const loadSettings = async () => {
+    setSettingsStatus("loading");
     try {
-      const savedCompany = localStorage.getItem(COMPANY_KEY);
-      const savedInvoice = localStorage.getItem(INVOICE_KEY);
-      const savedBank = localStorage.getItem(BANK_KEY);
-      const savedInternational =
-        localStorage.getItem(INTERNATIONAL_KEY);
-
-      if (savedCompany) {
-        setCompany({
-          ...defaultCompany,
-          ...JSON.parse(savedCompany),
-        });
-      }
-
-      if (savedInvoice) {
-        setInvoice({
-          ...defaultInvoice,
-          ...JSON.parse(savedInvoice),
-        });
-      }
-
-      if (savedBank) {
-        setBank({
-          ...defaultBank,
-          ...JSON.parse(savedBank),
-        });
-      }
-
-      if (savedInternational) {
-        setInternational({
-          ...defaultInternational,
-          ...JSON.parse(savedInternational),
-        });
-      }
+      const response = await fetch("/api/settings", { cache: "no-store" });
+      const payload = await response.json() as { settings?: Array<{ key: string; value: unknown }> ; error?: string };
+      if (!response.ok || !Array.isArray(payload.settings)) throw new Error(payload.error ?? "PostgreSQL settings could not be loaded.");
+      const values = new Map(payload.settings.map(item => [item.key, item.value]));
+      if (values.has("company")) setCompany({ ...defaultCompany, ...(values.get("company") as Partial<CompanySettings>) });
+      if (values.has("invoice")) setInvoice({ ...defaultInvoice, ...(values.get("invoice") as Partial<InvoiceSettings>) });
+      if (values.has("bank")) setBank({ ...defaultBank, ...(values.get("bank") as Partial<BankSettings>) });
+      if (values.has("international")) setInternational({ ...defaultInternational, ...(values.get("international") as Partial<InternationalSettings>) });
+      setSavedCategories([...values.keys()]);
+      setSettingsStatus("ready"); setSettingsError("");
     } catch (error) {
-      console.error("Settings loading error:", error);
-    }
-  }, []);
-
-  const saveSettings = () => {
-    try {
-      localStorage.setItem(
-        COMPANY_KEY,
-        JSON.stringify(company)
-      );
-
-      localStorage.setItem(
-        INVOICE_KEY,
-        JSON.stringify(invoice)
-      );
-
-      localStorage.setItem(
-        BANK_KEY,
-        JSON.stringify(bank)
-      );
-
-      localStorage.setItem(
-        INTERNATIONAL_KEY,
-        JSON.stringify(international)
-      );
-
-      setSaved(true);
-
-      setTimeout(() => {
-        setSaved(false);
-      }, 2500);
-    } catch (error) {
-      console.error("Settings save error:", error);
+      setSettingsStatus("error"); setSettingsError(error instanceof Error ? error.message : "PostgreSQL settings could not be loaded.");
     }
   };
 
-  const resetSettings = () => {
-    if (
-      !window.confirm(
-        "Are you sure you want to restore default settings?"
-      )
-    ) {
-      return;
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadSettings(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const saveSettings = async () => {
+    const values: Record<string, object> = { company, invoice, bank, international };
+    try {
+      const response = await fetch(`/api/settings/${activeTab}`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(values[activeTab]) });
+      const payload = await response.json() as { setting?: { key: string }; error?: string };
+      if (!response.ok || !payload.setting) throw new Error(payload.error ?? "Settings could not be saved to PostgreSQL.");
+      setSavedCategories(current => current.includes(activeTab) ? current : [...current, activeTab]);
+      setSaved(true); setSettingsError("");
+      setTimeout(() => setSaved(false), 2500);
+    } catch (error) {
+      setSaved(false); setSettingsError(error instanceof Error ? error.message : "Settings could not be saved to PostgreSQL.");
     }
-
-    setCompany(defaultCompany);
-    setInvoice(defaultInvoice);
-    setBank(defaultBank);
-    setInternational(defaultInternational);
-
-    localStorage.setItem(
-      COMPANY_KEY,
-      JSON.stringify(defaultCompany)
-    );
-
-    localStorage.setItem(
-      INVOICE_KEY,
-      JSON.stringify(defaultInvoice)
-    );
-
-    localStorage.setItem(
-      BANK_KEY,
-      JSON.stringify(defaultBank)
-    );
-
-    localStorage.setItem(
-      INTERNATIONAL_KEY,
-      JSON.stringify(defaultInternational)
-    );
-
-    setSaved(true);
-
-    setTimeout(() => {
-      setSaved(false);
-    }, 2500);
   };
 
   const inputStyle: React.CSSProperties = {
@@ -342,6 +268,26 @@ export default function Settings() {
           🌍 International Business
         </button>
       </div>
+
+      {settingsStatus === "loading" && <p role="status">Loading company-scoped PostgreSQL settings…</p>}
+      {settingsStatus === "error" && <p role="alert">{settingsError}</p>}
+      {settingsStatus === "ready" && <p role="status" style={{ color: "#6b7280", fontSize: 12 }}>
+        PostgreSQL categories saved: {savedCategories.length ? savedCategories.join(", ") : "none yet"}. Values shown for unsaved categories are screen defaults and have not been imported or persisted.
+      </p>}
+
+      <PasswordChangeForm />
+      <TaxConfigurationPanel />
+
+      <section aria-labelledby="tax-policy-title" style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: 14, marginBottom: 16 }}>
+        <h3 id="tax-policy-title" style={{ margin: "0 0 8px", color: "#92400e" }}>GST / NON-GST tax-policy approval</h3>
+        <p style={{ margin: "0 0 8px", fontSize: 13 }}>GST Tax Invoice and Without GST Invoice remain separate billing options. Without GST must use the legally applicable Bill of Supply or Commercial Invoice. No tax treatment is inferred from this checklist.</p>
+        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12 }}>
+          <li>Accountant approval required: seller registration/location and place-of-supply evidence.</li>
+          <li>Accountant approval required: conditions selecting CGST+SGST versus IGST.</li>
+          <li>Accountant approval required: export GST route and required evidence.</li>
+          <li>Until the approved effective-dated tax matrix is stored, new taxable Sales posting remains fail-closed.</li>
+        </ul>
+      </section>
 
       {/* ERP DATA BACKUP */}
 
@@ -524,6 +470,15 @@ export default function Settings() {
                       companyName: e.target.value,
                     })
                   }
+                />
+              </div>
+
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Legal Proprietor</label>
+                <input
+                  style={inputStyle}
+                  value={company.legalProprietor}
+                  onChange={(e) => setCompany({ ...company, legalProprietor: e.target.value })}
                 />
               </div>
 
@@ -1231,7 +1186,7 @@ export default function Settings() {
           </button>
 
           <button
-            onClick={resetSettings}
+            onClick={() => void loadSettings()}
             style={{
               padding: "10px 22px",
               background: "#6b7280",
@@ -1242,7 +1197,7 @@ export default function Settings() {
               fontWeight: "bold",
             }}
           >
-            🔄 Reset
+            ↻ Reload PostgreSQL settings
           </button>
 
           {saved && (

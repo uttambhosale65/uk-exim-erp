@@ -20,6 +20,9 @@ type SalesFormProps = {
   editingSale?: Sales | null;
   onSave: (sale: Sales) => void;
   onCancelEdit?: () => void;
+  masterCustomers?: Customer[];
+  masterProducts?: Product[];
+  existingSales?: Sales[];
 };
 
 export default function SalesForm({
@@ -27,20 +30,23 @@ export default function SalesForm({
   editingSale,
   onSave,
   onCancelEdit,
+  masterCustomers,
+  masterProducts,
+  existingSales,
 }: SalesFormProps) {
 
   /* =========================
      MASTER DATA
   ========================= */
 
-  const [customers, setCustomers] =
-    useState<Customer[]>([]);
+  const [customers] =
+    useState<Customer[]>(() => masterCustomers ?? loadCustomers());
 
   const [customerSearch, setCustomerSearch] =
     useState("");
 
-  const [products, setProducts] =
-    useState<Product[]>([]);
+  const [products] =
+    useState<Product[]>(() => masterProducts ?? loadProducts());
 
   /* =========================
      DATE HELPERS
@@ -141,7 +147,7 @@ export default function SalesForm({
   const getNextInvoiceNo = (
     invoiceType: "GST" | "NON_GST"
   ): string => {
-    const sales = loadSales();
+    const sales = existingSales ?? loadSales();
 
     const year =
       new Date()
@@ -223,7 +229,7 @@ export default function SalesForm({
     id: crypto.randomUUID(),
 
     salesNo:
-      getNextSalesNo(loadSales()),
+      getNextSalesNo(existingSales ?? loadSales()),
 
     salesDate:
       getToday(),
@@ -233,6 +239,10 @@ export default function SalesForm({
 
     invoiceType:
       "NON_GST",
+
+    placeOfSupplyStateCode: "",
+    placeOfSupplyBasis: "movement_destination",
+    placeOfSupplyAddress: "",
 
     customerCode: "",
     customerName: "",
@@ -276,16 +286,6 @@ export default function SalesForm({
   /* =========================
      LOAD MASTER DATA
   ========================= */
-
-  useEffect(() => {
-    setCustomers(
-      loadCustomers()
-    );
-
-    setProducts(
-      loadProducts()
-    );
-  }, []);
 
   /* =========================
      EDIT / NEW SALE
@@ -896,7 +896,7 @@ const handleSubmit = (
   const finalSale: Sales = {
     ...sale,
 
-    salesNo,
+    salesNo: editingSale?.salesNo ?? salesNo,
 
     salesDate:
       finalSalesDate,
@@ -1442,6 +1442,28 @@ const handleSubmit = (
               )}
             </datalist>
 
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Place of Supply State Code *</label>
+            <input name="placeOfSupplyStateCode" inputMode="numeric" maxLength={2} pattern="[0-9]{2}" value={sale.placeOfSupplyStateCode ?? ""} onChange={handleChange} placeholder="Enter verified 2-digit code" style={inputStyle} />
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Place of Supply Basis *</label>
+            <select name="placeOfSupplyBasis" value={sale.placeOfSupplyBasis ?? "movement_destination"} onChange={handleChange} style={inputStyle}>
+              <option value="movement_destination">Goods movement delivery destination</option>
+              <option value="third_party_bill_to">Third-party bill-to direction</option>
+              <option value="no_movement_location">Goods delivered without movement</option>
+              <option value="installation_site">Installation / assembly site</option>
+              <option value="onboard_location">Goods supplied on conveyance</option>
+              <option value="other_statutory_rule">Other statutory determination</option>
+            </select>
+          </div>
+
+          <div style={{ ...fieldStyle, gridColumn: "span 2" }}>
+            <label style={labelStyle}>Delivery / legally relevant location address *</label>
+            <input name="placeOfSupplyAddress" value={sale.placeOfSupplyAddress ?? ""} onChange={handleChange} maxLength={500} placeholder="Enter actual delivery or statutory Place of Supply address" style={inputStyle} />
           </div>
 
         </div>

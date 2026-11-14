@@ -1,5 +1,9 @@
-import ExportReservationMaster from "./ExportReservationMaster";
+import { requireOwnerContext } from "@/app/lib/auth/dal";
+import ExportPostgresWorkspace from "../ExportPostgresWorkspace";
 
-export default function ExportReservationPage() {
-  return <ExportReservationMaster />;
+export const dynamic = "force-dynamic";
+
+export default async function ExportReservationPage() {
+  await requireOwnerContext();
+  return <ExportPostgresWorkspace kind="reservation" />;
 }

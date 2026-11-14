@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  useMemo,
   useState,
+  useMemo,
 } from "react";
 
 import ProductForm from "./ProductForm";
@@ -10,14 +10,12 @@ import ProductTable from "./ProductTable";
 import { Product } from "./ProductTypes";
 
 import {
-  loadProducts,
-  saveProducts,
   getNextProductCode,
 } from "./ProductStorage";
+import { useProductCatalog } from "../useProductCatalog";
 
 export default function ProductMaster() {
-  const [products, setProducts] =
-    useState<Product[]>(loadProducts());
+  const { products, loading, error, saveProduct, deactivateProduct } = useProductCatalog();
 
   const [editingProduct, setEditingProduct] =
     useState<Product | null>(null);
@@ -50,30 +48,10 @@ export default function ProductMaster() {
      3. Sales / Issue
   ========================================= */
 
-  const handleSave = (product: Product) => {
-    let updatedProducts: Product[];
-
-    if (editingProduct) {
-      updatedProducts = products.map((item) =>
-        item.id === product.id
-          ? product
-          : item
-      );
-    } else {
-      updatedProducts = [
-        ...products,
-        product,
-      ];
-    }
-
-    /* SAVE PRODUCT */
-
-    setProducts(updatedProducts);
-    saveProducts(updatedProducts);
-
-    /* EXIT EDIT MODE */
-
+  const handleSave = async (product: Product) => {
+    const saved = await saveProduct(product, Boolean(editingProduct));
     setEditingProduct(null);
+    return saved;
   };
 
   /* =========================================
@@ -95,7 +73,7 @@ export default function ProductMaster() {
      history remains safe.
   ========================================= */
 
-  const handleDelete = (
+  const handleDelete = async (
     id: string
   ) => {
     const productToDeactivate =
@@ -115,18 +93,7 @@ export default function ProductMaster() {
       return;
     }
 
-    const updatedProducts =
-      products.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              active: false,
-            }
-          : item
-      );
-
-    setProducts(updatedProducts);
-    saveProducts(updatedProducts);
+    await deactivateProduct(id);
 
     if (
       editingProduct?.id === id
@@ -168,10 +135,14 @@ export default function ProductMaster() {
 
       <ProductForm
         productCode={productCode}
+        availableProducts={products}
         editingProduct={editingProduct}
         onSave={handleSave}
         onCancelEdit={handleCancelEdit}
       />
+
+      {loading && <p role="status">Loading products…</p>}
+      {error && <p role="alert" style={{ color: "#b91c1c" }}>{error}</p>}
 
       {/* =====================================
           PRODUCT REGISTER

@@ -12,9 +12,14 @@
 
 # testing
 /coverage
+/.local-test/
 
 # next.js
 /.next/
+/.next-products-ui-test/
+/.next-e2e-disposable/
+/.next-e2e-disposable-*/
+/.next-auth-check-*/
 /out/
 
 # production

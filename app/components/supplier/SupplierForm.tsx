@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Supplier } from "./SupplierTypes";
 
 type SupplierFormProps = {
   supplierCode: string;
   editingSupplier?: Supplier | null;
-  onSave: (supplier: Supplier) => void;
+  onSave: (supplier: Supplier) => Promise<boolean>;
   onCancelEdit?: () => void;
 };
 
@@ -17,7 +17,7 @@ export default function SupplierForm({
   onCancelEdit,
 }: SupplierFormProps) {
   const emptySupplier = (): Supplier => ({
-    id: crypto.randomUUID(),
+    id: "",
     code: supplierCode,
 
     // Basic Details
@@ -45,19 +45,9 @@ export default function SupplierForm({
     status: "Active",
   });
 
-  const [supplier, setSupplier] =
-    useState<Supplier>(emptySupplier());
-
-  useEffect(() => {
-    if (editingSupplier) {
-      setSupplier(editingSupplier);
-    } else {
-      setSupplier((prev) => ({
-        ...prev,
-        code: supplierCode,
-      }));
-    }
-  }, [supplierCode, editingSupplier]);
+  const [supplier, setSupplier] = useState<Supplier>(() => editingSupplier ?? emptySupplier());
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -86,14 +76,18 @@ export default function SupplierForm({
       return;
     }
 
-    onSave(supplier);
-
-    setSupplier({
-      ...emptySupplier(),
-      code: supplierCode,
-    });
-
-    onCancelEdit?.();
+    setSaving(true);
+    setSaveError("");
+    void onSave(supplier)
+      .then((saved) => {
+        if (!saved) return;
+        setSupplier({ ...emptySupplier(), code: supplierCode });
+        onCancelEdit?.();
+      })
+      .catch((error: unknown) => {
+        setSaveError(error instanceof Error ? error.message : "Supplier could not be saved.");
+      })
+      .finally(() => setSaving(false));
   };
 
   const handleReset = () => {
@@ -162,6 +156,8 @@ export default function SupplierForm({
         >
           🚚 Supplier Entry
         </h2>
+
+        {saveError && <p role="alert" style={{ color: "#b91c1c", margin: "0 0 12px" }}>{saveError}</p>}
 
         {/* ======================================
             ROW 1 — BASIC SUPPLIER DETAILS
@@ -553,21 +549,22 @@ export default function SupplierForm({
 
             <button
               type="submit"
+              disabled={saving}
               style={{
                 height: "40px",
                 padding: "0 18px",
                 border: "none",
                 borderRadius: "6px",
-                background: "#14532d",
+                background: saving ? "#6b7280" : "#14532d",
                 color: "#ffffff",
                 fontWeight: 700,
                 fontSize: "12px",
-                cursor: "pointer",
+                cursor: saving ? "wait" : "pointer",
                 whiteSpace: "nowrap",
               }}
             >
               💾{" "}
-              {editingSupplier
+              {saving ? "Saving…" : editingSupplier
                 ? "Update Supplier"
                 : "Save Supplier"}
             </button>

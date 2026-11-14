@@ -33,6 +33,11 @@ export type Sales = {
   salesDate: string;
   invoiceNo: string;
   invoiceType: "GST" | "NON_GST";
+  placeOfSupplyStateCode?: string;
+  placeOfSupplyBasis?: string;
+  placeOfSupplyAddress?: string;
+  taxSnapshot?: Record<string, unknown> | null;
+  taxDocumentType?: string;
   // Customer
   customerCode: string;
   customerName: string;

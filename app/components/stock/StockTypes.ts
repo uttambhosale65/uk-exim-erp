@@ -10,5 +10,7 @@ export type Stock = {
   openingStock: number;
   purchaseQty: number;
   salesQty: number;
+  grossPurchaseMovementQty?: number;
+  grossSalesMovementQty?: number;
   currentStock: number;
 };

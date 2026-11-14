@@ -1,37 +1,25 @@
 "use client";
 
-import { useState } from "react";
 import { Customer } from "./CustomerTypes";
 
 type CustomerTableProps = {
   customers: Customer[];
+  search: string;
+  onSearch: (value: string) => void;
   onEdit: (customer: Customer) => void;
-  onDelete: (id: string) => void;
+  onView: (customer: Customer) => void;
+  onSetStatus: (customer: Customer) => void;
 };
 
 export default function CustomerTable({
   customers,
+  search,
+  onSearch,
   onEdit,
-  onDelete,
+  onView,
+  onSetStatus,
 }: CustomerTableProps) {
-  const [search, setSearch] = useState("");
-
-  const filteredCustomers = customers.filter((customer) => {
-    const searchText = search.toLowerCase();
-
-    return (
-      customer.name.toLowerCase().includes(searchText) ||
-      customer.code.toLowerCase().includes(searchText) ||
-      customer.contactPerson
-        .toLowerCase()
-        .includes(searchText) ||
-      customer.mobile.includes(searchText) ||
-      customer.email.toLowerCase().includes(searchText) ||
-      customer.city.toLowerCase().includes(searchText) ||
-      customer.gst.toLowerCase().includes(searchText) ||
-      customer.pan.toLowerCase().includes(searchText)
-    );
-  });
+  const filteredCustomers = customers;
 
   // ==========================================
   // TABLE HEADER STYLE
@@ -139,7 +127,7 @@ export default function CustomerTable({
           type="text"
           placeholder="🔍 Search Customer / Code / Mobile / GST"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => onSearch(e.target.value)}
           style={{
             width: "320px",
             maxWidth: "40%",
@@ -184,14 +172,14 @@ export default function CustomerTable({
 
           <colgroup>
             <col style={{ width: "7%" }} />
-            <col style={{ width: "18%" }} />
+            <col style={{ width: "14%" }} />
             <col style={{ width: "14%" }} />
             <col style={{ width: "11%" }} />
-            <col style={{ width: "16%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "8%" }} />
-            <col style={{ width: "7%" }} />
+            <col style={{ width: "14%" }} />
             <col style={{ width: "9%" }} />
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "15%" }} />
           </colgroup>
 
           {/* ======================================
@@ -388,6 +376,23 @@ export default function CustomerTable({
                         flexWrap: "wrap",
                       }}
                     >
+                      <button
+                        type="button"
+                        onClick={() => onView(customer)}
+                        style={{
+                          background: "#0f766e",
+                          color: "#ffffff",
+                          border: "none",
+                          padding: "5px 7px",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                          fontSize: "10px",
+                          fontWeight: 600,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        View
+                      </button>
                       {/* EDIT */}
 
                       <button
@@ -413,24 +418,11 @@ export default function CustomerTable({
                         ✏️ Edit
                       </button>
 
-                      {/* DELETE */}
-
                       <button
                         type="button"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Are you sure you want to delete "${customer.name}"?`
-                            )
-                          ) {
-                            onDelete(
-                              customer.id
-                            );
-                          }
-                        }}
+                        onClick={() => onSetStatus(customer)}
                         style={{
-                          background:
-                            "#dc2626",
+                          background: customer.status === "Active" ? "#b91c1c" : "#15803d",
                           color: "#ffffff",
                           border: "none",
                           padding:
@@ -443,7 +435,7 @@ export default function CustomerTable({
                             "nowrap",
                         }}
                       >
-                        🗑 Delete
+                        {customer.status === "Active" ? "Deactivate" : "Activate"}
                       </button>
                     </div>
                   </td>

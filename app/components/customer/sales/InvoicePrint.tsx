@@ -134,15 +134,22 @@ export default function InvoicePrint({
     sale.gstAmount || 0
   );
 
-  const cgstAmount = totalGST / 2;
-  const sgstAmount = totalGST / 2;
+  const cgstAmount = Number(sale.cgst ?? sale.items?.reduce((sum, item) => sum + Number(item.cgst || 0), 0) ?? totalGST / 2);
+  const sgstAmount = Number(sale.sgst ?? sale.items?.reduce((sum, item) => sum + Number(item.sgst || 0), 0) ?? totalGST / 2);
+  const igstAmount = Number(sale.igst ?? sale.items?.reduce((sum, item) => sum + Number(item.igst || 0), 0) ?? 0);
 
   const gstRate = Number(
     sale.items?.[0]?.gst || 0
   );
 
-  const cgstRate = gstRate / 2;
-  const sgstRate = gstRate / 2;
+  const cgstRate = taxableAmount > 0 ? (cgstAmount / taxableAmount) * 100 : gstRate / 2;
+  const sgstRate = taxableAmount > 0 ? (sgstAmount / taxableAmount) * 100 : gstRate / 2;
+  const igstRate = taxableAmount > 0 ? (igstAmount / taxableAmount) * 100 : 0;
+  const taxSnapshot = sale.taxSnapshot as { documentType?: string; seller?: { registrationType?: string }; placeOfSupplyStateCode?: string; placeOfSupplyAddress?: string } | null | undefined;
+  const taxDocumentTitle = taxSnapshot?.documentType === "GST_TAX_INVOICE" ? "TAX INVOICE"
+    : taxSnapshot?.documentType === "BILL_OF_SUPPLY" ? "BILL OF SUPPLY"
+      : taxSnapshot?.documentType === "COMMERCIAL_INVOICE" ? "COMMERCIAL INVOICE"
+        : sale.invoiceType === "GST" ? "TAX INVOICE" : "INVOICE";
 
   const grandTotal = Number(
     sale.grandTotal || 0
@@ -203,17 +210,7 @@ export default function InvoicePrint({
 
           </div>
 
-          <div className="tax-invoice">
-  {sale.invoiceType === "GST" ? (
-    <>
-      TAX
-      <br />
-      INVOICE
-    </>
-  ) : (
-    "INVOICE"
-  )}
-</div>
+          <div className="tax-invoice">{taxDocumentTitle}</div>
 
         </div>
 
@@ -335,25 +332,13 @@ export default function InvoicePrint({
                   </td>
                 </tr>
 
-                <tr>
-                  <td>
-                    CGST @ {cgstRate.toFixed(2)}%
-                  </td>
-
-                  <td className="right">
-                    ₹{cgstAmount.toFixed(2)}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td>
-                    SGST @ {sgstRate.toFixed(2)}%
-                  </td>
-
-                  <td className="right">
-                    ₹{sgstAmount.toFixed(2)}
-                  </td>
-                </tr>
+                {igstAmount > 0 ? <tr>
+                  <td>IGST @ {igstRate.toFixed(2)}%</td>
+                  <td className="right">₹{igstAmount.toFixed(2)}</td>
+                </tr> : <>
+                  <tr><td>CGST @ {cgstRate.toFixed(2)}%</td><td className="right">₹{cgstAmount.toFixed(2)}</td></tr>
+                  <tr><td>SGST @ {sgstRate.toFixed(2)}%</td><td className="right">₹{sgstAmount.toFixed(2)}</td></tr>
+                </>}
 
                 <tr>
                   <td>
@@ -397,6 +382,12 @@ export default function InvoicePrint({
           </table>
 
         </div>
+
+        {taxSnapshot?.placeOfSupplyStateCode && <div className="company-small" style={{ marginTop: 8 }}>
+          Place of Supply state code: {taxSnapshot.placeOfSupplyStateCode}
+          {taxSnapshot.placeOfSupplyAddress ? ` · ${taxSnapshot.placeOfSupplyAddress}` : ""}
+        </div>}
+        {taxSnapshot?.seller?.registrationType === "composition" && <p style={{ fontSize: 11, fontWeight: 700 }}>Composition taxable person, not eligible to collect tax on supplies.</p>}
 
         {/* =========================
             AMOUNT IN WORDS
@@ -498,12 +489,7 @@ export default function InvoicePrint({
 
         <div className="invoice-footer">
 
-          <div>
-            {sale.invoiceType === "GST"
-              ? "This is a Computer Generated GST Invoice."
-              : "This is a Computer Generated Invoice."
-            }
-          </div>
+          <div>{taxDocumentTitle === "TAX INVOICE" ? "This is a Computer Generated GST Invoice." : `This is a Computer Generated ${taxDocumentTitle}.`}</div>
 
           <div className="developer-credit">
             Designed & Developed by

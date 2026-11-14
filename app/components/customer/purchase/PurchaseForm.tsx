@@ -31,6 +31,8 @@ type PurchaseFormProps = {
   purchaseNo: string;
   editingPurchase?: Purchase | null;
   onSave: (purchase: Purchase) => void;
+  masterProducts?: Product[];
+  masterSuppliers?: Supplier[];
 };
 
 /* =========================================================
@@ -166,17 +168,19 @@ export default function PurchaseForm({
   purchaseNo,
   editingPurchase,
   onSave,
+  masterProducts,
+  masterSuppliers,
 }: PurchaseFormProps) {
 
   /* =======================================================
      MASTER DATA
   ======================================================= */
 
-  const [products, setProducts] =
-    useState<Product[]>([]);
+  const [products] =
+    useState<Product[]>(() => masterProducts ?? loadProducts());
 
-  const [suppliers, setSuppliers] =
-    useState<Supplier[]>([]);
+  const [suppliers] =
+    useState<Supplier[]>(() => masterSuppliers ?? loadSuppliers());
 
   /* =======================================================
      SEARCH
@@ -264,16 +268,6 @@ items: [],
   /* =======================================================
      LOAD MASTER DATA
   ======================================================= */
-
-  useEffect(() => {
-    setProducts(
-      loadProducts()
-    );
-
-    setSuppliers(
-      loadSuppliers()
-    );
-  }, []);
 
   /* =======================================================
      EDIT / NEW GRN
@@ -885,6 +879,11 @@ items: [],
       return;
     }
 
+    if (!purchase.invoiceNo.trim()) {
+      alert("Please enter Supplier Invoice No.");
+      return;
+    }
+
     const finalPurchaseDate =
       parseDisplayDate(
         dateDisplay
@@ -1452,11 +1451,13 @@ items: [],
                 labelStyle
               }
             >
-              Supplier Invoice No.
+              Supplier Invoice No. <span aria-hidden="true" style={{ color: "#b91c1c" }}>*</span>
             </label>
 
             <input
               type="text"
+
+              required
 
               value={
                 purchase.invoiceNo

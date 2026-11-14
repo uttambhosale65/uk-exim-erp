@@ -1,5 +1,9 @@
-import ExportQuotationMaster from "./ExportQuotationMaster";
+import { requireOwnerContext } from "@/app/lib/auth/dal";
+import ExportPostgresWorkspace from "../ExportPostgresWorkspace";
 
-export default function ExportQuotationPage() {
-  return <ExportQuotationMaster />;
+export const dynamic = "force-dynamic";
+
+export default async function ExportQuotationPage() {
+  await requireOwnerContext();
+  return <ExportPostgresWorkspace kind="quotation" />;
 }

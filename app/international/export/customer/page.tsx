@@ -1,5 +1,9 @@
-import ExportCustomerMaster from "./ExportCustomerMaster";
+import { requireOwnerContext } from "@/app/lib/auth/dal";
+import ExportPostgresWorkspace from "../ExportPostgresWorkspace";
 
-export default function ExportCustomerPage() {
-  return <ExportCustomerMaster />;
+export const dynamic = "force-dynamic";
+
+export default async function ExportCustomerPage() {
+  await requireOwnerContext();
+  return <ExportPostgresWorkspace kind="customers" />;
 }

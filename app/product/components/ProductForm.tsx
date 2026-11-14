@@ -5,21 +5,25 @@ import {
   Product,
   ProductUnit,
 } from "./ProductTypes";
-import { loadProducts } from "./ProductStorage";
 
 type ProductFormProps = {
   productCode: string;
+  availableProducts: Product[];
   editingProduct?: Product | null;
-  onSave: (product: Product) => void;
+  onSave: (product: Product) => Promise<Product | void> | Product | void;
   onCancelEdit?: () => void;
 };
 
 export default function ProductForm({
   productCode,
+  availableProducts,
   editingProduct,
   onSave,
   onCancelEdit,
 }: ProductFormProps) {
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
   const emptyProduct = (): Product => ({
     id: crypto.randomUUID(),
 
@@ -138,12 +142,9 @@ export default function ProductForm({
      KG / Gram products can keep their own stock code.
   ===================================================== */
 
-  const availableProducts =
-    loadProducts().filter(
-      (item) =>
-        item.code !== product.code &&
-        item.active !== false
-    );
+  const selectableProducts = availableProducts.filter(
+    (item) => item.code !== product.code && item.active !== false,
+  );
 
   /* =====================================================
      HANDLE CHANGE
@@ -241,10 +242,11 @@ export default function ProductForm({
      SUBMIT
   ===================================================== */
 
-  const handleSubmit = (
+  const handleSubmit = async (
     e: React.FormEvent
   ) => {
     e.preventDefault();
+    setSaveError("");
 
     if (!product.name.trim()) {
       alert(
@@ -327,14 +329,19 @@ export default function ProductForm({
         finalTotalCost,
     };
 
-    onSave(finalProduct);
-
-    setProduct({
-      ...emptyProduct(),
-      code: productCode,
-    });
-
-    onCancelEdit?.();
+    setSaving(true);
+    try {
+      await onSave(finalProduct);
+      setProduct({
+        ...emptyProduct(),
+        code: productCode,
+      });
+      onCancelEdit?.();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Product could not be saved.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   /* =====================================================
@@ -342,6 +349,7 @@ export default function ProductForm({
   ===================================================== */
 
   const handleReset = () => {
+    setSaveError("");
     setProduct({
       ...emptyProduct(),
       code: productCode,
@@ -404,6 +412,11 @@ export default function ProductForm({
             "0 2px 8px rgba(0,0,0,0.08)",
         }}
       >
+        {saveError && (
+          <p role="alert" style={{ margin: "0 0 12px", color: "#b91c1c", fontSize: "13px" }}>
+            {saveError}
+          </p>
+        )}
         {/* TITLE */}
 
         <h2
@@ -645,7 +658,7 @@ gap: "10px",
               </option>
             )}
 
-            {availableProducts.map((item) => (
+            {selectableProducts.map((item) => (
               <option
                 key={item.code}
                 value={item.code}
@@ -793,6 +806,7 @@ gap: "10px",
               type="number"
               name="stock"
               value={product.stock}
+              readOnly={Boolean(editingProduct)}
               onChange={
                 handleChange
               }
@@ -1118,6 +1132,7 @@ gap: "10px",
 
             <button
               type="submit"
+              disabled={saving}
               style={{
                 height:
                   "40px",
@@ -1140,7 +1155,9 @@ gap: "10px",
               }}
             >
               💾{" "}
-              {editingProduct
+              {saving
+                ? "Saving…"
+                : editingProduct
                 ? "Update Product"
                 : "Save Product"}
             </button>

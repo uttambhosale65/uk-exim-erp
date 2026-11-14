@@ -1,40 +1,25 @@
 "use client";
 
-import { useState } from "react";
 import { Supplier } from "./SupplierTypes";
 
 type SupplierTableProps = {
   suppliers: Supplier[];
+  search: string;
+  onSearch: (value: string) => void;
   onEdit: (supplier: Supplier) => void;
-  onDelete: (id: string) => void;
+  onView: (supplier: Supplier) => void;
+  onSetStatus: (supplier: Supplier) => void;
 };
 
 export default function SupplierTable({
   suppliers,
+  search,
+  onSearch,
   onEdit,
-  onDelete,
+  onView,
+  onSetStatus,
 }: SupplierTableProps) {
-  const [search, setSearch] = useState("");
-
-  const filteredSuppliers = suppliers.filter(
-    (supplier) =>
-      supplier.name
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      supplier.code
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      supplier.contactPerson
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      supplier.mobile.includes(search) ||
-      supplier.city
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      supplier.gst
-        .toLowerCase()
-        .includes(search.toLowerCase())
-  );
+  const filteredSuppliers = suppliers;
 
   const thStyle: React.CSSProperties = {
     border: "1px solid #d1d5db",
@@ -128,9 +113,7 @@ export default function SupplierTable({
           type="text"
           placeholder="🔍 Search Supplier / Code / Mobile / GST"
           value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
-          }
+          onChange={(e) => onSearch(e.target.value)}
           style={{
             width: "320px",
             maxWidth: "100%",
@@ -362,11 +345,9 @@ export default function SupplierTable({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    <button
+                      <button
                       type="button"
-                      onClick={() =>
-                        onEdit(supplier)
-                      }
+                        onClick={() => onView(supplier)}
                       style={{
                         background: "#2563eb",
                         color: "#ffffff",
@@ -380,23 +361,13 @@ export default function SupplierTable({
                         minWidth: "24px",
                       }}
                       title="Edit"
-                    >
-                      ✏️
+                      >
+                        View
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Are you sure you want to delete "${supplier.name}"?`
-                          )
-                        ) {
-                          onDelete(
-                            supplier.id
-                          );
-                        }
-                      }}
+                        onClick={() => onEdit(supplier)}
                       style={{
                         background: "#dc2626",
                         color: "#ffffff",
@@ -409,8 +380,25 @@ export default function SupplierTable({
                         minWidth: "24px",
                       }}
                       title="Delete"
-                    >
-                      🗑
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onSetStatus(supplier)}
+                        style={{
+                          background: supplier.status === "Active" ? "#b91c1c" : "#15803d",
+                          color: "#ffffff",
+                          border: "none",
+                          padding: "4px 5px",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                          fontSize: "9px",
+                          fontWeight: 600,
+                          minWidth: "24px",
+                        }}
+                      >
+                        {supplier.status === "Active" ? "Deactivate" : "Reactivate"}
                     </button>
                   </td>
                 </tr>

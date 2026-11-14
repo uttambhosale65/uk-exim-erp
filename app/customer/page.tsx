@@ -1,7 +1,9 @@
-"use client";
-
+import { requireOwnerContext } from "@/app/lib/auth/dal";
 import CustomerMaster from "../components/customer/CustomerMaster";
 
-export default function CustomerPage() {
+export const dynamic = "force-dynamic";
+
+export default async function CustomerPage() {
+  await requireOwnerContext();
   return <CustomerMaster />;
 }

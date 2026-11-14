@@ -1,5 +1,9 @@
-import ExportEnquiryMaster from "./ExportEnquiryMaster";
+import { requireOwnerContext } from "@/app/lib/auth/dal";
+import ExportPostgresWorkspace from "../ExportPostgresWorkspace";
 
-export default function ExportEnquiryPage() {
-  return <ExportEnquiryMaster />;
+export const dynamic = "force-dynamic";
+
+export default async function ExportEnquiryPage() {
+  await requireOwnerContext();
+  return <ExportPostgresWorkspace kind="enquiry" />;
 }

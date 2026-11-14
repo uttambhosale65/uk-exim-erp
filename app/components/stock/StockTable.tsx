@@ -14,7 +14,7 @@ export default function StockTable({
     <div
       style={{
         width: "100%",
-        overflow: "hidden",
+        overflowX: "auto",
         border: "1px solid #d1d5db",
         borderRadius: "7px",
         boxSizing: "border-box",
@@ -23,6 +23,7 @@ export default function StockTable({
       <table
         style={{
           width: "100%",
+          minWidth: "1000px",
           borderCollapse: "collapse",
           tableLayout: "fixed",
           fontSize: "10px",
@@ -35,35 +36,43 @@ export default function StockTable({
               color: "#ffffff",
             }}
           >
-            <th style={{ ...thStyle, width: "13%" }}>
+            <th style={{ ...thStyle, width: "11%" }}>
               Product Code
             </th>
 
-            <th style={{ ...thStyle, width: "25%" }}>
+            <th style={{ ...thStyle, width: "19%" }}>
               Product Name
             </th>
 
-            <th style={{ ...thStyle, width: "12%" }}>
+            <th style={{ ...thStyle, width: "8%" }}>
               HSN
             </th>
 
-            <th style={{ ...thStyle, width: "9%" }}>
+            <th style={{ ...thStyle, width: "6%" }}>
               Unit
             </th>
 
-            <th style={{ ...thStyle, width: "10%" }}>
+            <th style={{ ...thStyle, width: "9%" }}>
               Opening
             </th>
 
-            <th style={{ ...thStyle, width: "10%" }}>
-              Purchase
+            <th style={{ ...thStyle, width: "9%" }}>
+              Net Purchase
+            </th>
+
+            <th style={{ ...thStyle, width: "9%" }}>
+              Net Sales
             </th>
 
             <th style={{ ...thStyle, width: "10%" }}>
-              Sales
+              Gross Ledger In
             </th>
 
-            <th style={{ ...thStyle, width: "11%" }}>
+            <th style={{ ...thStyle, width: "10%" }}>
+              Gross Ledger Out
+            </th>
+
+            <th style={{ ...thStyle, width: "9%" }}>
               Current Stock
             </th>
           </tr>
@@ -73,7 +82,7 @@ export default function StockTable({
           {stock.length === 0 ? (
             <tr>
               <td
-                colSpan={8}
+                colSpan={10}
                 style={{
                   ...tdStyle,
                   textAlign: "center",
@@ -139,6 +148,14 @@ export default function StockTable({
                   {Number(
                     item.salesQty || 0
                   ).toFixed(2)}
+                </td>
+
+                <td style={tdNumber}>
+                  {Number(item.grossPurchaseMovementQty || 0).toFixed(2)}
+                </td>
+
+                <td style={tdNumber}>
+                  {Number(item.grossSalesMovementQty || 0).toFixed(2)}
                 </td>
 
                 <td

@@ -1,5 +1,9 @@
-import PackingMaster from "./PackingMaster";
+import { requireOwnerContext } from "@/app/lib/auth/dal";
+import ExportPostgresWorkspace from "../ExportPostgresWorkspace";
 
-export default function PackingPage() {
-  return <PackingMaster />;
+export const dynamic = "force-dynamic";
+
+export default async function PackingPage() {
+  await requireOwnerContext();
+  return <ExportPostgresWorkspace kind="packing" />;
 }

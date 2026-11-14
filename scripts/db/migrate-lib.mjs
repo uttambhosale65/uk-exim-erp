@@ -2,46 +2,19 @@ import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseLocalPostgresUrl, verifyLocalPostgresConnection } from "../../app/lib/db/postgres-target.mjs";
 
 const PROJECT_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 export const MIGRATIONS_DIRECTORY = path.join(PROJECT_ROOT, "db", "migrations");
 const LOCK_KEY = 0x554b4558;
 
 export function parseLocalDatabaseUrl(connectionString, expectedDatabase) {
-  if (!connectionString) {
-    throw new Error("A database URL must be configured for this local development command.");
-  }
-
-  const url = new URL(connectionString);
-  const host = url.hostname.toLowerCase();
-  const loopback = (url.protocol === "postgres:" || url.protocol === "postgresql:")
-    && (host === "127.0.0.1" || host === "[::1]");
-  const database = decodeURIComponent(url.pathname.replace(/^\//, ""));
-
-  if (!loopback) {
-    throw new Error("Database access is restricted to a loopback host; remote databases are rejected.");
-  }
-  if (database !== expectedDatabase) {
-    throw new Error(`Expected local database '${expectedDatabase}', received '${database || "(empty)"}'.`);
-  }
-
-  return url;
+  return parseLocalPostgresUrl(connectionString, expectedDatabase, "Database URL");
 }
 
 export async function verifyLocalDatabaseConnection(client, expectedDatabase) {
-  const result = await client.query(
-    "SELECT current_database() AS name, host(inet_server_addr()) AS address, current_setting('server_version') AS version",
-  );
-  const server = result.rows[0];
-
-  if (server?.name !== expectedDatabase) {
-    throw new Error(`Connected database '${server?.name || "(unknown)"}' does not match '${expectedDatabase}'.`);
-  }
-  if (server?.address !== "127.0.0.1" && server?.address !== "::1") {
-    throw new Error(`Database server address '${server?.address || "(unknown)"}' is not an allowed loopback address.`);
-  }
-
-  return { name: server.name, address: server.address, version: server.version };
+  const identity = await verifyLocalPostgresConnection(client, expectedDatabase);
+  return { name: identity.database, address: identity.address, port: identity.port, version: identity.version };
 }
 
 export function checksumMigration(sql) {

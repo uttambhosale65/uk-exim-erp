@@ -1,5 +1,9 @@
-import ExportOrderMaster from "./ExportOrderMaster";
+import { requireOwnerContext } from "@/app/lib/auth/dal";
+import ExportPostgresWorkspace from "../ExportPostgresWorkspace";
 
-export default function ExportOrderPage() {
-  return <ExportOrderMaster />;
+export const dynamic = "force-dynamic";
+
+export default async function ExportOrderPage() {
+  await requireOwnerContext();
+  return <ExportPostgresWorkspace kind="order" />;
 }

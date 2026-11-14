@@ -14,7 +14,7 @@ type ProductTableProps = {
 
   onDelete: (
     id: string
-  ) => void;
+  ) => void | Promise<void>;
 };
 
 export default function ProductTable({
@@ -42,6 +42,25 @@ export default function ProductTable({
   ] = useState(() =>
     loadStock()
   );
+  const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
+
+  const handleView = async (productId: string) => {
+    setDetailLoading(true);
+    setDetailError("");
+    try {
+      const response = await fetch(`/api/products/${encodeURIComponent(productId)}`, { cache: "no-store" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "Product details could not be loaded.");
+      setViewingProduct(body.product as Product);
+    } catch (error) {
+      setDetailError(error instanceof Error ? error.message : "Product details could not be loaded.");
+      setViewingProduct(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   /*
   =====================================================
@@ -917,6 +936,25 @@ export default function ProductTable({
                     >
                       <button
                         type="button"
+                        aria-label={`View ${item.name}`}
+                        title="View details"
+                        onClick={() => void handleView(item.id)}
+                        style={{
+                          background: "#0f766e",
+                          color: "#ffffff",
+                          border: "none",
+                          padding: "4px 6px",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                          fontSize: "9px",
+                          marginRight: "2px",
+                          minWidth: "24px",
+                        }}
+                      >
+                        ℹ
+                      </button>
+                      <button
+                        type="button"
                         onClick={() =>
                           onEdit(
                             item
@@ -965,9 +1003,7 @@ export default function ProductTable({
                               `Are you sure you want to delete "${item.name}"?`
                             )
                           ) {
-                            onDelete(
-                              item.id
-                            );
+                            void Promise.resolve(onDelete(item.id)).catch(() => {});
                           }
                         }}
                         style={{
@@ -1035,6 +1071,62 @@ export default function ProductTable({
           </div>
         )}
       </div>
+
+      {(viewingProduct || detailLoading || detailError) && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="product-detail-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1000,
+            display: "grid",
+            placeItems: "center",
+            padding: "20px",
+            background: "rgba(15, 23, 42, 0.55)",
+          }}
+        >
+          <section style={{ width: "min(640px, 100%)", maxHeight: "85vh", overflowY: "auto", background: "#ffffff", borderRadius: "12px", padding: "22px", boxShadow: "0 20px 50px rgba(0,0,0,.25)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+              <h2 id="product-detail-title" style={{ margin: 0, color: "#14532d" }}>Product Details</h2>
+              <button type="button" onClick={() => { setViewingProduct(null); setDetailError(""); }} aria-label="Close product details">Close</button>
+            </div>
+            {detailLoading && <p>Loading product details…</p>}
+            {detailError && <p role="alert" style={{ color: "#b91c1c" }}>{detailError}</p>}
+            {viewingProduct && (
+              <dl style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "10px 18px", marginTop: "18px" }}>
+                {([
+                  ["Product ID", viewingProduct.id],
+                  ["Code", viewingProduct.code],
+                  ["Name", viewingProduct.name],
+                  ["Category", viewingProduct.category],
+                  ["HSN", viewingProduct.hsn],
+                  ["GST", viewingProduct.gst],
+                  ["Unit", viewingProduct.unit],
+                  ["Net weight", viewingProduct.netWeight],
+                  ["Stock base code", viewingProduct.stockBaseCode || "—"],
+                  ["Purchase", viewingProduct.purchase],
+                  ["Sale", viewingProduct.sale],
+                  ["MRP", viewingProduct.mrp],
+                  ["Base cost", viewingProduct.baseCost],
+                  ["Packing cost", viewingProduct.packingCost],
+                  ["Other charges", viewingProduct.otherCharges],
+                  ["Total cost", viewingProduct.totalCost],
+                  ["Product stock field", viewingProduct.stock],
+                  ["Minimum stock", viewingProduct.minimumStock],
+                  ["Status", viewingProduct.active ? "Active" : "Inactive"],
+                ] as const).map(([label, value]) => (
+                  <div key={label}>
+                    <dt style={{ color: "#64748b", fontSize: "12px" }}>{label}</dt>
+                    <dd style={{ margin: "3px 0 0", overflowWrap: "anywhere", fontWeight: 600 }}>{String(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   );
 }

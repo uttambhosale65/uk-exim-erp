@@ -1,7 +1,9 @@
-"use client";
+import { requireOwnerContext } from "@/app/lib/auth/dal";
+import ExportPostgresWorkspace from "../ExportPostgresWorkspace";
 
-import ShipmentMaster from "./ShipmentMaster";
+export const dynamic = "force-dynamic";
 
-export default function ShipmentPage() {
-  return <ShipmentMaster />;
+export default async function ShipmentPage() {
+  await requireOwnerContext();
+  return <ExportPostgresWorkspace kind="shipment" />;
 }

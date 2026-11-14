@@ -11,13 +11,14 @@ test("database target guard accepts only the named loopback database", () => {
     parseLocalDatabaseUrl("postgresql://test:secret@127.0.0.1:5432/uk_exim_erp_dev", "uk_exim_erp_dev").hostname,
     "127.0.0.1",
   );
-  assert.equal(
-    parseLocalDatabaseUrl("postgres://test:secret@[::1]:5432/uk_exim_erp_dev", "uk_exim_erp_dev").hostname,
-    "[::1]",
-  );
-  assert.throws(() => parseLocalDatabaseUrl("postgresql://x@localhost/uk_exim_erp_dev", "uk_exim_erp_dev"), /loopback/);
-  assert.throws(() => parseLocalDatabaseUrl("https://x@127.0.0.1/uk_exim_erp_dev", "uk_exim_erp_dev"), /loopback/);
-  assert.throws(() => parseLocalDatabaseUrl("postgresql://x@127.0.0.1/production", "uk_exim_erp_dev"), /Expected local database/);
+  assert.throws(() => parseLocalDatabaseUrl("postgres://test:secret@[::1]:5432/uk_exim_erp_dev", "uk_exim_erp_dev"), /exactly 127\.0\.0\.1/);
+  assert.throws(() => parseLocalDatabaseUrl("postgresql://x@localhost:5432/uk_exim_erp_dev", "uk_exim_erp_dev"), /exactly 127\.0\.0\.1/);
+  assert.throws(() => parseLocalDatabaseUrl("https://x@127.0.0.1:5432/uk_exim_erp_dev", "uk_exim_erp_dev"), /exactly 127\.0\.0\.1/);
+  assert.throws(() => parseLocalDatabaseUrl("postgresql://x@127.0.0.1:5432/production", "uk_exim_erp_dev"), /exactly 127\.0\.0\.1/);
+  assert.throws(() => parseLocalDatabaseUrl("postgresql://x@127.0.0.1:5433/uk_exim_erp_dev", "uk_exim_erp_dev"), /exactly 127\.0\.0\.1/);
+  for (const override of ["host=192.0.2.1", "hostaddr=192.0.2.1", "port=6432", "dbname=production"]) {
+    assert.throws(() => parseLocalDatabaseUrl(`postgresql://x@127.0.0.1:5432/uk_exim_erp_dev?${override}`, "uk_exim_erp_dev"), /query parameters/);
+  }
 });
 
 test("connected database identity normalizes inet CIDR addresses and accepts IPv4 loopback", async () => {
@@ -26,44 +27,41 @@ test("connected database identity normalizes inet CIDR addresses and accepts IPv
     async query(sql) {
       queryText = sql;
       // PostgreSQL host(inet_server_addr()) strips the /32 host mask returned by inet_server_addr()::text.
-      return { rows: [{ name: "uk_exim_erp_dev", address: "127.0.0.1", version: "18.6" }] };
+      return { rows: [{ database: "uk_exim_erp_dev", address: "127.0.0.1", port: 5432, version: "18.6" }] };
     },
   };
   assert.deepEqual(
     await verifyLocalDatabaseConnection(localDb, "uk_exim_erp_dev"),
-    { name: "uk_exim_erp_dev", address: "127.0.0.1", version: "18.6" },
+    { name: "uk_exim_erp_dev", address: "127.0.0.1", port: 5432, version: "18.6" },
   );
   assert.match(queryText, /host\(inet_server_addr\(\)\) AS address/);
 });
 
-test("connected database identity accepts IPv6 loopback", async () => {
+test("connected database identity rejects IPv6 loopback", async () => {
   const ipv6LoopbackDb = {
     async query() {
       return { rows: [{ name: "uk_exim_erp_dev", address: "::1", version: "18.6" }] };
     },
   };
-  assert.deepEqual(
-    await verifyLocalDatabaseConnection(ipv6LoopbackDb, "uk_exim_erp_dev"),
-    { name: "uk_exim_erp_dev", address: "::1", version: "18.6" },
-  );
+  await assert.rejects(verifyLocalDatabaseConnection(ipv6LoopbackDb, "uk_exim_erp_dev"), /exactly 127\.0\.0\.1/);
 });
 
 test("connected database identity rejects a wrong database name", async () => {
   const wrongDatabase = {
     async query() {
-      return { rows: [{ name: "uk_exim_erp_test", address: "127.0.0.1", version: "18.6" }] };
+      return { rows: [{ database: "uk_exim_erp_test", address: "127.0.0.1", port: 5432, version: "18.6" }] };
     },
   };
-  await assert.rejects(verifyLocalDatabaseConnection(wrongDatabase, "uk_exim_erp_dev"), /does not match/);
+  await assert.rejects(verifyLocalDatabaseConnection(wrongDatabase, "uk_exim_erp_dev"), /must be exactly/);
 });
 
 test("connected database identity rejects remote server addresses", async () => {
   const remoteServer = {
     async query() {
-      return { rows: [{ name: "uk_exim_erp_dev", address: "192.0.2.1", version: "18.6" }] };
+      return { rows: [{ database: "uk_exim_erp_dev", address: "192.0.2.1", port: 5432, version: "18.6" }] };
     },
   };
-  await assert.rejects(verifyLocalDatabaseConnection(remoteServer, "uk_exim_erp_dev"), /not an allowed loopback address/);
+  await assert.rejects(verifyLocalDatabaseConnection(remoteServer, "uk_exim_erp_dev"), /must be exactly/);
 });
 
 test("cutover UTC and Asia/Calcutta timestamps compare by instant", () => {
