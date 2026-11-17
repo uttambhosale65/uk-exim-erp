@@ -172,7 +172,7 @@ export function createSupplierDAL({ getOwnerContext, database, idFactory = rando
              OR coalesce(email, source_record->>'email', '') ILIKE $3 ESCAPE E'\\\\'
              OR coalesce(city, source_record->>'city', '') ILIKE $3 ESCAPE E'\\\\'
              OR coalesce(gst, source_record->>'gst', '') ILIKE $3 ESCAPE E'\\\\')
-         ORDER BY code, id LIMIT $4 OFFSET $5`,
+         ORDER BY NULLIF(to_jsonb(suppliers)->>'created_at', '')::timestamptz DESC NULLS LAST, code DESC, id DESC LIMIT $4 OFFSET $5`,
         [companyId, status, search, limit, offset],
       );
       return { suppliers: result.rows.map(mapSupplier), nextCode: await nextCode(database, companyId) };

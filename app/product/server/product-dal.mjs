@@ -211,7 +211,7 @@ export function createProductDAL({ getOwnerContext, database, onProductCreate })
         `SELECT ${PRODUCT_COLUMNS}
          FROM public.products
          WHERE company_id = $1
-         ORDER BY code, id`,
+         ORDER BY NULLIF(to_jsonb(products)->>'created_at', '')::timestamptz DESC NULLS LAST, code DESC, id DESC`,
         [companyId],
       );
       return result.rows.map(mapProduct);

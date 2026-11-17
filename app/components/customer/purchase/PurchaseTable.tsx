@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Purchase } from "./PurchaseTypes";
+import { sortEntriesNewestFirst } from "@/app/transactions/client/entry-order";
 
 type PurchaseTableProps = {
   purchases: Purchase[];
@@ -43,8 +44,7 @@ export default function PurchaseTable({
   const filteredPurchases = useMemo(() => {
     const keyword = search.toLowerCase().trim();
 
-    // नवीन GRN सर्वात वर
-    const orderedPurchases = [...purchases].reverse();
+    const orderedPurchases = sortEntriesNewestFirst(purchases, "purchaseDate", "purchaseNo");
 
     if (!keyword) return orderedPurchases;
 

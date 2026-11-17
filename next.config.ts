@@ -4,6 +4,7 @@ const disposableE2E = process.env.NODE_ENV === "development" && process.env.UKEX
 const e2eRunId = process.env.UKEXIM_E2E_RUN_ID ?? "";
 const isolatedAuthBuild = process.env.NODE_ENV === "production" && process.env.UKEXIM_AUTH_CHECK_BUILD === "1";
 const authBuildId = process.env.UKEXIM_AUTH_CHECK_BUILD_ID ?? "";
+const presentationMode = process.env.NODE_ENV === "production" && process.env.UKEXIM_PRESENTATION_MODE === "1";
 if (disposableE2E && !/^\d{14}_[a-f0-9]{8}$/.test(e2eRunId)) {
   throw new Error("Disposable E2E mode requires the run ID from the verified TEST manifest.");
 }
@@ -19,9 +20,11 @@ const nextConfig: NextConfig = {
     ? `.next-e2e-disposable-${e2eRunId}`
     : isolatedAuthBuild
       ? `.next-auth-check-${authBuildId}`
-    : process.env.NODE_ENV === "development" && process.env.UKEXIM_PRODUCTS_UI_TEST_MODE === "1"
-      ? ".next-products-ui-test"
-      : ".next",
+      : presentationMode
+        ? ".next-presentation"
+        : process.env.NODE_ENV === "development" && process.env.UKEXIM_PRODUCTS_UI_TEST_MODE === "1"
+          ? ".next-products-ui-test"
+          : ".next",
   // Prevent development request logs from recording sensitive URL query values.
   logging: { incomingRequests: false },
 };

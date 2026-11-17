@@ -38,7 +38,7 @@ export function createDashboardSummaryDAL({ getOwnerContext, database }) {
         coalesce((SELECT sum(grand_total) FROM public.sales WHERE company_id=$1 ${salesActive} AND invoice_type='NON_GST'
           AND sales_date::date >= make_date($2,$3,1) AND sales_date::date < (make_date($2,$3,1) + interval '1 month')),0)::text AS "monthlyNonGstSalesTotal",
         coalesce((SELECT json_agg(json_build_object('id',id,'salesNo',sales_no,'salesDate',sales_date::text,
-          'customerName',customer_name,'paymentMode',payment_mode,'invoiceTotal',grand_total::text) ORDER BY sales_date DESC,sales_no)
+          'customerName',customer_name,'paymentMode',payment_mode,'invoiceTotal',grand_total::text) ORDER BY created_on DESC,sales_date DESC,sales_no DESC)
           FROM public.sales WHERE company_id=$1 ${salesActive} AND status='Pending'),'[]'::json) AS "pendingSales"`,
       [companyId, year, month]);
 

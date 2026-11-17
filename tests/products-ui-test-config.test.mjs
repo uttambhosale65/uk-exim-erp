@@ -21,6 +21,21 @@ test("normal mode keeps the existing development database selection", () => {
   }), { mode: "development" });
 });
 
+test("explicitly disabled TEST and disposable E2E flags preserve normal DEV mode", () => {
+  assert.deepEqual(resolveProductsUiDatabaseTarget({
+    NODE_ENV: "production",
+    [flag]: "0",
+    [e2eFlag]: "0",
+    UKEXIM_PRESENTATION_MODE: "1",
+    DATABASE_URL: "postgresql://user:pw@127.0.0.1:5432/uk_exim_erp_dev",
+  }), { mode: "development" });
+  assert.throws(() => resolveProductsUiDatabaseTarget({
+    NODE_ENV: "development",
+    [flag]: "0",
+    [e2eFlag]: "1",
+  }), /also requires explicit Products UI TEST mode/);
+});
+
 test("test mode selects TEST_DATABASE_URL and never falls back to DATABASE_URL", () => {
   assert.deepEqual(resolveProductsUiDatabaseTarget({
     [flag]: "1",

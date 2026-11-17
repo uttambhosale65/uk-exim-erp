@@ -17,6 +17,7 @@ const EXPECTED_MIGRATIONS = [
   "005_transactional_trade_stock_ledger.sql", "006_immutable_stock_movement_events.sql", "007_stock_baseline_source_snapshot.sql",
   "008_verified_stock_baseline_gate.sql", "009_historical_transaction_protection.sql", "010_stock_baseline_provenance_and_effective_date.sql",
   "011_export_domain_foundation.sql", "012_company_settings.sql", "013_settlement_ledger.sql",
+  "014_india_gst_tax_engine.sql",
 ];
 const APPLY = process.argv.includes("--apply");
 const argument = name => { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : null; };
@@ -47,7 +48,7 @@ async function assertFreshNativeBackup() {
 
 async function verifyMigrations(client) {
   const applied = await client.query("SELECT name,checksum FROM public._schema_migrations ORDER BY name");
-  if (applied.rowCount !== EXPECTED_MIGRATIONS.length) fail("DEV migration history is not exactly the expected 001–013 set.");
+  if (applied.rowCount !== EXPECTED_MIGRATIONS.length) fail("DEV migration history is not exactly the expected 001–014 set.");
   for (let index = 0; index < EXPECTED_MIGRATIONS.length; index++) {
     const name = EXPECTED_MIGRATIONS[index];
     if (applied.rows[index]?.name !== name) fail("DEV migration history contains a missing or unexpected migration.");
@@ -183,15 +184,27 @@ async function main() {
     await client.query("BEGIN READ ONLY");
     await assertCompany(client); await verifyMigrations(client);
     const counts = await collisionPlan(client, source.plan);
-    await client.query("ROLLBACK");
-    if (conflictCount(counts)) fail("Source/target ID, code, document number, settings, or stock collision detected; no writes were made.");
+    let targetSetsMatch = true, referencesMatch = true;
     if (!APPLY) {
+      try { await assertTargetSets(client, source.plan); } catch { targetSetsMatch = false; }
+      try { await verifyReferenceSets(client, source.plan); } catch { referencesMatch = false; }
+    }
+    await client.query("ROLLBACK");
+    if (!APPLY) {
+      await client.query("BEGIN READ ONLY");
+      const settingReconciliation = [];
+      for (const item of source.plan.settings) settingReconciliation.push({ key: item.key, status: await checkSettings(client, item) });
+      await client.query("ROLLBACK");
       console.log(JSON.stringify({ mode: "DRY_RUN", sourceSha256: source.digest, sourceCounts: source.plan.sourceCounts,
         directOwnerReviewFlags: source.plan.directReviewCount, allExportRowsReviewRequired: source.plan.reviewCount,
         unresolvedSourceReferences: source.plan.unresolvedReferences, target: identity, companyMatch: true,
-        collisionCheck: counts, stockProtection: "Only public.export_stock is in scope; domestic stock tables are not written.", paymentProtection: "No receipts, payments, or allocations are written.", readyToApply: true }, null, 2));
+        collisionCheck: counts, settingReconciliation, stockProtection: "Only public.export_stock is in scope; domestic stock tables are not written.", paymentProtection: "No receipts, payments, or allocations are written.",
+        targetSetsMatch, referencesMatch,
+        readyToApply: conflictCount(counts) === 0 && targetSetsMatch && referencesMatch,
+        reason: conflictCount(counts) ? "Existing source IDs or unique business keys do not exactly match the imported snapshot; no writes were made." : !targetSetsMatch ? "Target contains company-scoped rows outside the source snapshot; no writes were made." : !referencesMatch ? "Normalized Export relationships do not exactly match the source; no writes were made." : null }, null, 2));
       return;
     }
+    if (conflictCount(counts)) fail("Source/target ID, code, document number, settings, or stock collision detected; no writes were made.");
     await client.query("BEGIN");
     try {
       await client.query("SELECT pg_advisory_xact_lock($1,$2)", [571015520, 271828]);

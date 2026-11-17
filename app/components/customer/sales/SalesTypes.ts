@@ -25,6 +25,7 @@ export type SalesItem = {
 
 export type Sales = {
   id: string;
+  entryCreatedAt?: string;
   postedAt?: string;
   stockMovements?: import("../../stock/StockMovementStorage").StockMovementLine[];
 

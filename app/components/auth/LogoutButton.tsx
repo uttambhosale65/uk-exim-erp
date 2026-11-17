@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createAuthClient } from "better-auth/client";
 
 const authClient = createAuthClient();
+const logoutFailureMessage = "Sign-out was not confirmed. Start ERP with the desktop START shortcut, then retry Logout. Treat the session as active until you reach Login.";
 
 export default function LogoutButton() {
   const [busy, setBusy] = useState(false);
@@ -15,12 +16,12 @@ export default function LogoutButton() {
     try {
       const result = await authClient.signOut();
       if (result.error) {
-        setMessage("Sign-out could not be confirmed. Please retry.");
+        setMessage(logoutFailureMessage);
         return;
       }
       window.location.replace("/login");
     } catch {
-      setMessage("Sign-out could not be confirmed. Please retry.");
+      setMessage(logoutFailureMessage);
     } finally {
       setBusy(false);
     }

@@ -4,7 +4,7 @@ const NO_STORE = { "Cache-Control": "no-store, private" };
 const DOC_KINDS = new Set(["enquiry", "quotation", "proforma_invoice", "order", "purchase", "reservation", "packing", "shipment", "commercial_invoice"]);
 function json(body, status = 200) { return Response.json(body, { status, headers: NO_STORE }); }
 function errorResponse(error) {
-  const statuses = { UNAUTHENTICATED: 401, INVALID_EXPORT: 400, INVALID_EXPORT_ID: 400, INVALID_QUERY: 400, EXPORT_REFERENCE_NOT_FOUND: 409, EXPORT_REVIEW_REQUIRED: 409, EXPORT_CUSTOMER_CONFLICT: 409, SCHEMA_PENDING: 503 };
+  const statuses = { UNAUTHENTICATED: 401, INVALID_EXPORT: 400, INVALID_EXPORT_ID: 400, INVALID_QUERY: 400, EXPORT_REFERENCE_NOT_FOUND: 409, EXPORT_REVIEW_REQUIRED: 409, EXPORT_DOCUMENT_LOCKED: 409, EXPORT_DOCUMENT_CONFLICT: 409, EXPORT_CUSTOMER_CONFLICT: 409, SCHEMA_PENDING: 503 };
   const status = statuses[error?.code];
   return status ? json({ error: error.message }, status) : json({ error: "The Export request could not be completed." }, 500);
 }
@@ -60,8 +60,11 @@ export function createExportRouteHandlers(dal) {
       if (!sameOrigin(request)) return json({ error: "Cross-origin Export writes are not allowed." }, 403);
       try {
         const input = await body(request);
-        const document = await dal.setDocumentReviewStatus(kind, id, input.reviewStatus);
-        return document ? json({ document }) : json({ error: "Export document not found." }, 404);
+        const isCustomer = kind === "customers";
+        const record = isCustomer
+          ? await dal.setCustomerReviewStatus(id, input.reviewStatus)
+          : await dal.setDocumentReviewStatus(kind, id, input.reviewStatus);
+        return record ? json(isCustomer ? { customer: record } : { document: record }) : json({ error: "Export record not found." }, 404);
       } catch (error) { return errorResponse(error); }
     },
   };

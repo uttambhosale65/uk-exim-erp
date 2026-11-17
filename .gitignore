@@ -16,6 +16,7 @@
 
 # next.js
 /.next/
+/.next-presentation/
 /.next-products-ui-test/
 /.next-e2e-disposable/
 /.next-e2e-disposable-*/

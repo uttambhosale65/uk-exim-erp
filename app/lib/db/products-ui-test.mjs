@@ -18,7 +18,8 @@ export function isProductsUiTestMode(env = process.env) {
 export function resolveProductsUiDatabaseTarget(env = process.env) {
   const flag = env[PRODUCTS_UI_TEST_FLAG];
   if (flag === undefined || flag === "0") {
-    if (env[PRODUCTS_UI_E2E_FLAG] !== undefined) {
+    const e2eFlag = env[PRODUCTS_UI_E2E_FLAG];
+    if (e2eFlag !== undefined && e2eFlag !== "0") {
       throw new Error("Disposable E2E mode also requires explicit Products UI TEST mode.");
     }
     return { mode: "development" };

@@ -20,6 +20,9 @@ export default function SettlementPostgresMaster({ kind }: { kind: Kind }) {
   const [paymentMode, setPaymentMode] = useState("Bank");
   const [referenceNo, setReferenceNo] = useState("");
   const [query, setQuery] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [partyFilter, setPartyFilter] = useState("");
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -53,6 +56,21 @@ export default function SettlementPostgresMaster({ kind }: { kind: Kind }) {
 
   const availableInvoices = useMemo(() => invoices.filter(invoice => invoice.partner_code === partyCode), [invoices, partyCode]);
   const selectedInvoice = availableInvoices.find(invoice => invoice.id === invoiceId);
+  const filteredPayments = useMemo(() => payments.filter(payment => {
+    const day = String(payment.date).slice(0, 10);
+    return (!from || day >= from) && (!to || day <= to) && (!partyFilter || payment.partnerCode === partyFilter);
+  }), [payments, from, to, partyFilter]);
+  const postedTotal = filteredPayments.filter(payment => !payment.voidedAt).reduce((sum, payment) => sum + Number(payment.amount), 0);
+  const currency = (value: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+  const exportCsv = () => {
+    if (!filteredPayments.length) return;
+    const rows = filteredPayments.map(payment => ({ Number: payment.number, Date: payment.date, Party: payment.partnerCode, Mode: payment.paymentMode, Reference: payment.referenceNo, Amount: payment.amount, Allocations: payment.allocations.map(item => `${item.invoiceNo}: ${item.amount}`).join(" | "), Status: payment.voidedAt ? "Voided" : "Posted" }));
+    const columns = Object.keys(rows[0]);
+    const cell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    const csv = [columns.map(cell).join(","), ...rows.map(row => columns.map(column => cell(row[column as keyof typeof row])).join(","))].join("\r\n");
+    const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = receipt ? "uk-exim-customer-receipts.csv" : "uk-exim-supplier-payments.csv"; link.click(); URL.revokeObjectURL(url);
+  };
   const save = async (event: FormEvent) => {
     event.preventDefault(); setMessage("");
     if (submissionLock.current) return;
@@ -110,8 +128,18 @@ export default function SettlementPostgresMaster({ kind }: { kind: Kind }) {
       {message && <p role="status">{message}</p>}
       <h3>Payment Register</h3>
       <input aria-label="Search payments" placeholder="Search number, party or reference" value={query} onChange={event => setQuery(event.target.value)} style={{ padding: 8, width: "min(100%,420px)" }} />
-      <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", marginTop: 10 }}><thead><tr>{["Number", "Date", "Party", "Mode", "Reference", "Amount", "Invoice allocations", "Status", "Action"].map(title => <th key={title} style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ddd" }}>{title}</th>)}</tr></thead><tbody>{payments.map(payment => <tr key={payment.id}><td>{payment.number}</td><td>{payment.date}</td><td>{payment.partnerCode}</td><td>{payment.paymentMode}</td><td>{payment.referenceNo || "—"}</td><td>₹{payment.amount}</td><td>{payment.allocations.map(allocation => `${allocation.invoiceNo}: ₹${allocation.amount}`).join(" · ")}</td><td>{payment.voidedAt ? "Voided" : "Posted"}</td><td>{!payment.voidedAt && <button type="button" onClick={() => void voidPayment(payment)}>Void</button>}</td></tr>)}</tbody></table></div>
-      {!payments.length && <p role="status">No payment records are available.</p>}
+      <div className="settlement-report-filters" style={{ display: "flex", flexWrap: "wrap", alignItems: "end", gap: 8, marginTop: 8 }}>
+        <label>From<input type="date" value={from} onChange={event => setFrom(event.target.value)} style={{ display: "block", padding: 7 }} /></label>
+        <label>To<input type="date" value={to} onChange={event => setTo(event.target.value)} style={{ display: "block", padding: 7 }} /></label>
+        <label>{receipt ? "Customer" : "Supplier"}<select value={partyFilter} onChange={event => setPartyFilter(event.target.value)} style={{ display: "block", padding: 7 }}><option value="">All parties</option>{[...new Set(payments.map(payment => payment.partnerCode))].sort().map(code => <option key={code} value={code}>{code}</option>)}</select></label>
+        <button type="button" onClick={() => { setFrom(""); setTo(""); setPartyFilter(""); setQuery(""); }} style={{ padding: 8 }}>Clear filters</button>
+        <button type="button" onClick={() => window.print()} style={{ padding: 8 }}>Print register</button>
+        <button type="button" onClick={exportCsv} disabled={!filteredPayments.length} style={{ padding: 8 }}>Export CSV</button>
+      </div>
+      <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 10, padding: 10, border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc" }}><span>Entries: <strong>{filteredPayments.length}</strong></span><span>Posted amount total: <strong>{currency(postedTotal)}</strong></span><span>Voided entries: <strong>{filteredPayments.filter(payment => payment.voidedAt).length}</strong></span></div>
+      <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", marginTop: 10 }}><thead><tr>{["Number", "Date", "Party", "Mode", "Reference", "Amount", "Invoice allocations", "Status", "Action"].map(title => <th key={title} style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ddd" }}>{title}</th>)}</tr></thead><tbody>{filteredPayments.map(payment => <tr key={payment.id}><td>{payment.number}</td><td>{payment.date}</td><td>{payment.partnerCode}</td><td>{payment.paymentMode}</td><td>{payment.referenceNo || "—"}</td><td>{currency(Number(payment.amount))}</td><td>{payment.allocations.map(allocation => `${allocation.invoiceNo}: ${currency(Number(allocation.amount))}`).join(" · ")}</td><td>{payment.voidedAt ? "Voided" : "Posted"}</td><td>{!payment.voidedAt && <button type="button" onClick={() => void voidPayment(payment)}>Void</button>}</td></tr>)}</tbody></table></div>
+      {!filteredPayments.length && <p role="status">No payment records match the current filters. Historical imported balances remain unverified.</p>}
+      <style>{`@media print{.settlement-report-filters{display:none!important}button{display:none!important}}`}</style>
     </>}
   </section>;
 }

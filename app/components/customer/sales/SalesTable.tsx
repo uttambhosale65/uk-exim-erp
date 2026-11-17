@@ -7,6 +7,7 @@ import React, {
 
 import { Sales } from "./SalesTypes";
 import InvoicePrint from "./InvoicePrint";
+import { sortEntriesNewestFirst } from "@/app/transactions/client/entry-order";
 
 type SalesTableProps = {
   sales: Sales[];
@@ -56,8 +57,7 @@ export default function SalesTable({
   ===================================================== */
 
   const filteredSales = useMemo(() => {
-    const orderedSales =
-      [...sales].reverse();
+    const orderedSales = sortEntriesNewestFirst(sales, "salesDate", "salesNo");
 
     const keyword =
       search

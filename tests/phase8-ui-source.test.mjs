@@ -9,7 +9,11 @@ test("Export workspace uses authenticated PostgreSQL API without LocalStorage fa
   assert.match(source, /fetch\(`\/api\/export\/\$\{kind\}/);
   assert.match(source, /No LocalStorage fallback is used/);
   assert.doesNotMatch(source, /localStorage\s*\./);
-  assert.match(source, /Record IDs are immutable/);
+  assert.match(source, /Record IDs cannot be changed/);
+  assert.match(source, /Administrative audit view · original source_record/);
+  assert.match(source, /Source heuristic flag: no/);
+  assert.match(source, /Non-operational: owner verification pending/);
+  assert.doesNotMatch(source, /JSON\.stringify\(selected,\s*null/);
 });
 
 test("Settings load and save one category through PostgreSQL API and keep tax approval fail-closed", async () => {

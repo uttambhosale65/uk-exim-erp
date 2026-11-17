@@ -55,6 +55,8 @@ test("logout only navigates after Better Auth confirms server sign-out", async (
   const source = await readFile(new URL("../app/components/auth/LogoutButton.tsx", import.meta.url), "utf8");
   assert.match(source, /const result = await authClient\.signOut\(\)/);
   assert.match(source, /if \(result\.error\)[\s\S]*?return;/);
+  assert.match(source, /Start ERP with the desktop START shortcut, then retry Logout/);
+  assert.match(source, /Treat the session as active until you reach Login/);
   assert.match(source, /window\.location\.replace\("\/login"\)/);
 });
 

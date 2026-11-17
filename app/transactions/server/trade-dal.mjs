@@ -47,12 +47,15 @@ function mapItem(row) {
 function mapPurchase(row, items) { return { ...row.source_record, id: row.id, purchaseNo: row.purchase_no, purchaseDate: row.purchase_date, invoiceNo: row.invoice_no,
   supplierCode: row.supplier_code, supplierName: row.supplier_name, contactPerson: row.contact_person, totalQty: Number(row.total_qty),
   totalAmount: Number(row.total_amount), totalGstAmount: Number(row.total_gst_amount), totalNetAmount: Number(row.total_net_amount), remarks: row.remarks,
+  entryCreatedAt: row.created_at?.toISOString?.() ?? row.created_at ?? undefined,
   postedAt: row.posted_at?.toISOString?.() ?? row.posted_at ?? undefined, items: items.map(mapItem) }; }
 function mapSale(row, items) { return { ...row.source_record, id: row.id, salesNo: row.sales_no, salesDate: row.sales_date, invoiceNo: row.invoice_no,
   invoiceType: row.invoice_type, customerCode: row.customer_code, customerName: row.customer_name, contactPerson: row.contact_person,
   taxableAmount: Number(row.taxable_amount), gstAmount: Number(row.gst_amount), cgst: Number(row.cgst), sgst: Number(row.sgst), igst: Number(row.igst),
   grandTotal: Number(row.grand_total), paymentMode: row.payment_mode, status: row.status, remarks: row.remarks,
-  createdAt: row.created_at, updatedAt: row.updated_at, postedAt: row.posted_at?.toISOString?.() ?? row.posted_at ?? undefined,
+  createdAt: row.created_at, updatedAt: row.updated_at,
+  entryCreatedAt: row.created_on?.toISOString?.() ?? row.created_on ?? undefined,
+  postedAt: row.posted_at?.toISOString?.() ?? row.posted_at ?? undefined,
   taxSnapshot: row.tax_snapshot ?? row.source_record?.taxSnapshot ?? null, items: items.map(mapItem) }; }
 
 export function calculatePurchaseItem(item) {
@@ -289,7 +292,8 @@ export function createTradeDAL({ getOwnerContext, database, idFactory = randomUU
     async list(type, { q = "", limit = 200, offset = 0 } = {}) {
       if (!specs[type] || typeof q !== "string" || q.length > 100 || !Number.isInteger(limit) || limit < 1 || limit > 200 || !Number.isInteger(offset) || offset < 0) throw ERR("INVALID_QUERY","Transaction query is invalid.");
       const companyId=await company(),s=specs[type],search=q?`%${q.replace(/[\\%_]/g,"\\$&")}%`:null;
-      const {rows}=await database.query(`SELECT * FROM public.${s.table} WHERE company_id=$1 AND deleted_at IS NULL AND ($2::text IS NULL OR ${s.number} ILIKE $2 OR invoice_no ILIKE $2 OR ${type==="purchase"?"supplier_name":"customer_name"} ILIKE $2) ORDER BY ${s.date} DESC,${s.number} DESC LIMIT $3 OFFSET $4`,[companyId,search,limit,offset]);
+      const entryTimestamp = type === "purchase" ? "created_at" : "created_on";
+      const {rows}=await database.query(`SELECT * FROM public.${s.table} WHERE company_id=$1 AND deleted_at IS NULL AND ($2::text IS NULL OR ${s.number} ILIKE $2 OR invoice_no ILIKE $2 OR ${type==="purchase"?"supplier_name":"customer_name"} ILIKE $2) ORDER BY ${entryTimestamp} DESC NULLS LAST,${s.date} DESC,${s.number} DESC LIMIT $3 OFFSET $4`,[companyId,search,limit,offset]);
       return Promise.all(rows.map(async row=>type==="purchase"?mapPurchase(row,await listItems(database,type,row.id)):mapSale(row,await listItems(database,type,row.id))));
     },
     async get(type,id) { if(!specs[type]) throw ERR("INVALID_QUERY","Transaction type is invalid.");cleanId(id);const c=await company(),raw=await getRaw(database,type,c,id);if(!raw)return null;const items=await listItems(database,type,id);return type==="purchase"?mapPurchase(raw.head,items):mapSale(raw.head,items); },

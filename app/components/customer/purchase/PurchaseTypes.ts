@@ -37,6 +37,7 @@ export type Purchase = {
   ------------------------------------------------------- */
 
   id: string;
+  entryCreatedAt?: string;
   postedAt?: string;
   stockMovements?: import("../../stock/StockMovementStorage").StockMovementLine[];
 

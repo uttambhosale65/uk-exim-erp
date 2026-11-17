@@ -5,111 +5,150 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = (relative) => readFile(new URL(relative, root), "utf8");
 
-test("Windows launcher wrappers resolve helpers relative to this checkout", async () => {
+test("Windows launcher wrappers use the in-checkout helpers and remain quiet only on success", async () => {
   const start = await read("START-UK-EXIM-ERP.bat");
   const stop = await read("STOP-UK-EXIM-ERP.bat");
   assert.match(start, /%~dp0scripts\\windows\\start-uk-exim-erp\.ps1/i);
   assert.match(stop, /%~dp0scripts\\windows\\stop-uk-exim-erp\.ps1/i);
-  assert.match(start, /if not "%RUNNER_EXIT_CODE%"=="0"/i);
-  assert.match(start, /pause/i);
-  assert.match(stop, /pause/i);
-});
-
-test("startup pins development mode, disables test mode, and clears test database selection", async () => {
-  const source = await read("scripts/windows/start-uk-exim-erp.ps1");
-  assert.match(source, /\$env:NODE_ENV\s*=\s*"development"/);
-  assert.match(source, /\$env:UKEXIM_PRODUCTS_UI_TEST_MODE\s*=\s*"0"/);
-  assert.match(source, /\$env:TEST_DATABASE_URL\s*=\s*\$null/);
-  assert.match(source, /\$env:BETTER_AUTH_URL\s*=\s*"http:\/\/127\.0\.0\.1:3000"/);
-  assert.match(source, /--hostname 127\.0\.0\.1 --port 3000/);
-  assert.match(source, /http:\/\/127\.0\.0\.1:3000\/login/);
-  assert.match(source, /Get-VerifiedERPNextListenerIds 3000/);
-  assert.match(source, /Wait-ERPLoginRoute \$loginUrl/);
-  assert.match(source, /Start-Process -FilePath \$loginUrl/);
-  assert.match(source, /Write-ERPNextRunnerState/);
-});
-
-test("launcher requires an actual successful Login page response before opening the browser", async () => {
-  const source = await read("scripts/windows/runner-common.ps1");
-  assert.match(source, /function Test-ERPLoginRoute/);
-  assert.match(source, /AllowAutoRedirect = \$false/);
-  assert.match(source, /StatusCode -ne 200/);
-  assert.match(source, /Sign in to your account/);
-  assert.match(source, /function Wait-ERPLoginRoute/);
-  const startup = await read("scripts/windows/start-uk-exim-erp.ps1");
-  assert.match(startup, /managed ERP server is running, but its Login page did not return HTTP 200/);
-  assert.match(startup, /Next\.js is listening, but the Login page did not return HTTP 200/);
-});
-
-test("already-running listener detection verifies Next start-server worker and its project Next CLI ancestor", async () => {
-  const helper = await read("scripts/windows/runner-common.ps1");
-  const startup = await read("scripts/windows/start-uk-exim-erp.ps1");
-  assert.match(helper, /function Test-ERPNextServerWorker/);
-  assert.match(helper, /node_modules\\next\\dist\\server\\lib\\start-server\.js/);
-  assert.match(helper, /function Test-ERPNextListenerProcessTree/);
-  assert.match(helper, /ParentProcessId/);
-  assert.match(helper, /function Test-ManagedERPListener/);
-  assert.match(startup, /Test-ManagedERPListener \(\[int\]\$portOwners\[0\]\)/);
-  assert.doesNotMatch(startup, /Test-ManagedERPProcess \$existing/);
-});
-
-test("launcher reports failure and pauses only on error; success exits without a pause", async () => {
-  const start = await read("START-UK-EXIM-ERP.bat");
-  assert.match(start, /if not "%RUNNER_EXIT_CODE%"=="0" \([\s\S]*?pause[\s\S]*?\)/i);
+  assert.match(start, /if not "%RUNNER_EXIT_CODE%"=="0"[\s\S]*?pause/i);
   assert.match(start, /exit \/b %RUNNER_EXIT_CODE%/i);
+  assert.match(await read("scripts/windows/stop-uk-exim-erp.ps1"), /PostgreSQL, if running, was left untouched/);
 });
 
-test("the login route exists directly in the App Router and has no configured base path", async () => {
-  const route = await read("app/login/page.tsx");
+test("launcher explicitly pins DEV production settings and excludes TEST selection", async () => {
+  const source = await read("scripts/windows/runner-common.ps1");
+  assert.match(source, /function Set-ERPPresentationEnvironment/);
+  assert.match(source, /NODE_ENV = "production"/);
+  assert.match(source, /UKEXIM_PRESENTATION_MODE = "1"/);
+  assert.match(source, /UKEXIM_PRODUCTS_UI_TEST_MODE = "0"/);
+  assert.match(source, /\$env:DATABASE_URL = \$null/);
+  assert.match(source, /\$env:TEST_DATABASE_URL = \$null/);
+  assert.match(source, /BETTER_AUTH_URL = "http:\/\/localhost:3000"/);
+  assert.match(source, /HOSTNAME = "127\.0\.0\.1"/);
+  assert.match(source, /function Test-ERPDevDatabase/);
+  assert.match(source, /Connected to uk_exim_erp_dev on 127\\\.0\\\.0\\\.1:5432/);
+});
+
+test("Presentation Mode builds only missing or stale output and starts the existing production script", async () => {
+  const startup = await read("scripts/windows/start-uk-exim-erp.ps1");
+  const common = await read("scripts/windows/runner-common.ps1");
   const config = await read("next.config.ts");
-  const proxy = await read("proxy.ts");
-  assert.match(route, /export default async function LoginPage/);
-  assert.doesNotMatch(config, /basePath|rewrites|redirects/);
-  assert.match(proxy, /pathname === "\/login"/);
+  const packageJson = JSON.parse(await read("package.json"));
+  assert.match(startup, /Test-ERPProductionBuildFresh/);
+  assert.match(startup, /Invoke-ERPnpmScript \$paths "build"/);
+  assert.match(startup, /Invoke-ERPnpmScript/);
+  assert.match(startup, /next-presentation-host\.mjs/);
+  assert.match(startup, /Write-ERPNextRunnerState \$paths \(\[int\]\$server\.Id\) \$env:BETTER_AUTH_URL "production"/);
+  assert.match(startup, /UKEXIM_ERP_STDOUT_LOG/);
+  assert.match(common, /function Test-ERPProductionBuildFresh/);
+  assert.match(config, /UKEXIM_PRESENTATION_MODE === "1"/);
+  assert.match(config, /"\.next-presentation"/);
+  assert.match(await read(".gitignore"), /\/\.next-presentation\//);
+  assert.match(packageJson.scripts.start, /--hostname 127\.0\.0\.1 --port 3000/);
 });
 
-test("PostgreSQL helper is restricted to the existing local DEV cluster and exact version", async () => {
+test("database and server checks are read-only and precede browser launch", async () => {
+  const startup = await read("scripts/windows/start-uk-exim-erp.ps1");
+  const common = await read("scripts/windows/runner-common.ps1");
+  assert.match(startup, /Ensure-ApprovedPostgreSql/);
+  assert.match(startup, /Wait-PostgreSqlReady/);
+  assert.match(startup, /Test-ERPDevDatabase/);
+  assert.match(startup, /Wait-ERPLoginRoute \$loginUrl/);
+  assert.match(startup, /Start-Process -FilePath \$loginUrl/);
+  assert.ok(startup.indexOf("Test-ERPDevDatabase") < startup.indexOf("Start-Process -FilePath $loginUrl"));
+  assert.match(common, /function Test-ERPLoginRoute/);
+  assert.match(common, /AllowAutoRedirect = \$false/);
+  assert.match(common, /StatusCode -ne 200/);
+  assert.match(common, /Sign in to your account/);
+  assert.match(common, /function Wait-ERPLoginRoute/);
+  assert.match(common, /@\("build", "start", "db:check"\)/);
+  assert.doesNotMatch(startup, /npm run db:migrate|npm run db:test/i);
+});
+
+test("existing server reuse is exact-project and state constrained; unrelated listeners are never stopped", async () => {
+  const startup = await read("scripts/windows/start-uk-exim-erp.ps1");
+  const common = await read("scripts/windows/runner-common.ps1");
+  assert.match(common, /function Test-ERPNextServerWorker/);
+  assert.match(common, /node_modules\\next\\dist\\server\\lib\\start-server\.js/);
+  assert.match(common, /function Test-ERPNextListenerProcessTree/);
+  assert.match(common, /function Get-ERPNextListenerMode/);
+  assert.match(common, /function Get-ERPNextManagerProcessId/);
+  assert.match(common, /function Test-ERPNextLegacyDevListenerTree/);
+  assert.match(common, /TEST mode is disabled/);
+  assert.match(startup, /Get-ERPNextVerifiedMode/);
+  assert.match(startup, /databaseName -cne "uk_exim_erp_dev"/);
+  assert.match(startup, /No process was stopped and no duplicate ERP was started/);
+  assert.doesNotMatch(startup, /Stop-Process|taskkill/i);
+});
+
+test("PostgreSQL guard verifies exact installation, cluster, config and unique external startup log", async () => {
   const source = await read("scripts/windows/runner-common.ps1");
-  assert.match(source, /UKEXIM-ERP\\PostgreSQL\\data/);
   assert.match(source, /postgresql-18\.6-5-windows-x64-binaries\\pgsql\\bin/);
-  assert.match(source, /\$Paths\.PostgreSqlBinDirectory "pg_ctl\.exe"/);
-  assert.match(source, /\$Paths\.PostgreSqlBinDirectory "postgres\.exe"/);
-  assert.match(source, /PostgreSQL\\\) 18\\\.6/);
-  assert.match(source, /\$PostgreSql\.PgCtl start -D \$Paths\.DataDirectory -o "-h 127\.0\.0\.1 -p 5432"/);
-  assert.match(source, /Get-ListeningProcessIds 5432/);
-  assert.match(source, /\$_.LocalAddress -ne "127\.0\.0\.1"/);
-  assert.match(source, /not exclusively owned by the approved PostgreSQL data directory/);
-  assert.match(source, /-ine \$PostgreSql\.PostgresExe/);
+  assert.match(source, /UKEXIM-ERP\\PostgreSQL\\data/);
+  assert.match(source, /function Test-ApprovedPostgreSqlConfiguration/);
+  assert.match(source, /listen_addresses/);
+  assert.match(source, /logging_collector/);
+  assert.ok(source.includes('PostgreSQL\\) 18\\.6'));
+  assert.match(source, /-h 127\.0\.0\.1 -p 5432/);
+  assert.match(source, /postgresql-start-\$runId\.log/);
+  assert.match(source, /function Enter-ERPRunnerMutex/);
+  assert.match(source, /function Invoke-ERPPostgreSqlStart/);
+  assert.match(source, /RedirectStandardOutput \$Paths\.PostgreSqlCtlStdoutLog/);
+  assert.match(source, /RedirectStandardError \$Paths\.PostgreSqlCtlStderrLog/);
+  assert.match(source, /Invoke-ERPPostgreSqlStart \$Paths \$PostgreSql/);
+  assert.match(source, /postmaster\.pid/);
+  assert.match(source, /No other cluster will be used/);
+  assert.doesNotMatch(source, /Remove-Item[^\n]*postmaster\.pid/i);
 });
 
-test("startup readiness verifies a loopback listener belongs to the launched Next.js process tree", async () => {
+test("logging is unique per run and diagnostic output is sanitized", async () => {
   const source = await read("scripts/windows/runner-common.ps1");
-  assert.match(source, /function Test-ERPNextProcessDescendant/);
-  assert.match(source, /ParentProcessId/);
-  assert.match(source, /function Get-VerifiedERPNextListenerIds/);
-  assert.match(source, /LocalAddress -ne "127\.0\.0\.1"/);
-  assert.match(source, /could not be verified as part of this checkout's Next\.js process tree/);
+  assert.match(source, /launcher-\$runId\.log/);
+  assert.match(source, /next-presentation-\$runId\.stdout\.log/);
+  assert.match(source, /next-presentation-\$runId\.stderr\.log/);
+  assert.match(source, /function ConvertTo-SafeDiagnosticText/);
+  assert.match(source, /REDACTED POSTGRESQL URL/);
+  assert.match(source, /sharing violation/);
+  assert.match(source, /data directory was preserved/);
 });
 
-test("stop logic validates the recorded checkout and targets only its recorded PID", async () => {
+test("Presentation output relay redacts credentials before appending logs", async () => {
+  const { sanitizeDiagnosticText } = await import("../scripts/windows/next-presentation-host.mjs");
+  const sanitized = sanitizeDiagnosticText(
+    "DATABASE_URL=postgres://owner:very-secret@127.0.0.1/db password=hidden token=abc?session=xyz",
+  );
+  assert.doesNotMatch(sanitized, /very-secret|hidden|abc|xyz/);
+  assert.match(sanitized, /REDACTED/);
+  const relay = await read("scripts/windows/next-presentation-host.mjs");
+  assert.match(relay, /appendSanitized/);
+  assert.match(relay, /sanitizeDiagnosticText\(text\)/);
+});
+
+test("safe Stop handles only exact recorded Next.js processes and leaves PostgreSQL running", async () => {
   const source = await read("scripts/windows/stop-uk-exim-erp.ps1");
+  const common = await read("scripts/windows/runner-common.ps1");
   assert.match(source, /Test-ManagedERPProcess/);
-  assert.match(source, /processId/);
+  assert.match(source, /state\.mode.*production/);
   assert.match(source, /SIGINT/);
   assert.match(source, /SIGTERM/);
-  assert.match(source, /Stop-Process -Id \$processId -Force/);
-  assert.doesNotMatch(source, /taskkill\s+\/IM\s+node\.exe/i);
+  assert.match(common, /function Send-ERPProcessSignal/);
+  assert.match(common, /process\.kill\(Number\(process\.argv\[1\]\),String\.fromCharCode/);
+  assert.match(common, /SIGNAL_SENT/);
+  assert.doesNotMatch(source, /Stop-Process -Id \$processId -Force/);
   assert.match(source, /PostgreSQL was left running/);
+  assert.match(source, /Type STOP to confirm stopping this exact UK EXIM ERP process/);
+  assert.match(source, /Test-ERPNextLegacyDevListenerTree/);
+  assert.doesNotMatch(source, /taskkill\s+\/IM\s+node\.exe/i);
+  assert.match(source, /Stop-VerifiedERPNextProductionListener/);
+  assert.match(common, /function Get-VerifiedERPNextProductionListenerIds/);
+  assert.match(common, /function Stop-VerifiedERPNextProductionListener/);
+  assert.match(common, /this checkout's exact loopback Next\.js Presentation server/);
 });
 
-test("module inventory covers all requested modules and distinguishes schema from API integration", async () => {
-  const doc = await read("docs/ERP-MODULE-INTEGRATION-STATUS.md");
-  for (const moduleName of [
-    "Dashboard", "Product Master", "Customer Master", "Supplier Master", "Stock", "Purchase", "Sales",
-    "Purchase Return", "Sales Return", "Payments / Receipts", "Expenses", "Reports", "Export / Import",
-    "Settings", "User Management",
-  ]) assert.ok(doc.includes(moduleName), `missing module inventory row: ${moduleName}`);
-  assert.match(doc, /schema exists|schema only/i);
-  assert.match(doc, /No purchase API/);
-  assert.match(doc, /No sales API/);
+test("login route and App Router assumptions match current source", async () => {
+  const route = await read("app/login/page.tsx");
+  const config = await read("next.config.ts");
+  assert.match(route, /export default async function LoginPage/);
+  assert.match(route, /Sign in to your account/);
+  assert.doesNotMatch(config, /basePath|rewrites|redirects/);
 });

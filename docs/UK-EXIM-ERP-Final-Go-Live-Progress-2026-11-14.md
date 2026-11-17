@@ -221,3 +221,34 @@ Have the owner/accountant review the export authenticity flags and approve the e
 - Review and classify the nine flagged Export records and approve any relationships/authenticity before moving any record from review-only into operational use. Current unflagged rows also remain review-required pending independent source verification.
 - Owner/accountant tax matrix for GST Tax Invoice vs Without GST, CGST/SGST vs IGST, place of supply, and export LUT/IGST remains required. No Sales tax guard was changed.
 - Production deployment, hosting, TLS/domain, backup automation and operational recovery rehearsal remain pending. No commit, push, or deployment was performed.
+
+## Phase 12 dashboard, reports, Export review and readiness – 2026-11-15
+
+### Implemented in source
+
+- The domestic Dashboard source retains all seven PostgreSQL-backed KPIs and both charts, and uses a four-column desktop KPI grid with the stock summary and stock movement chart side by side. The chart layout falls back to one column on narrower screens. This is a source-level change; current authenticated browser verification is still pending because port 3000 is served by an older exact-checkout Next.js process and the safe launcher refused to start a duplicate.
+- Sales and Purchase reports now query the existing authenticated PostgreSQL APIs, paginate through the full register, and provide date, text/document and related-party/product filters, totals, CSV and print views. Sales separates GST and Without GST and labels historical pending balances unverified.
+- Stock report and settlement/payment register now present the existing PostgreSQL API data with filters and printable/exportable views. No stock movement, baseline, receipt, payment or historical transaction was written.
+- Export UI uses labelled record sections and grouped field forms, separates the retained source snapshot into a collapsed administrative audit view, and explains the review hold. A customer review-status action is company-scoped and owner-confirmed; no review status was changed during this work.
+- Export migration dry-run now checks migration history through 014, compares source and target sets and references, and reports settings conflicts without overwriting them.
+
+### Read-only database reconciliation
+
+- DEV identity was verified as the local PostgreSQL 18.6 database `uk_exim_erp_dev` on `127.0.0.1:5432`. No DEV migration, import, settings update, payment write, stock write or business-record change was performed in this Phase 12 work.
+- Current counts remain consistent with the prior Phase 9 verification: 7 Products, 39 Domestic Customers, 1 Supplier, 3 Purchases / 3 lines, 88 Sales / 92 lines, 2 stock baseline rows, 66 Export Customers, 14 Export documents, and 2 separate Export Stock rows. Receipt/payment/allocation tables remain empty.
+- Export dry-run reconciles source-to-target counts and references with zero ID/code/document conflicts. All 82 Export rows remain `review_required`; nine rows carry direct source review heuristics (four customers and five documents). These flags are not claims that records are false.
+- Settings source reconciliation reports three categories as exact matches; Company Settings is a protected conflict. No settings value was overwritten. The migration/import preview is therefore not ready to apply.
+- The native backup/recovery utility completed only its no-flag read-only preflight in this Phase 12 session. It proposed a backup path, but no fresh backup or restore was performed.
+
+### Verification and current blockers
+
+- Focused Dashboard/report/Export/stock/settlement suite: 55 passed, 0 failed. The synthetic LocalStorage quota-failure test intentionally logs its recovery-path diagnostic; no live browser storage was accessed.
+- TypeScript: passed.
+- Targeted ESLint: 0 errors and two existing warnings in `app/ERPWorkspace.tsx` (`<img>` optimization and unused `MonthlyStockGraph`).
+- `git diff --check`: whitespace check passed; Git emitted line-ending normalization notices.
+- Production build passed earlier in this work after the relevant source changes; Next.js generated the production routes successfully.
+- Browser read-only inspection showed an authenticated DEV Dashboard with the expected figures, but its rendered source is stale (old seven-card single-row layout; the expected `.dashboard-chart-layout` wrapper is absent). The port-3000 listener is PID 70428, a `node.exe` Next server from this exact project on `127.0.0.1`. The existing launcher refused to reuse it because its stricter runner/mode ownership verification did not accept the listener. No duplicate server was started, no process was stopped or signalled, and no screenshot at 1557×889, 1366×768 or 1920×1080 is claimed.
+- Owner could not locate the PowerShell terminal that started PID 70428. Approval to invoke the existing exact-process STOP helper for a graceful signal is pending. Do not continue server handoff until that explicit approval arrives.
+- Export/settings browser save-and-reload, the 13 individual report acceptance views, and browser console/network verification remain pending. No authenticated browser screenshot of the latest source was captured.
+- Settings remain unchanged because of the Company Settings conflict. Export operational approvals remain pending. Historical pending balances remain unverified. GST posting gates remain fail-closed; export LUT validity is not verified. No receipts/payments were fabricated.
+- Production deployment, hosting, domain/TLS, and production backup/recovery operations remain pending.

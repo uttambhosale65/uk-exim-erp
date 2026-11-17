@@ -104,7 +104,7 @@ export function createSettlementDAL({ getOwnerContext, database, idFactory = ran
     if (typeof q !== "string" || q.length > 100 || !Number.isInteger(limit) || limit < 1 || limit > 200 || !Number.isInteger(offset) || offset < 0) throw ERR("INVALID_QUERY", "Settlement query is invalid.");
     const company = await companyId();
     const search = q ? `%${q.replace(/[\\%_]/g, "\\$&")}%` : null;
-    const { rows } = await database.query(`SELECT * FROM public.${s.table} WHERE company_id=$1 AND ($2::text IS NULL OR ${s.number} ILIKE $2 OR ${s.partner} ILIKE $2 OR reference_no ILIKE $2) ORDER BY ${s.date} DESC,${s.number} DESC LIMIT $3 OFFSET $4`, [company, search, limit, offset]);
+    const { rows } = await database.query(`SELECT * FROM public.${s.table} WHERE company_id=$1 AND ($2::text IS NULL OR ${s.number} ILIKE $2 OR ${s.partner} ILIKE $2 OR reference_no ILIKE $2) ORDER BY created_at DESC,${s.date} DESC,${s.number} DESC LIMIT $3 OFFSET $4`, [company, search, limit, offset]);
     return Promise.all(rows.map(async (row) => mapPayment(row, await allocationsFor(database, s, company, row.id))));
   }
   async function create(kind, input) {

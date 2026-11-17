@@ -37,13 +37,14 @@ function validateRecord(kind, record, creating) {
   if (typeof record[fields.date] !== "string" || record[fields.date].length > 80) fail("INVALID_EXPORT", "Document date must be text.");
   if (record.currency !== undefined && typeof record.currency !== "string") fail("INVALID_EXPORT", "Currency must be text.");
   if (record.status !== undefined && typeof record.status !== "string") fail("INVALID_EXPORT", "Status must be text.");
+  if (creating && record.status !== undefined && !/^draft$/i.test(record.status)) fail("EXPORT_DOCUMENT_LOCKED", "New Export documents must be saved as Draft. Issuance requires a separate approved workflow.");
   if (creating && Object.hasOwn(record, "reviewStatus")) fail("INVALID_EXPORT", "Review state is assigned by the server.");
-  return { ...record };
+  return { ...record, ...(creating ? { status: "Draft" } : {}) };
 }
 
 function mapDocument(row) {
   if (!row) return null;
-  return { ...row.source_record, id: row.id, documentNumber: row.document_number,
+  return { ...row.source_record, sourceRecord: row.source_record, id: row.id, documentNumber: row.document_number,
     documentDate: row.document_date, currency: row.currency, status: row.status,
     reviewStatus: row.review_status, documentKind: row.document_kind };
 }
@@ -92,7 +93,7 @@ export function createExportDAL({ getOwnerContext, database, idFactory = randomU
       const company = await companyId();
       const search = q ? `%${q.replace(/[\\%_]/g, "\\$&")}%` : null;
       const { rows } = await database.query(
-        "SELECT * FROM public.export_documents WHERE company_id=$1 AND document_kind=$2 AND ($3::text IS NULL OR document_number ILIKE $3 OR source_record::text ILIKE $3) AND ($4::text IS NULL OR review_status=$4) ORDER BY document_date DESC,document_number LIMIT $5 OFFSET $6",
+        "SELECT * FROM public.export_documents WHERE company_id=$1 AND document_kind=$2 AND ($3::text IS NULL OR document_number ILIKE $3 OR source_record::text ILIKE $3) AND ($4::text IS NULL OR review_status=$4) ORDER BY created_at DESC,document_date DESC,document_number DESC LIMIT $5 OFFSET $6",
         [company, kind, search, reviewStatus, limit, offset],
       );
       return rows.map(mapDocument);
@@ -109,10 +110,16 @@ export function createExportDAL({ getOwnerContext, database, idFactory = randomU
       return transaction(async client => {
         await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1 || ':export:' || $2,0))", [company, kind]);
         const id = record.id || idFactory();
-        const result = await client.query(
-          "INSERT INTO public.export_documents(id,company_id,document_kind,document_number,document_date,currency,status,review_status,source_record) VALUES($1,$2,$3,$4,$5,$6,$7,'owner_verified',$8::jsonb) RETURNING *",
-          [id, company, kind, record[fields.number], record[fields.date], record.currency ?? "", record.status ?? "", JSON.stringify(record)],
-        );
+        let result;
+        try {
+          result = await client.query(
+            "INSERT INTO public.export_documents(id,company_id,document_kind,document_number,document_date,currency,status,review_status,source_record) VALUES($1,$2,$3,$4,$5,$6,$7,'owner_verified',$8::jsonb) RETURNING *",
+            [id, company, kind, record[fields.number], record[fields.date], record.currency ?? "", record.status, JSON.stringify(record)],
+          );
+        } catch (error) {
+          if (error?.code === "23505") fail("EXPORT_DOCUMENT_CONFLICT", "An Export document with this ID or number already exists in this company.");
+          throw error;
+        }
         await linksFor(client, company, kind, id, record);
         return mapDocument(result.rows[0]);
       });
@@ -123,12 +130,21 @@ export function createExportDAL({ getOwnerContext, database, idFactory = randomU
         const current = await client.query("SELECT * FROM public.export_documents WHERE company_id=$1 AND document_kind=$2 AND id=$3 FOR UPDATE", [company, kind, id]);
         if (!current.rowCount) return null;
         if (current.rows[0].review_status !== "owner_verified") fail("EXPORT_REVIEW_REQUIRED", "A record awaiting owner review cannot be edited as an operational document.");
+        if (!/^draft$/i.test(String(current.rows[0].status ?? "")) || (record.status !== undefined && !/^draft$/i.test(record.status))) {
+          fail("EXPORT_DOCUMENT_LOCKED", "Only Draft Export documents can be edited. Issued, filed, cancelled or other non-draft records require a dedicated audited workflow.");
+        }
         await client.query("DELETE FROM public.export_document_references WHERE company_id=$1 AND source_id=$2", [company, id]);
         await client.query("DELETE FROM public.export_customer_document_references WHERE company_id=$1 AND document_id=$2", [company, id]);
-        const result = await client.query(
-          "UPDATE public.export_documents SET document_number=$4,document_date=$5,currency=$6,status=$7,source_record=$8::jsonb,updated_at=now() WHERE company_id=$1 AND document_kind=$2 AND id=$3 RETURNING *",
-          [company, kind, id, record[fields.number], record[fields.date], record.currency ?? "", record.status ?? "", JSON.stringify(record)],
-        );
+        let result;
+        try {
+          result = await client.query(
+            "UPDATE public.export_documents SET document_number=$4,document_date=$5,currency=$6,status=$7,source_record=$8::jsonb,updated_at=now() WHERE company_id=$1 AND document_kind=$2 AND id=$3 RETURNING *",
+            [company, kind, id, record[fields.number], record[fields.date], record.currency ?? "", "Draft", JSON.stringify({ ...record, status: "Draft" })],
+          );
+        } catch (error) {
+          if (error?.code === "23505") fail("EXPORT_DOCUMENT_CONFLICT", "An Export document with this number already exists in this company.");
+          throw error;
+        }
         await linksFor(client, company, kind, id, record);
         return mapDocument(result.rows[0]);
       });
@@ -144,8 +160,8 @@ export function createExportDAL({ getOwnerContext, database, idFactory = randomU
     async listCustomers({ q = "", limit = 100, offset = 0 } = {}) {
       if (typeof q !== "string" || q.length > 100 || !Number.isInteger(limit) || limit < 1 || limit > 200 || !Number.isInteger(offset) || offset < 0) fail("INVALID_QUERY", "Export customer query is invalid.");
       const company = await companyId(); const search = q ? `%${q.replace(/[\\%_]/g, "\\$&")}%` : null;
-      const { rows } = await database.query("SELECT id,code,name,status,review_status,source_record FROM public.export_customers WHERE company_id=$1 AND ($2::text IS NULL OR code ILIKE $2 OR name ILIKE $2 OR source_record::text ILIKE $2) ORDER BY name,code LIMIT $3 OFFSET $4", [company, search, limit, offset]);
-      return rows.map(row => ({ ...row.source_record, id: row.id, code: row.code, name: row.name, status: row.status, reviewStatus: row.review_status }));
+      const { rows } = await database.query("SELECT id,code,name,status,review_status,source_record FROM public.export_customers WHERE company_id=$1 AND ($2::text IS NULL OR code ILIKE $2 OR name ILIKE $2 OR source_record::text ILIKE $2) ORDER BY created_at DESC,name,code LIMIT $3 OFFSET $4", [company, search, limit, offset]);
+      return rows.map(row => ({ ...row.source_record, sourceRecord: row.source_record, id: row.id, code: row.code, name: row.name, status: row.status, reviewStatus: row.review_status }));
     },
     async createCustomer(input) {
       if (!input || typeof input !== "object" || Array.isArray(input) || typeof input.id !== "string" || !input.id.trim() || typeof input.code !== "string" || !input.code.trim() || typeof input.name !== "string" || !input.name.trim() || !["Active", "Inactive"].includes(input.status)) fail("INVALID_EXPORT", "Export customer ID, code, name and status are required.");
@@ -158,13 +174,13 @@ export function createExportDAL({ getOwnerContext, database, idFactory = randomU
         if (error?.code === "23505") fail("EXPORT_CUSTOMER_CONFLICT", "An Export Customer with this ID or code already exists in this company.");
         throw error;
       }
-      const row = rows[0]; return { ...row.source_record, id: row.id, code: row.code, name: row.name, status: row.status, reviewStatus: row.review_status };
+      const row = rows[0]; return { ...row.source_record, sourceRecord: row.source_record, id: row.id, code: row.code, name: row.name, status: row.status, reviewStatus: row.review_status };
     },
     async getCustomer(id) {
       if (typeof id !== "string" || !id.trim() || id.length > 200) fail("INVALID_EXPORT_ID", "Export customer ID is invalid.");
       const company = await companyId();
       const { rows } = await database.query("SELECT id,code,name,status,review_status,source_record FROM public.export_customers WHERE company_id=$1 AND id=$2", [company, id]);
-      const row = rows[0]; return row ? { ...row.source_record, id: row.id, code: row.code, name: row.name, status: row.status, reviewStatus: row.review_status } : null;
+      const row = rows[0]; return row ? { ...row.source_record, sourceRecord: row.source_record, id: row.id, code: row.code, name: row.name, status: row.status, reviewStatus: row.review_status } : null;
     },
     async updateCustomer(id, input) {
       if (typeof id !== "string" || !id.trim() || !input || typeof input !== "object" || Array.isArray(input) || input.id !== id || typeof input.code !== "string" || !input.code.trim() || typeof input.name !== "string" || !input.name.trim() || !["Active", "Inactive"].includes(input.status)) fail("INVALID_EXPORT", "Export customer ID, code, name and status are required.");
@@ -177,12 +193,18 @@ export function createExportDAL({ getOwnerContext, database, idFactory = randomU
         if (error?.code === "23505") fail("EXPORT_CUSTOMER_CONFLICT", "An Export Customer with this code already exists in this company.");
         throw error;
       }
-      const row = rows[0]; return row ? { ...row.source_record, id: row.id, code: row.code, name: row.name, status: row.status, reviewStatus: row.review_status } : null;
+      const row = rows[0]; return row ? { ...row.source_record, sourceRecord: row.source_record, id: row.id, code: row.code, name: row.name, status: row.status, reviewStatus: row.review_status } : null;
+    },
+    async setCustomerReviewStatus(id, reviewStatus) {
+      if (typeof id !== "string" || !id.trim() || !["review_required", "owner_verified"].includes(reviewStatus)) fail("INVALID_EXPORT", "Export customer review state is invalid.");
+      const company = await companyId();
+      const { rows } = await database.query("UPDATE public.export_customers SET review_status=$3,updated_at=now() WHERE company_id=$1 AND id=$2 RETURNING id,code,name,status,review_status,source_record", [company, id, reviewStatus]);
+      const row = rows[0]; return row ? { ...row.source_record, sourceRecord: row.source_record, id: row.id, code: row.code, name: row.name, status: row.status, reviewStatus: row.review_status } : null;
     },
     async listStock() {
       const company = await companyId();
-      const { rows } = await database.query("SELECT * FROM public.export_stock WHERE company_id=$1 ORDER BY product_code,lot_batch_no,id", [company]);
-      return rows.map(row => ({ ...row.source_record, id: row.id, productCode: row.product_code,
+      const { rows } = await database.query("SELECT * FROM public.export_stock WHERE company_id=$1 ORDER BY created_at DESC,product_code,lot_batch_no,id", [company]);
+      return rows.map(row => ({ ...row.source_record, sourceRecord: row.source_record, id: row.id, productCode: row.product_code,
         lotBatchNo: row.lot_batch_no, availableQty: row.available_qty, reservedQty: row.reserved_qty,
         packedQty: row.packed_qty, loadedQty: row.loaded_qty, shippedQty: row.shipped_qty,
         unit: row.unit, stockSource: row.stock_source, purchaseReference: row.purchase_reference,

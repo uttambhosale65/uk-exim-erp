@@ -66,6 +66,11 @@ export default function Home() {
 
   const [monthlyReports, setMonthlyReports] =
     useState<MonthlyStockSummary[]>([]);
+  const [monthlyFinancials, setMonthlyFinancials] = useState<
+    | { status: "loading" }
+    | { status: "ready"; months: Array<{ month: string; sales: number; purchase: number }> }
+    | { status: "error" }
+  >({ status: "loading" });
 
   /* =======================================================
      MENU STYLE
@@ -128,6 +133,45 @@ export default function Home() {
     return () => {
       current = false;
       window.removeEventListener(CUSTOMER_DATA_CHANGED_EVENT, loadCustomerCount);
+    };
+  }, [activePage]);
+
+  useEffect(() => {
+    let current = true;
+    const loadMonthlyFinancials = async () => {
+      setMonthlyFinancials({ status: "loading" });
+      try {
+        const now = new Date();
+        const periods = Array.from({ length: 6 }, (_, index) => {
+          const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+          return { year: date.getFullYear(), month: date.getMonth() + 1 };
+        });
+        const months = await Promise.all(periods.map(async ({ year, month }) => {
+          const response = await fetch(`/api/dashboard/summary?year=${year}&month=${month}`, {
+            cache: "no-store",
+            credentials: "same-origin",
+          });
+          if (!response.ok) throw new Error("Monthly business summary request failed.");
+          const data = await response.json() as Record<string, unknown>;
+          const sales = Number(data.monthlySalesTotal);
+          const purchase = Number(data.monthlyPurchaseTotal);
+          if (!Number.isFinite(sales) || !Number.isFinite(purchase)) {
+            throw new Error("Monthly business summary response was invalid.");
+          }
+          return { month: `${year}-${String(month).padStart(2, "0")}`, sales, purchase };
+        }));
+        if (current) setMonthlyFinancials({ status: "ready", months });
+      } catch {
+        if (current) setMonthlyFinancials({ status: "error" });
+      }
+    };
+    void loadMonthlyFinancials();
+    window.addEventListener(TRADE_DATA_CHANGED_EVENT, loadMonthlyFinancials);
+    window.addEventListener("focus", loadMonthlyFinancials);
+    return () => {
+      current = false;
+      window.removeEventListener(TRADE_DATA_CHANGED_EVENT, loadMonthlyFinancials);
+      window.removeEventListener("focus", loadMonthlyFinancials);
     };
   }, [activePage]);
 
@@ -575,14 +619,13 @@ case "export-stock":
                   fontSize: "11px",
                 }}
               >
-                UK EXIM ENTERPRISES ERP Overview
+                Domestic Business Overview · Live company-scoped PostgreSQL figures
               </div>
 
             </div>
 
             {/* =============================================
-                MAIN DASHBOARD CARDS
-                COMPACT – 6 CARDS IN ONE ROW
+                DOMESTIC BUSINESS KPI CARDS
             ============================================== */}
 
             <div
@@ -590,7 +633,7 @@ case "export-stock":
               style={{
                 display: "grid",
                 gridTemplateColumns:
-                  "repeat(7, minmax(0, 1fr))",
+                  "repeat(4, minmax(0, 1fr))",
                 gap: "8px",
                 width: "100%",
               }}
@@ -654,7 +697,7 @@ case "export-stock":
               {/* SALES */}
 
               <DashboardMainCard
-                title="Sales"
+                title="All-time Sales"
                 value={dashboard.status === "ready" ? `₹${dashboard.sales.toLocaleString(
                   "en-IN",
                   {
@@ -670,7 +713,7 @@ case "export-stock":
               {/* PURCHASE */}
 
               <DashboardMainCard
-                title="Purchase"
+                title="All-time Purchase"
                 value={dashboard.status === "ready" ? `₹${dashboard.purchase.toLocaleString(
                   "en-IN",
                   {
@@ -686,7 +729,7 @@ case "export-stock":
               {/* PENDING PAYMENT */}
 
               <DashboardMainCard
-                title="Pending Payment"
+                title="Pending Payments"
                 value={dashboard.status === "ready" ? `${dashboard.pendingSalesCount} invoices` : dashboard.status === "loading" ? "Loading" : "Unavailable"}
                 icon="⏳"
                 color="#b45309"
@@ -702,12 +745,11 @@ case "export-stock":
               )}
             </div>
 
-            <BusinessSummaryPanel compact />
-
             {/* =============================================
                 MONTHLY STOCK SUMMARY
             ============================================== */}
 
+            <div className="dashboard-chart-layout">
             <div
               className="dashboard-stock-panel"
               style={{
@@ -786,9 +828,9 @@ case "export-stock":
                   LATEST MONTH CARDS
               ============================================ */}
 
-              {latestMonthlyReport ? (
-                <div className="dashboard-stock-layout">
+              <div className="dashboard-stock-layout">
                   <section className="dashboard-stock-summary" aria-label="Stock summary">
+                  {latestMonthlyReport ? (
                   <div
                     className="dashboard-monthly-cards"
                     style={{
@@ -809,7 +851,7 @@ case "export-stock":
                     />
 
                     <DashboardMetric
-                      title="Purchase"
+                      title="Net Purchase"
                       value={
                         latestMonthlyReport.purchaseTotal
                       }
@@ -817,7 +859,7 @@ case "export-stock":
                     />
 
                     <DashboardMetric
-                      title="Sales"
+                      title="Net Sales"
                       value={
                         latestMonthlyReport.salesTotal
                       }
@@ -832,155 +874,21 @@ case "export-stock":
                       icon="📊"
                     />
                   </div>
+                  ) : (
+                    <div className="dashboard-stock-unavailable" role={dashboard.status === "error" ? "alert" : "status"}>
+                      {dashboard.status === "loading"
+                        ? "Loading verified PostgreSQL monthly stock figures…"
+                        : dashboard.status === "error"
+                          ? "Stock summary could not be loaded from PostgreSQL."
+                          : "Verified monthly stock figures are unavailable for the current period."}
+                    </div>
+                  )}
 
                   {/* =========================================
                       STOCK ALERTS
                   ========================================== */}
 
                   <StockAlerts />
-
-                  {/* =========================================
-                      MONTHLY SALES VS PURCHASE
-                  ========================================== */}
-
-                  <div
-                    style={{
-                      marginTop: "7px",
-                      paddingTop: "6px",
-                      borderTop:
-                        "1px solid #e5e7eb",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent:
-                          "space-between",
-                        alignItems: "center",
-                        marginBottom: "7px",
-                        gap: "8px",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <div>
-                        <h3
-                          style={{
-                            margin: 0,
-                            color: "#14532d",
-                            fontSize: "14px",
-                            fontWeight: 800,
-                          }}
-                        >
-                          💰 Monthly Sales vs Purchase
-                        </h3>
-
-                        <div
-                          style={{
-                            marginTop: "2px",
-                            color: "#6b7280",
-                            fontSize: "10px",
-                          }}
-                        >
-                          Month-wise business value
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      className="dashboard-business-cards"
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns:
-                          "repeat(2, minmax(0, 1fr))",
-                        gap: "7px",
-                      }}
-                    >
-                      {/* MONTHLY SALES */}
-
-                      <div
-                        style={{
-                          padding: "9px 11px",
-                          border:
-                            "1px solid #dbeafe",
-                          borderRadius: "7px",
-                          background: "#eff6ff",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "9px",
-                            fontWeight: 700,
-                            color: "#1d4ed8",
-                          }}
-                        >
-                          💰 MONTHLY SALES
-                        </div>
-
-                        <div
-                          style={{
-                            marginTop: "3px",
-                            fontSize: "18px",
-                            fontWeight: 900,
-                            color: "#1d4ed8",
-                            lineHeight: 1.1,
-                          }}
-                        >
-                          ₹
-                          {dashboard.status === "ready" ? dashboard.monthlySales.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : dashboard.status === "loading" ? "Loading" : "Unavailable"}
-                        </div>
-                        {dashboard.status === "ready" && (
-                          <div style={{ marginTop: 5, color: "#1e40af", fontSize: 9, fontWeight: 700 }}>
-                            GST ₹{dashboard.monthlyGstSales.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            {" · "}
-                            Without GST ₹{dashboard.monthlyNonGstSales.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* TOTAL PURCHASE */}
-
-                      <div
-                        style={{
-                          padding: "9px 11px",
-                          border:
-                            "1px solid #ede9fe",
-                          borderRadius: "7px",
-                          background: "#f5f3ff",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "9px",
-                            fontWeight: 700,
-                            color: "#6d28d9",
-                          }}
-                        >
-                          🛒 TOTAL PURCHASE
-                        </div>
-
-                        <div
-                          style={{
-                            marginTop: "3px",
-                            fontSize: "18px",
-                            fontWeight: 900,
-                            color: "#6d28d9",
-                            lineHeight: 1.1,
-                          }}
-                        >
-                          ₹
-                          {dashboard.status === "ready" ? dashboard.purchase.toLocaleString(
-                            "en-IN",
-                            {
-                              minimumFractionDigits:
-                                2,
-                              maximumFractionDigits:
-                                2,
-                            }
-                          ) : dashboard.status === "loading" ? "Loading" : "Unavailable"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
 
                   </section>
 
@@ -1002,27 +910,12 @@ case "export-stock":
                       reports={
                         monthlyReports
                       }
+                      status={dashboard.status}
                     />
                   </section>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    padding: "20px",
-                    textAlign: "center",
-                    color: "#6b7280",
-                    border:
-                      "1px solid #e5e7eb",
-                    borderRadius: "7px",
-                    fontSize: "11px",
-                  }}
-                >
-                  📦 Monthly stock data will
-                  appear here after Purchase
-                  or Sales transactions are
-                  recorded.
-                </div>
-              )}
+              </div>
+            </div>
+            <MonthlySalesPurchaseGraph data={monthlyFinancials} />
             </div>
             </div>
           </>
@@ -1594,29 +1487,28 @@ case "export-stock":
             <div
               className="dashboard-footer"
               style={{
-                marginTop: "8px",
-                paddingTop: "4px",
+                marginTop: "6px",
+                padding: "6px 2px 0",
                 borderTop:
                   "1px solid #d1d5db",
-                overflow: "hidden",
-                whiteSpace: "nowrap",
                 width: "100%",
                 boxSizing:
                   "border-box",
               }}
             >
+              <div className="dashboard-brand-ticker" aria-label="UK EXIM ENTERPRISES, UTTAM HALDI, वाईच्या कुशीतील उत्तम सातारी हळद. Delivering Indian purity across continents.">
+                <div className="dashboard-brand-ticker-track">
+                  <span><strong>UK EXIM ENTERPRISES</strong><span className="ticker-separator">✦</span><strong>UTTAM HALDI</strong><span>वाईच्या कुशीतील उत्तम सातारी हळद</span><span>Delivering Indian purity across continents</span></span>
+                  <span aria-hidden="true"><strong>UK EXIM ENTERPRISES</strong><span className="ticker-separator">✦</span><strong>UTTAM HALDI</strong><span>वाईच्या कुशीतील उत्तम सातारी हळद</span><span>Delivering Indian purity across continents</span></span>
+                </div>
+              </div>
               <div
                 style={{
-                  display:
-                    "inline-flex",
+                  display: "flex",
                   alignItems:
                     "center",
-                  gap: "10px",
-                  paddingLeft:
-                    "100%",
-                  animation:
-                    "ukEximFooterMove 28s linear infinite",
-                  fontSize: "10px",
+                  flexWrap: "wrap",
+                  gap: "7px",
                   color: "#6b7280",
                 }}
               >
@@ -1624,20 +1516,20 @@ case "export-stock":
                   src="/uklogo.png"
                   alt="UK EXIM Logo"
                   style={{
-                  width: "32px",
-                  height: "32px",
+                  width: "22px",
+                  height: "22px",
                     objectFit:
                       "contain",
                     flexShrink: 0,
                   }}
                 />
 
-                <span style={{ fontSize: "15px", whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: "11px", whiteSpace: "nowrap" }}>
                   Designed & Developed by{" "}
                   <strong
                     style={{
                       color: "#14532d",
-                      fontSize: "17px",
+                      fontSize: "11px",
                       fontWeight: 900,
                     }}
                   >
@@ -1645,14 +1537,14 @@ case "export-stock":
                   </strong>
                 </span>
 
-                <span style={{ color: "#9ca3af", fontSize: "16px", fontWeight: 800 }}>
+                <span style={{ color: "#9ca3af", fontSize: "11px", fontWeight: 800 }}>
                   •
                 </span>
 
                 <strong
                   style={{
                     color: "#14532d",
-                    fontSize: "18px",
+                    fontSize: "11px",
                     fontWeight: 900,
                     letterSpacing: "0.4px",
                     whiteSpace: "nowrap",
@@ -1664,7 +1556,7 @@ case "export-stock":
                 <strong
                   style={{
                     color: "#b58a32",
-                    fontSize: "18px",
+                    fontSize: "11px",
                     fontWeight: 900,
                     letterSpacing: "0.4px",
                     whiteSpace: "nowrap",
@@ -1673,26 +1565,16 @@ case "export-stock":
                   DESIGNED FOR TRUST.
                 </strong>
 
-                <span style={{ color: "#9ca3af", fontSize: "16px", fontWeight: 800 }}>
+                <span style={{ color: "#9ca3af", fontSize: "11px", fontWeight: 800 }}>
                   •
                 </span>
 
-                <span style={{ fontSize: "13px", whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: "11px", whiteSpace: "nowrap" }}>
                   UK EXIM ERP Version 1.0
                 </span>
               </div>
 
               <style>{`
-                @keyframes ukEximFooterMove {
-                  from {
-                    transform: translateX(0);
-                  }
-
-                  to {
-                    transform: translateX(-100%);
-                  }
-                }
-
                 .dashboard-shell {
                   height: 100vh;
                   min-height: 0 !important;
@@ -1704,15 +1586,16 @@ case "export-stock":
                   flex-direction: column;
                   height: 100vh;
                   min-height: 0 !important;
-                  overflow: hidden;
+                  overflow-x: hidden;
+                  overflow-y: auto;
                   padding: 10px !important;
                 }
 
                 .erp-dashboard {
                   display: grid;
-                  grid-template-rows: auto auto auto auto;
+                  grid-template-rows: auto auto minmax(0, 1fr);
                   align-content: start;
-                  gap: 7px;
+                  gap: 10px;
                   width: 100%;
                   max-width: 1680px;
                   min-width: 0;
@@ -1727,15 +1610,50 @@ case "export-stock":
 
                 .dashboard-heading h2 {
                   font-size: 20px !important;
+                  letter-spacing: -0.025em;
                 }
 
+                .dashboard-heading { padding: 2px 2px 4px; }
+                .dashboard-heading > div { color: #64748b !important; font-size: 12px !important; }
+
                 .dashboard-main-cards {
+                  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
                   gap: 6px !important;
                 }
 
+                .dashboard-chart-layout {
+                  display: grid;
+                  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+                  align-items: stretch;
+                  gap: 10px;
+                  min-width: 0;
+                }
+
                 .dashboard-main-cards > div {
-                  min-height: 60px !important;
-                  padding: 7px 9px !important;
+                  min-height: 78px !important;
+                  padding: 10px 11px !important;
+                  border: 1px solid #e2e8f0;
+                  border-top: 3px solid #15803d;
+                  border-radius: 10px !important;
+                  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.055) !important;
+                  background: linear-gradient(155deg, #ffffff, #fbfdfb) !important;
+                }
+
+                .dashboard-main-cards > div:hover {
+                  border-color: #bbd7c3;
+                  box-shadow: 0 7px 18px rgba(15, 23, 42, 0.09) !important;
+                  transform: translateY(-1px);
+                  transition: transform 150ms ease, box-shadow 150ms ease;
+                }
+
+                .dashboard-main-cards > div > div:first-child { color: #536273 !important; font-size: 11px !important; font-weight: 650; }
+                .dashboard-main-cards .dashboard-kpi-value {
+                  font-size: clamp(13px, 1vw, 17px) !important;
+                  overflow-wrap: normal;
+                  white-space: normal !important;
+                  overflow: visible !important;
+                  text-overflow: clip !important;
+                  letter-spacing: -0.025em;
                 }
 
                 .dashboard-main-cards > p {
@@ -1745,8 +1663,8 @@ case "export-stock":
                 }
 
                 .dashboard-business-summary {
-                  padding: 7px !important;
-                  overflow: hidden;
+                  padding: 9px !important;
+                  overflow: visible;
                 }
 
                 .dashboard-business-summary > h3 {
@@ -1754,13 +1672,13 @@ case "export-stock":
                 }
 
                 .dashboard-business-summary .dashboard-export-summary-cards {
-                  grid-template-columns: repeat(11, minmax(0, 1fr)) !important;
-                  gap: 5px !important;
+                  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+                  gap: 6px !important;
                 }
 
                 .dashboard-business-summary .dashboard-payment-summary-cards {
                   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-                  gap: 5px !important;
+                  gap: 6px !important;
                 }
 
                 .dashboard-business-summary button {
@@ -1772,9 +1690,11 @@ case "export-stock":
                   flex-direction: column;
                   gap: 6px;
                   min-height: 0;
+                  height: 100%;
+                  box-sizing: border-box;
                   margin-top: 0 !important;
-                  padding: 8px !important;
-                  overflow: hidden;
+                  padding: 10px !important;
+                  overflow: visible;
                 }
 
                 .dashboard-stock-heading {
@@ -1788,8 +1708,8 @@ case "export-stock":
 
                 .dashboard-stock-layout {
                   display: grid;
-                  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-                  gap: 10px;
+                  grid-template-columns: minmax(300px, 0.65fr) minmax(0, 1.35fr);
+                  gap: 16px;
                   min-height: 0;
                 }
 
@@ -1800,11 +1720,21 @@ case "export-stock":
                 }
 
                 .dashboard-stock-summary {
-                  overflow-y: auto;
-                  overscroll-behavior: contain;
+                  overflow: visible;
+                }
+
+                .dashboard-stock-unavailable {
+                  margin-bottom: 8px;
+                  padding: 10px;
+                  border: 1px solid #e5e7eb;
+                  border-radius: 7px;
+                  color: #6b7280;
+                  background: #f8fafc;
+                  font-size: 12px;
                 }
 
                 .dashboard-stock-summary .dashboard-monthly-cards {
+                  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
                   gap: 5px !important;
                   margin-bottom: 5px !important;
                 }
@@ -1820,14 +1750,14 @@ case "export-stock":
                   padding: 0 0 0 8px !important;
                   border-top: 0 !important;
                   border-left: 1px solid #e5e7eb;
-                  overflow: hidden;
+                  overflow: visible;
                 }
 
                 .dashboard-stock-chart > div,
                 .dashboard-stock-chart > div > div {
                   width: 100% !important;
                   min-width: 0 !important;
-                  overflow: hidden !important;
+                  overflow: visible !important;
                 }
 
                 .dashboard-stock-chart svg {
@@ -1835,16 +1765,76 @@ case "export-stock":
                   max-width: 100%;
                 }
 
+                .dashboard-monthly-financial-chart {
+                  min-width: 0;
+                  height: 100%;
+                  box-sizing: border-box;
+                  padding: 12px 15px 8px;
+                  border: 1px solid #e2e8f0;
+                  border-radius: 12px;
+                  background: linear-gradient(155deg, #ffffff, #fbfcff);
+                  box-shadow: 0 5px 18px rgba(15, 23, 42, 0.05);
+                }
+
+                .dashboard-monthly-financial-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+                .dashboard-financial-bar { transition: opacity 140ms ease, filter 140ms ease; outline: none; }
+                .dashboard-financial-bar:hover,
+                .dashboard-financial-bar:focus-visible { filter: brightness(0.88); stroke: #0f172a; stroke-width: 1.5; }
+
+                .dashboard-brand-ticker {
+                  height: 28px;
+                  display: flex;
+                  align-items: center;
+                  overflow: hidden;
+                  border-radius: 7px;
+                  margin: 0 0 5px;
+                  color: #334155;
+                  background: linear-gradient(90deg, #f8fafc, #f1f7f2, #f8fafc);
+                  border: 1px solid #e8eee9;
+                }
+
+                .dashboard-brand-ticker-track {
+                  display: flex;
+                  width: max-content;
+                  align-items: center;
+                  animation: ukexim-brand-ticker 34s linear infinite;
+                  will-change: transform;
+                }
+
+                .dashboard-brand-ticker-track > span {
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 22px;
+                  padding-right: 42px;
+                  white-space: nowrap;
+                  font-size: 11px;
+                  letter-spacing: 0.025em;
+                }
+
+                .dashboard-brand-ticker-track strong:first-child { color: #123148; letter-spacing: 0.13em; }
+                .dashboard-brand-ticker-track strong:nth-child(3) { color: #15803d; letter-spacing: 0.12em; }
+                .ticker-separator { color: #c39b3b; font-size: 12px; }
+
+                @keyframes ukexim-brand-ticker {
+                  from { transform: translateX(0); }
+                  to { transform: translateX(-50%); }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                  .dashboard-brand-ticker-track { animation: none; }
+                  .dashboard-main-cards > div:hover { transform: none; }
+                }
+
                 .dashboard-footer {
-                  flex: 0 0 38px;
-                  height: 38px;
+                  flex: 0 0 auto;
+                  min-height: 28px;
                   margin-top: 4px !important;
-                  padding-top: 2px !important;
+                  padding-top: 5px !important;
                 }
 
                 .dashboard-footer > div {
                   align-items: center;
-                  min-height: 32px;
+                  min-height: 22px;
                 }
 
                 .dashboard-footer span,
@@ -1875,6 +1865,10 @@ case "export-stock":
                     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
                   }
 
+                  .dashboard-chart-layout {
+                    grid-template-columns: minmax(0, 1fr);
+                  }
+
                   .dashboard-stock-layout {
                     grid-template-columns: minmax(0, 1fr);
                   }
@@ -1894,31 +1888,11 @@ case "export-stock":
                   }
 
                   .dashboard-business-summary .dashboard-export-summary-cards {
-                    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)) !important;
-                  }
-                }
-
-                @media (min-width: 1201px) and (max-height: 760px) {
-                  .dashboard-shell {
-                    height: auto;
-                    min-height: 100vh;
-                    overflow: visible;
+                    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
                   }
 
-                  .dashboard-page {
-                    height: auto;
-                    min-height: 100vh !important;
-                    overflow: visible;
-                  }
-
-                  .erp-dashboard {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                  }
-
-                  .dashboard-stock-panel {
-                    overflow: visible;
+                  .dashboard-business-summary .dashboard-payment-summary-cards {
+                    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
                   }
                 }
 
@@ -1945,6 +1919,10 @@ case "export-stock":
                     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
                   }
 
+                  .dashboard-chart-layout {
+                    grid-template-columns: minmax(0, 1fr);
+                  }
+
                   .dashboard-monthly-cards {
                     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
                   }
@@ -1968,7 +1946,7 @@ case "export-stock":
                   }
 
                   .dashboard-business-summary .dashboard-export-summary-cards {
-                    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)) !important;
+                    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
                   }
 
                   .dashboard-business-summary .dashboard-payment-summary-cards {
@@ -1997,6 +1975,10 @@ case "export-stock":
 
                   .dashboard-business-summary .dashboard-payment-summary-cards {
                     grid-template-columns: 1fr !important;
+                  }
+
+                  .dashboard-business-summary .dashboard-export-summary-cards {
+                    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
                   }
                 }
               `}</style>
@@ -2272,711 +2254,27 @@ function InternationalExportWorkspace({
       | "export-invoice"
   ) => void;
 }) {
-  const actionButton = {
-    border: "1px solid #d1d5db",
-    borderRadius: "8px",
-    background: "#ffffff",
-    padding: "12px",
-    cursor: "pointer",
-    textAlign: "left" as const,
-    boxShadow:
-      "0 2px 6px rgba(0,0,0,0.05)",
-    transition: "0.2s",
-  };
-
   return (
-    <div
-      style={{
-        width: "100%",
-        minWidth: 0,
-      }}
-    >
-      {/* HEADER */}
-
-      <div
-        style={{
-          marginBottom: "12px",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "22px",
-            fontWeight: 900,
-            color: "#14532d",
-          }}
-        >
-          🌍 International Export
-        </div>
-
-        <div
-          style={{
-            marginTop: "3px",
-            fontSize: "11px",
-            color: "#6b7280",
-          }}
-        >
-          Export Dashboard / Workspace
-        </div>
-      </div>
-
-      <BusinessSummaryPanel view="export" onOpen={(page) => onOpen(page as Parameters<typeof onOpen>[0])} />
-
-      {/* QUICK ACTIONS */}
-
-      <div
-        style={{
-          background: "#ffffff",
-          borderRadius: "8px",
-          border:
-            "1px solid #e5e7eb",
-          padding: "12px",
-          boxShadow:
-            "0 2px 6px rgba(0,0,0,0.06)",
-          marginBottom: "12px",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "15px",
-            fontWeight: 900,
-            color: "#14532d",
-            marginBottom: "8px",
-          }}
-        >
-          ⚡ Quick Actions
-        </div>
-
-        <div
-          className="export-workspace-actions"
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(10, minmax(0, 1fr))",
-            gap: "8px",
-          }}
-        >
-          <button
-            type="button"
-            style={actionButton}
-            onClick={() =>
-              onOpen(
-                "export-customer"
-              )
-            }
-          >
-            <div
-              style={{
-                fontSize: "18px",
-              }}
-            >
-              👥
-            </div>
-
-            <div
-              style={{
-                marginTop: "4px",
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#374151",
-              }}
-            >
-              Export Customer
-            </div>
-
-            <div
-              style={{
-                marginTop: "2px",
-                fontSize: "9px",
-                color: "#6b7280",
-              }}
-            >
-              Manage export buyers
-            </div>
-          </button>
-
-          <button
-            type="button"
-            style={actionButton}
-            onClick={() =>
-              onOpen(
-                "export-enquiry"
-              )
-            }
-          >
-            <div
-              style={{
-                fontSize: "18px",
-              }}
-            >
-              📩
-            </div>
-
-            <div
-              style={{
-                marginTop: "4px",
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#374151",
-              }}
-            >
-              New Enquiry
-            </div>
-
-            <div
-              style={{
-                marginTop: "2px",
-                fontSize: "9px",
-                color: "#6b7280",
-              }}
-            >
-              Record buyer enquiry
-            </div>
-          </button>
-
-          <button
-            type="button"
-            style={actionButton}
-            onClick={() =>
-              onOpen(
-                "export-quotation"
-              )
-            }
-          >
-            <div
-              style={{
-                fontSize: "18px",
-              }}
-            >
-              📄
-            </div>
-
-            <div
-              style={{
-                marginTop: "4px",
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#374151",
-              }}
-            >
-              New Quotation
-            </div>
-
-            <div
-              style={{
-                marginTop: "2px",
-                fontSize: "9px",
-                color: "#6b7280",
-              }}
-            >
-              Prepare export quotation
-            </div>
-          </button>
-
-          <button
-            type="button"
-            style={actionButton}
-            onClick={() =>
-              onOpen(
-                "export-proforma"
-              )
-            }
-          >
-            <div
-              style={{
-                fontSize: "18px",
-              }}
-            >
-              🧾
-            </div>
-
-            <div
-              style={{
-                marginTop: "4px",
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#374151",
-              }}
-            >
-              New Proforma
-            </div>
-
-            <div
-              style={{
-                marginTop: "2px",
-                fontSize: "9px",
-                color: "#6b7280",
-              }}
-            >
-              Create from quotation
-            </div>
-          </button>
-
-          <button
-            type="button"
-            style={actionButton}
-            onClick={() =>
-              onOpen(
-                "export-order"
-              )
-            }
-          >
-            <div
-              style={{
-                fontSize: "18px",
-              }}
-            >
-              📦
-            </div>
-
-            <div
-              style={{
-                marginTop: "4px",
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#374151",
-              }}
-            >
-              New Export Order
-            </div>
-
-            <div
-              style={{
-                marginTop: "2px",
-                fontSize: "9px",
-                color: "#6b7280",
-              }}
-            >
-              Create from proforma
-            </div>
-          </button>
-
-          <button
-            type="button"
-            style={actionButton}
-            onClick={() =>
-              onOpen(
-                "export-purchase"
-              )
-            }
-          >
-            <div
-              style={{
-                fontSize: "18px",
-              }}
-            >
-              📥
-            </div>
-
-            <div
-              style={{
-                marginTop: "4px",
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#374151",
-              }}
-            >
-              New Export Purchase
-            </div>
-
-            <div
-              style={{
-                marginTop: "2px",
-                fontSize: "9px",
-                color: "#6b7280",
-              }}
-            >
-              Purchase goods for export
-            </div>
-          </button>
-
-          <button
-            type="button"
-            style={actionButton}
-            onClick={() =>
-              onOpen(
-                "export-reservation"
-              )
-            }
-          >
-            <div
-              style={{
-                fontSize: "18px",
-              }}
-            >
-              🔒
-            </div>
-
-            <div
-              style={{
-                marginTop: "4px",
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#374151",
-              }}
-            >
-              Stock Reservation
-            </div>
-
-            <div
-              style={{
-                marginTop: "2px",
-                fontSize: "9px",
-                color: "#6b7280",
-              }}
-            >
-              Reserve stock for export order
-            </div>
-          </button>
-
-          <button
-            type="button"
-            style={actionButton}
-            onClick={() =>
-              onOpen(
-                "export-packing"
-              )
-            }
-          >
-            <div
-              style={{
-                fontSize: "18px",
-              }}
-            >
-              📦
-            </div>
-
-            <div
-              style={{
-                marginTop: "4px",
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#374151",
-              }}
-            >
-              Export Packing
-            </div>
-
-            <div
-              style={{
-                marginTop: "2px",
-                fontSize: "9px",
-                color: "#6b7280",
-              }}
-            >
-              Record actual packing
-            </div>
-          </button>
-
-          <button
-            type="button"
-            style={actionButton}
-            onClick={() =>
-              onOpen(
-                "export-stock"
-              )
-            }
-          >
-            <div
-              style={{
-                fontSize: "18px",
-              }}
-            >
-              📦
-            </div>
-
-            <div
-              style={{
-                marginTop: "4px",
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#374151",
-              }}
-            >
-              Export Stock
-            </div>
-
-            <div
-              style={{
-                marginTop: "2px",
-                fontSize: "9px",
-                color: "#6b7280",
-              }}
-            >
-              View international stock
-            </div>
-          </button>
-
-          <button
-            type="button"
-            style={actionButton}
-            onClick={() =>
-              onOpen(
-                "export-shipment"
-              )
-            }
-          >
-            <div
-              style={{
-                fontSize: "18px",
-              }}
-            >
-              🚢
-            </div>
-
-            <div
-              style={{
-                marginTop: "4px",
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#374151",
-              }}
-            >
-              Export Shipment
-            </div>
-
-            <div
-              style={{
-                marginTop: "2px",
-                fontSize: "9px",
-                color: "#6b7280",
-              }}
-            >
-              Manage export shipment
-            </div>
-          </button>
-
-          <button
-            type="button"
-            style={actionButton}
-            onClick={() =>
-              onOpen(
-                "export-invoice"
-              )
-            }
-          >
-            <div
-              style={{
-                fontSize: "18px",
-              }}
-            >
-              🧾
-            </div>
-
-            <div
-              style={{
-                marginTop: "4px",
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#374151",
-              }}
-            >
-              Commercial Invoice
-            </div>
-
-            <div
-              style={{
-                marginTop: "2px",
-                fontSize: "9px",
-                color: "#6b7280",
-              }}
-            >
-              Final export invoice
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* WORKFLOW */}
-
-      <div
-        style={{
-          background: "#ffffff",
-          borderRadius: "8px",
-          border:
-            "1px solid #e5e7eb",
-          padding: "12px",
-          boxShadow:
-            "0 2px 6px rgba(0,0,0,0.06)",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "15px",
-            fontWeight: 900,
-            color: "#14532d",
-            marginBottom: "9px",
-          }}
-        >
-          🔄 Export Workflow
-        </div>
-
-        <div
-          className="export-workflow"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            flexWrap: "wrap",
-          }}
-        >
-          <WorkflowStep
-            number="1"
-            title="Enquiry"
-            onClick={() =>
-              onOpen(
-                "export-enquiry"
-              )
-            }
-          />
-
-          <WorkflowArrow />
-
-          <WorkflowStep
-            number="2"
-            title="Quotation"
-            onClick={() =>
-              onOpen(
-                "export-quotation"
-              )
-            }
-          />
-
-          <WorkflowArrow />
-
-          <WorkflowStep
-            number="3"
-            title="Proforma"
-            onClick={() =>
-              onOpen(
-                "export-proforma"
-              )
-            }
-          />
-
-          <WorkflowArrow />
-
-          <WorkflowStep
-            number="4"
-            title="Export Order"
-            onClick={() =>
-              onOpen(
-                "export-order"
-              )
-            }
-          />
-
-          <WorkflowArrow />
-
-          <WorkflowStep
-            number="5"
-            title="Reservation"
-            onClick={() =>
-              onOpen(
-                "export-reservation"
-              )
-            }
-          />
-
-          <WorkflowArrow />
-
-          <WorkflowStep
-            number="6"
-            title="Packing"
-            onClick={() =>
-              onOpen(
-                "export-packing"
-              )
-            }
-          />
-
-          <WorkflowArrow />
-
-          <WorkflowStep
-            number="7"
-            title="Shipment"
-            onClick={() =>
-              onOpen(
-                "export-shipment"
-              )
-            }
-          />
-
-          <WorkflowArrow />
-
-          <WorkflowStep
-            number="8"
-            title="Invoice"
-            onClick={() =>
-              onOpen(
-                "export-invoice"
-              )
-            }
-          />
-
-          <WorkflowArrow />
-
-          <WorkflowStep
-            number="9"
-            title="Payment"
-            disabled
-          />
-        </div>
-
-        <div
-          style={{
-            marginTop: "10px",
-            padding: "8px 10px",
-            borderRadius: "6px",
-            background: "#f0fdf4",
-            border:
-              "1px solid #bbf7d0",
-            color: "#166534",
-            fontSize: "10px",
-            lineHeight: 1.5,
-          }}
-        >
-          <strong>
-            Current Stage:
-          </strong>{" "}
-          Shipment module is now available
-          after Packing.
-        </div>
-      </div>
-
-      {/* RESPONSIVE CSS */}
-
+    <main className="export-landing">
       <style>{`
-        @media (max-width: 1200px) {
-          .export-workspace-summary {
-            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-          }
-
-          .export-workspace-actions {
-            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-          }
-        }
-
-        @media (max-width: 800px) {
-          .export-workspace-summary {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-          }
-
-          .export-workspace-actions {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-          }
-        }
-
-        @media (max-width: 600px) {
-          .export-workspace-summary,
-          .export-workspace-actions {
-            grid-template-columns: 1fr !important;
-          }
-        }
+        .export-landing { width:100%; min-width:0; display:grid; gap:8px; }
+        .export-landing-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:2px 2px 4px; }
+        .export-landing-header h1 { margin:0; color:#15364b; font-size:22px; line-height:1.2; }
+        .export-landing-header p { margin:4px 0 0; color:#64748b; font-size:11px; }
+        .export-landing-brand { color:#15803d; font-size:10px; font-weight:750; letter-spacing:.12em; white-space:nowrap; }
+        @media (max-width: 620px) { .export-landing-header { align-items:flex-start; flex-direction:column; } .export-landing-brand { white-space:normal; } }
       `}</style>
-    </div>
+      <header className="export-landing-header">
+        <div>
+          <h1>International Export</h1>
+          <p>Company-scoped export source inventory, owner review and module access</p>
+        </div>
+        <div className="export-landing-brand">UK EXIM ENTERPRISES · UTTAM HALDI</div>
+      </header>
+      <BusinessSummaryPanel view="export" onOpen={(page) => onOpen(page as Parameters<typeof onOpen>[0])} />
+    </main>
   );
 }
-
 /* =========================================================
    INTERNATIONAL MODULE WRAPPER
 ========================================================= */
@@ -3042,98 +2340,6 @@ function InternationalModuleWrapper({
 }
 
 /* =========================================================
-   EXPORT WORKFLOW STEP
-========================================================= */
-
-function WorkflowStep({
-  number,
-  title,
-  onClick,
-  disabled = false,
-}: {
-  number: string;
-  title: string;
-  onClick?: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "5px",
-        border:
-          disabled
-            ? "1px solid #e5e7eb"
-            : "1px solid #bbf7d0",
-        borderRadius: "7px",
-        padding: "6px 8px",
-        background:
-          disabled
-            ? "#f9fafb"
-            : "#f0fdf4",
-        color:
-          disabled
-            ? "#9ca3af"
-            : "#166534",
-        cursor:
-          disabled
-            ? "default"
-            : "pointer",
-        fontSize: "9px",
-        fontWeight: 800,
-      }}
-    >
-      <span
-        style={{
-          width: "18px",
-          height: "18px",
-          borderRadius: "50%",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background:
-            disabled
-              ? "#e5e7eb"
-              : "#22c55e",
-          color:
-            disabled
-              ? "#6b7280"
-              : "#ffffff",
-          fontSize: "8px",
-          fontWeight: 900,
-        }}
-      >
-        {number}
-      </span>
-
-      {title}
-    </button>
-  );
-}
-
-/* =========================================================
-   WORKFLOW ARROW
-========================================================= */
-
-function WorkflowArrow() {
-  return (
-    <span
-      style={{
-        color: "#9ca3af",
-        fontSize: "12px",
-        fontWeight: 800,
-      }}
-    >
-      →
-    </span>
-  );
-}
-
-/* =========================================================
    DASHBOARD MAIN CARD
 ========================================================= */
 
@@ -3158,7 +2364,16 @@ function DashboardMainCard({
 }) {
   return (
     <div
+      className="dashboard-kpi-card"
       onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      } : undefined}
       aria-label={ariaLabel}
       title={ariaLabel}
       style={{
@@ -3171,6 +2386,7 @@ function DashboardMainCard({
       }}
     >
       <div
+        className="dashboard-kpi-value"
         style={{
           display: "flex",
           alignItems: "center",
@@ -3204,10 +2420,8 @@ function DashboardMainCard({
               : "20px",
           fontWeight: 800,
           lineHeight: 1.1,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow:
-            "ellipsis",
+          whiteSpace: "normal",
+          overflowWrap: "normal",
           fontVariantNumeric:
             "tabular-nums",
         }}
@@ -3422,7 +2636,7 @@ function MonthlyStockGraph({
     >
       <div
         style={{
-          minWidth: "700px",
+          minWidth: 0,
           width: "100%",
         }}
       >
@@ -3633,14 +2847,98 @@ function MonthlyStockGraph({
    MONTHLY STOCK MOVEMENT GRAPH
 ========================================================= */
 
+function MonthlySalesPurchaseGraph({
+  data,
+}: {
+  data:
+    | { status: "loading" }
+    | { status: "ready"; months: Array<{ month: string; sales: number; purchase: number }> }
+    | { status: "error" };
+}) {
+  if (data.status !== "ready") {
+    return (
+      <section className="dashboard-monthly-financial-chart" aria-labelledby="monthly-financial-title">
+        <h3 id="monthly-financial-title" style={{ margin: "0 0 3px", color: "#15364b", fontSize: 15 }}>Monthly Sales vs Purchase</h3>
+        <p role={data.status === "error" ? "alert" : "status"} style={{ margin: 0, color: "#64748b", fontSize: 12 }}>
+          {data.status === "loading" ? "Loading verified PostgreSQL monthly totals…" : "Monthly business totals could not be loaded from PostgreSQL."}
+        </p>
+      </section>
+    );
+  }
+
+  const width = 1000;
+  const height = 238;
+  const left = 86;
+  const right = 18;
+  const top = 18;
+  const bottom = 42;
+  const plotHeight = height - top - bottom;
+  const plotWidth = width - left - right;
+  const maxValue = Math.max(1, ...data.months.flatMap((month) => [month.sales, month.purchase]));
+  const ceiling = Math.pow(10, Math.floor(Math.log10(maxValue))) * Math.ceil(maxValue / Math.pow(10, Math.floor(Math.log10(maxValue))));
+  const tickValue = ceiling / 4;
+  const formatMoney = (value: number) => `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatAxis = (value: number) => value >= 100000 ? `₹${(value / 100000).toLocaleString("en-IN", { maximumFractionDigits: 1 })}L` : value >= 1000 ? `₹${(value / 1000).toLocaleString("en-IN", { maximumFractionDigits: 0 })}k` : `₹${Math.round(value)}`;
+  const monthLabel = (value: string) => {
+    const [year, month] = value.split("-").map(Number);
+    return new Date(year, month - 1, 1).toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+  };
+  const groupWidth = plotWidth / data.months.length;
+  const barWidth = Math.min(34, groupWidth * 0.28);
+
+  return (
+    <section className="dashboard-monthly-financial-chart" aria-labelledby="monthly-financial-title">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <h3 id="monthly-financial-title" style={{ margin: 0, color: "#15364b", fontSize: 15, letterSpacing: "-0.015em" }}>Monthly Sales vs Purchase</h3>
+          <p style={{ margin: "3px 0 0", color: "#64748b", fontSize: 11 }}>Domestic business · Last 6 months · PostgreSQL</p>
+        </div>
+        <div aria-label="Chart legend" style={{ display: "flex", gap: 16, color: "#475569", fontSize: 11, fontWeight: 650 }}>
+          <span><i style={{ display: "inline-block", width: 9, height: 9, marginRight: 6, borderRadius: 2, background: "#16834a" }} />Sales</span>
+          <span><i style={{ display: "inline-block", width: 9, height: 9, marginRight: 6, borderRadius: 2, background: "#4e79a7" }} />Purchase</span>
+        </div>
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Monthly domestic Sales and Purchase totals for the last six months, in Indian rupees">
+        {[0, 1, 2, 3, 4].map((tick) => {
+          const value = ceiling - tick * tickValue;
+          const y = top + (tick / 4) * plotHeight;
+          return <g key={tick}>
+            <line x1={left} x2={width - right} y1={y} y2={y} stroke="#e8edf2" strokeWidth="1" />
+            <text x={left - 12} y={y + 4} textAnchor="end" fill="#718096" fontSize="11">{formatAxis(value)}</text>
+          </g>;
+        })}
+        {data.months.map((month, index) => {
+          const center = left + groupWidth * (index + 0.5);
+          const salesHeight = (month.sales / ceiling) * plotHeight;
+          const purchaseHeight = (month.purchase / ceiling) * plotHeight;
+          const xSales = center - barWidth - 2;
+          const xPurchase = center + 2;
+          return <g key={month.month}>
+            <rect className="dashboard-financial-bar" tabIndex={0} x={xSales} y={top + plotHeight - salesHeight} width={barWidth} height={Math.max(0, salesHeight)} rx="4" fill="#16834a">
+              <title>{`${monthLabel(month.month)} Sales: ${formatMoney(month.sales)}`}</title>
+            </rect>
+            <rect className="dashboard-financial-bar" tabIndex={0} x={xPurchase} y={top + plotHeight - purchaseHeight} width={barWidth} height={Math.max(0, purchaseHeight)} rx="4" fill="#4e79a7">
+              <title>{`${monthLabel(month.month)} Purchase: ${formatMoney(month.purchase)}`}</title>
+            </rect>
+            <text x={center} y={height - 14} textAnchor="middle" fill="#475569" fontSize="12" fontWeight="600">{monthLabel(month.month)}</text>
+          </g>;
+        })}
+      </svg>
+    </section>
+  );
+}
+
 function MonthlyStockMovementGraph({
   reports,
+  status,
 }: {
   reports: MonthlyStockSummary[];
+  status: "loading" | "ready" | "error";
 }) {
   if (reports.length === 0) {
     return (
       <div
+        role={status === "error" ? "alert" : "status"}
         style={{
           padding: "15px",
           textAlign: "center",
@@ -3651,18 +2949,22 @@ function MonthlyStockMovementGraph({
           borderRadius: "7px",
         }}
       >
-        No monthly stock data available.
+        {status === "loading"
+          ? "Loading verified PostgreSQL stock movements…"
+          : status === "error"
+            ? "Monthly stock movements could not be loaded from PostgreSQL."
+            : "No verified PostgreSQL monthly stock movement data is available for this period."}
       </div>
     );
   }
 
   const width = 900;
-  const height = 180;
+  const height = 270;
 
-  const paddingLeft = 60;
-  const paddingRight = 20;
-  const paddingTop = 25;
-  const paddingBottom = 40;
+  const paddingLeft = 76;
+  const paddingRight = 24;
+  const paddingTop = 30;
+  const paddingBottom = 48;
 
   const chartWidth =
     width -
@@ -3808,18 +3110,16 @@ function MonthlyStockMovementGraph({
       >
         <div
           style={{
-            display: "flex",
-            justifyContent:
-              "space-between",
-            alignItems:
-              "center",
-            marginBottom: "5px",
-            gap: "10px",
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr)",
+            justifyItems: "start",
+            marginBottom: "4px",
+            gap: "5px",
           }}
         >
           <div
             style={{
-              fontSize: "12px",
+              fontSize: "13px",
               fontWeight: 800,
               color: "#374151",
             }}
@@ -3831,8 +3131,9 @@ function MonthlyStockMovementGraph({
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "12px",
-              flexWrap: "wrap",
+              gap: "10px",
+              flexWrap: "nowrap",
+              whiteSpace: "nowrap",
               fontSize: "10px",
               fontWeight: 700,
               color: "#374151",
@@ -3863,7 +3164,7 @@ function MonthlyStockMovementGraph({
         <svg
           viewBox={`0 0 ${width} ${height}`}
           width="100%"
-          height="75"
+          height="auto"
           role="img"
           aria-label="Monthly stock movement graph"
         >
@@ -3925,6 +3226,16 @@ function MonthlyStockMovementGraph({
             strokeWidth="1"
           />
 
+          <text
+            x={paddingLeft}
+            y={18}
+            fontSize="10"
+            fontWeight="700"
+            fill="#64748b"
+          >
+            Quantity (KG)
+          </text>
+
           {/* Y LABELS */}
 
           <text
@@ -3935,7 +3246,7 @@ function MonthlyStockMovementGraph({
               paddingTop + 4
             }
             textAnchor="end"
-            fontSize="9"
+            fontSize="11"
             fill="#6b7280"
           >
             {maxValue.toLocaleString(
@@ -3952,7 +3263,7 @@ function MonthlyStockMovementGraph({
               chartHeight
             }
             textAnchor="end"
-            fontSize="9"
+            fontSize="11"
             fill="#6b7280"
           >
             {minValue.toLocaleString(
@@ -4028,7 +3339,7 @@ function MonthlyStockMovementGraph({
                   16
                 }
                 textAnchor="middle"
-                fontSize="8"
+                fontSize="10"
                 fill="#6b7280"
               >
                 {shortMonthLabel(
@@ -4051,7 +3362,7 @@ function MonthlyStockMovementGraph({
                     key={`${item.key}-${index}`}
                     cx={getX(index)}
                     cy={getY(value)}
-                    r="3"
+                    r="4"
                     fill="#ffffff"
                     stroke={
                       item.key ===
@@ -4065,7 +3376,9 @@ function MonthlyStockMovementGraph({
                         ? "#ea580c"
                         : "#14532d"
                     }
-                    strokeWidth="1.5"
+                    strokeWidth="2"
+                    tabIndex={0}
+                    aria-label={`${item.label}, ${shortMonthLabel(reports[index].month)}: ${value.toLocaleString("en-IN", { maximumFractionDigits: 3 })} KG`}
                   >
                     <title>
                       {
@@ -4086,7 +3399,7 @@ function MonthlyStockMovementGraph({
                           maximumFractionDigits:
                             3,
                         }
-                      )}
+                      )} KG
                     </title>
                   </circle>
                 )

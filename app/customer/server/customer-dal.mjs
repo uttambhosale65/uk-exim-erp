@@ -185,7 +185,7 @@ export function createCustomerDAL({ getOwnerContext, database, idFactory = rando
              OR city ILIKE $3 ESCAPE E'\\\\'
              OR gst ILIKE $3 ESCAPE E'\\\\'
              OR pan ILIKE $3 ESCAPE E'\\\\')
-         ORDER BY code, id LIMIT $4 OFFSET $5`,
+         ORDER BY NULLIF(to_jsonb(customers)->>'created_at', '')::timestamptz DESC NULLS LAST, code DESC, id DESC LIMIT $4 OFFSET $5`,
         [companyId, status, search, limit, offset],
       );
       const previewCode = await nextCode(database, companyId);

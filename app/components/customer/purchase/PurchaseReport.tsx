@@ -1,1073 +1,120 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type CSSProperties,
-} from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import type { Purchase } from "./PurchaseTypes";
 
-import { Purchase } from "./PurchaseTypes";
-import { loadPurchases } from "./PurchaseStorage";
+type View = "register" | "products" | "suppliers" | "monthly";
+type LoadState = "loading" | "ready" | "empty" | "error";
+const money = (value: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+const qty = (value: number) => new Intl.NumberFormat("en-IN", { maximumFractionDigits: 3 }).format(value);
+const control: CSSProperties = { padding: "8px 10px", border: "1px solid #dbe3e8", borderRadius: 7, background: "#fff", color: "#334155" };
+const withinDates = (date: string, from: string, to: string) => (!from || date.slice(0, 10) >= from) && (!to || date.slice(0, 10) <= to);
+
+async function readJson(response: Response) {
+  if (!(response.headers.get("content-type") ?? "").toLowerCase().includes("application/json")) throw new Error(`Purchase API returned ${response.status} with a non-JSON response.`);
+  const body = await response.json() as Record<string, unknown>;
+  if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "Purchase data could not be loaded.");
+  return body;
+}
+
+async function readAllPurchases() {
+  const rows: Purchase[] = [];
+  for (let offset = 0; offset < 100000; offset += 200) {
+    const body = await readJson(await fetch(`/api/purchases?limit=200&offset=${offset}`, { cache: "no-store", credentials: "same-origin" }));
+    if (!Array.isArray(body.transactions)) throw new Error("Purchase API response did not contain a transaction list.");
+    rows.push(...body.transactions as Purchase[]);
+    if (body.transactions.length < 200) return rows;
+  }
+  throw new Error("Purchase report exceeds the safe 100,000-record display limit; narrow the report at the source.");
+}
+
+function downloadCsv(filename: string, rows: Array<Record<string, string | number>>) {
+  if (!rows.length) return;
+  const columns = [...new Set(rows.flatMap(row => Object.keys(row)))];
+  const cell = (value: unknown) => { let text = String(value ?? ""); if (/^[=+@\-]/.test(text)) text = `'${text}`; return `"${text.replaceAll('"', '""')}"`; };
+  const csv = [columns.map(cell).join(","), ...rows.map(row => columns.map(key => cell(row[key])).join(","))].join("\r\n");
+  const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a"); link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url);
+}
 
 export default function PurchaseReport() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [state, setState] = useState<LoadState>("loading");
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [supplierCode, setSupplierCode] = useState("");
+  const [productCode, setProductCode] = useState("");
+  const [view, setView] = useState<View>("register");
 
-  useEffect(() => {
-    setPurchases(loadPurchases());
+  const load = useCallback(async () => {
+    setState("loading"); setError("");
+    try { const transactions = await readAllPurchases(); setPurchases(transactions); setState(transactions.length ? "ready" : "empty"); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Purchase data could not be loaded."); setState("error"); }
   }, []);
+  useEffect(() => { void load(); }, [load]);
 
-  const filteredPurchases = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
+  const suppliers = useMemo(() => [...new Map(purchases.map(item => [item.supplierCode, item.supplierName])).entries()].sort((a, b) => a[1].localeCompare(b[1])), [purchases]);
+  const products = useMemo(() => [...new Map(purchases.flatMap(purchase => purchase.items.map(item => [item.productCode, item.productName] as const))).entries()].sort((a, b) => a[1].localeCompare(b[1])), [purchases]);
+  const filtered = useMemo(() => purchases.filter(purchase => {
+    const q = search.trim().toLocaleLowerCase();
+    const matches = !q || [purchase.purchaseNo, purchase.invoiceNo, purchase.supplierCode, purchase.supplierName, purchase.purchaseDate, ...purchase.items.flatMap(item => [item.productCode, item.productName, item.hsn])].some(value => String(value ?? "").toLocaleLowerCase().includes(q));
+    return matches && withinDates(purchase.purchaseDate, from, to) && (!supplierCode || purchase.supplierCode === supplierCode)
+      && (!productCode || purchase.items.some(item => item.productCode === productCode));
+  }).sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate) || b.purchaseNo.localeCompare(a.purchaseNo)), [purchases, search, from, to, supplierCode, productCode]);
 
-    // नवीन GRN सर्वात वर
-    const orderedPurchases = [...purchases].reverse();
+  const totalQty = filtered.reduce((sum, row) => sum + row.totalQty, 0);
+  const subtotal = filtered.reduce((sum, row) => sum + row.totalAmount, 0);
+  const gst = filtered.reduce((sum, row) => sum + row.totalGstAmount, 0);
+  const total = filtered.reduce((sum, row) => sum + row.totalNetAmount, 0);
+  const productRows = useMemo(() => {
+    const groups = new Map<string, { code: string; name: string; quantity: number; amount: number; gst: number; total: number; grns: Set<string> }>();
+    for (const purchase of filtered) for (const item of purchase.items) { const row = groups.get(item.productCode) ?? { code: item.productCode, name: item.productName, quantity: 0, amount: 0, gst: 0, total: 0, grns: new Set<string>() }; row.quantity += item.qty; row.amount += item.amount; row.gst += item.gstAmount; row.total += item.netAmount; row.grns.add(purchase.id); groups.set(item.productCode, row); }
+    return [...groups.values()].sort((a, b) => b.total - a.total);
+  }, [filtered]);
+  const supplierRows = useMemo(() => {
+    const groups = new Map<string, { code: string; name: string; grns: number; quantity: number; total: number }>();
+    for (const purchase of filtered) { const row = groups.get(purchase.supplierCode) ?? { code: purchase.supplierCode, name: purchase.supplierName, grns: 0, quantity: 0, total: 0 }; row.grns++; row.quantity += purchase.totalQty; row.total += purchase.totalNetAmount; groups.set(purchase.supplierCode, row); }
+    return [...groups.values()].sort((a, b) => b.total - a.total);
+  }, [filtered]);
+  const monthlyRows = useMemo(() => {
+    const groups = new Map<string, { month: string; grns: number; quantity: number; subtotal: number; gst: number; total: number }>();
+    for (const purchase of filtered) { const month = purchase.purchaseDate.slice(0, 7); const row = groups.get(month) ?? { month, grns: 0, quantity: 0, subtotal: 0, gst: 0, total: 0 }; row.grns++; row.quantity += purchase.totalQty; row.subtotal += purchase.totalAmount; row.gst += purchase.totalGstAmount; row.total += purchase.totalNetAmount; groups.set(month, row); }
+    return [...groups.values()].sort((a, b) => a.month.localeCompare(b.month));
+  }, [filtered]);
+  const clearFilters = () => { setSearch(""); setFrom(""); setTo(""); setSupplierCode(""); setProductCode(""); };
+  const csvRows = view === "products" ? productRows.map(row => ({ "Product code": row.code, "Product name": row.name, Quantity: row.quantity, GRNs: row.grns.size, "Subtotal INR": row.amount, "GST INR": row.gst, "Total INR": row.total }))
+    : view === "suppliers" ? supplierRows.map(row => ({ "Supplier code": row.code, "Supplier name": row.name, GRNs: row.grns, Quantity: row.quantity, "Total INR": row.total }))
+      : view === "monthly" ? monthlyRows.map(row => ({ Month: row.month, GRNs: row.grns, Quantity: row.quantity, "Subtotal INR": row.subtotal, "GST INR": row.gst, "Purchase total INR": row.total }))
+        : filtered.map(row => ({ "Purchase no": row.purchaseNo, "Supplier invoice": row.invoiceNo, Date: row.purchaseDate, Supplier: row.supplierName, "Supplier code": row.supplierCode, Quantity: row.totalQty, Subtotal: row.totalAmount, GST: row.totalGstAmount, Total: row.totalNetAmount }));
 
-    if (!keyword) return orderedPurchases;
+  const tableStyle = { width: "100%", minWidth: 820, borderCollapse: "collapse" as const, fontSize: 12 };
+  const table = () => {
+    if (view === "products") return <table className="purchase-report-table" style={tableStyle}><thead><tr><th>Product</th><th>Quantity</th><th>GRNs</th><th>Subtotal</th><th>GST</th><th>Total</th></tr></thead><tbody>{productRows.map(row => <tr key={row.code}><td>{row.code} · {row.name}</td><td>{qty(row.quantity)}</td><td>{row.grns.size}</td><td>{money(row.amount)}</td><td>{money(row.gst)}</td><td>{money(row.total)}</td></tr>)}</tbody></table>;
+    if (view === "suppliers") return <table className="purchase-report-table" style={tableStyle}><thead><tr><th>Supplier</th><th>GRNs</th><th>Quantity</th><th>Purchase total</th></tr></thead><tbody>{supplierRows.map(row => <tr key={row.code}><td>{row.code} · {row.name}</td><td>{row.grns}</td><td>{qty(row.quantity)}</td><td>{money(row.total)}</td></tr>)}</tbody></table>;
+    if (view === "monthly") return <table className="purchase-report-table" style={tableStyle}><thead><tr><th>Month</th><th>GRNs</th><th>Quantity</th><th>Subtotal</th><th>GST</th><th>Purchase total</th></tr></thead><tbody>{monthlyRows.map(row => <tr key={row.month}><td>{row.month}</td><td>{row.grns}</td><td>{qty(row.quantity)}</td><td>{money(row.subtotal)}</td><td>{money(row.gst)}</td><td>{money(row.total)}</td></tr>)}</tbody></table>;
+    return <table className="purchase-report-table" style={tableStyle}><thead><tr><th>GRN</th><th>Supplier invoice</th><th>Date</th><th>Supplier</th><th>Items</th><th>Quantity</th><th>Subtotal</th><th>GST</th><th>Total</th></tr></thead><tbody>{filtered.map(row => <tr key={row.id}><td>{row.purchaseNo}</td><td>{row.invoiceNo || "—"}</td><td>{row.purchaseDate}</td><td>{row.supplierCode} · {row.supplierName}</td><td>{row.items.map(item => `${item.productCode} · ${item.productName}`).join(", ")}</td><td>{qty(row.totalQty)}</td><td>{money(row.totalAmount)}</td><td>{money(row.totalGstAmount)}</td><td>{money(row.totalNetAmount)}</td></tr>)}</tbody></table>;
+  };
 
-    return orderedPurchases.filter((purchase) => {
-      const documentMatch =
-        String(purchase.purchaseNo ?? "")
-          .toLowerCase()
-          .includes(keyword) ||
-        String(purchase.purchaseDate ?? "")
-          .toLowerCase()
-          .includes(keyword) ||
-        String(purchase.invoiceNo ?? "")
-          .toLowerCase()
-          .includes(keyword) ||
-        String(purchase.supplierCode ?? "")
-          .toLowerCase()
-          .includes(keyword) ||
-        String(purchase.supplierName ?? "")
-          .toLowerCase()
-          .includes(keyword) ||
-        String(purchase.remarks ?? "")
-          .toLowerCase()
-          .includes(keyword);
-
-      const itemMatch =
-        purchase.items?.some(
-          (item) =>
-            String(item.productCode ?? "")
-              .toLowerCase()
-              .includes(keyword) ||
-            String(item.productName ?? "")
-              .toLowerCase()
-              .includes(keyword) ||
-            String(item.hsn ?? "")
-              .toLowerCase()
-              .includes(keyword) ||
-            String(item.unit ?? "")
-              .toLowerCase()
-              .includes(keyword)
-        ) ?? false;
-
-      return documentMatch || itemMatch;
-    });
-  }, [purchases, search]);
-
-  const totalGRN = filteredPurchases.length;
-
-  const totalQuantity = filteredPurchases.reduce(
-    (total, purchase) =>
-      total + Number(purchase.totalQty ?? 0),
-    0
-  );
-
-  const totalAmount = filteredPurchases.reduce(
-    (total, purchase) =>
-      total + Number(purchase.totalAmount ?? 0),
-    0
-  );
-
-  const totalGST = filteredPurchases.reduce(
-    (total, purchase) =>
-      total + Number(purchase.totalGstAmount ?? 0),
-    0
-  );
-
-  const totalNetAmount = filteredPurchases.reduce(
-    (total, purchase) =>
-      total + Number(purchase.totalNetAmount ?? 0),
-    0
-  );
-
-  return (
-    <>
-      <style>{printStyles}</style>
-
-      <div
-        className="purchase-report-print"
-        style={containerStyle}
-      >
-        {/* =================================================
-            PRINT HEADER
-        ================================================= */}
-
-        <div className="purchase-print-header">
-          <div className="companyName">
-            UK EXIM ENTERPRISES
-          </div>
-
-          <div className="reportTitle">
-            PURCHASE REPORT
-          </div>
-
-          <div className="reportSubtitle">
-            GRN-wise Purchase Details
-          </div>
-        </div>
-
-        {/* =================================================
-            SCREEN HEADER
-        ================================================= */}
-
-        <div
-          className="purchase-screen-header"
-          style={headerStyle}
-        >
-          <div style={titleGroupStyle}>
-            <h2 style={titleStyle}>
-              📊 Purchase Register
-            </h2>
-
-            <div style={subtitleStyle}>
-              GRN-wise Purchase Details
-            </div>
-          </div>
-
-          <input
-            type="text"
-            placeholder="🔍 Search GRN / Supplier / Product"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={searchStyle}
-          />
-
-          <button
-            type="button"
-            onClick={() => window.print()}
-            style={printButtonStyle}
-          >
-            🖨️ Print Report
-          </button>
-        </div>
-
-        {/* =================================================
-            SUMMARY
-        ================================================= */}
-
-        <div
-          className="purchase-summary"
-          style={summaryGridStyle}
-        >
-          <SummaryCard
-            title="Total GRN"
-            value={String(totalGRN)}
-          />
-
-          <SummaryCard
-            title="Total Quantity"
-            value={totalQuantity.toFixed(2)}
-          />
-
-          <SummaryCard
-            title="Total Amount"
-            value={`₹${totalAmount.toFixed(2)}`}
-          />
-
-          <SummaryCard
-            title="Total GST"
-            value={`₹${totalGST.toFixed(2)}`}
-          />
-
-          <SummaryCard
-            title="Net Purchase"
-            value={`₹${totalNetAmount.toFixed(2)}`}
-            green
-          />
-        </div>
-
-        {/* =================================================
-            PURCHASE TABLE
-        ================================================= */}
-
-        <div
-          className="purchase-table-wrapper"
-          style={tableWrapperStyle}
-        >
-          <table style={tableStyle}>
-            <thead>
-              <tr
-                style={{
-                  background: "#14532d",
-                  color: "#ffffff",
-                }}
-              >
-                <th style={{ ...thStyle, width: "3%" }}>
-                  #
-                </th>
-
-                <th style={{ ...thStyle, width: "7%" }}>
-                  GRN No
-                </th>
-
-                <th style={{ ...thStyle, width: "7%" }}>
-                  Date
-                </th>
-
-                <th style={{ ...thStyle, width: "8%" }}>
-                  Invoice
-                </th>
-
-                <th style={{ ...thStyle, width: "12%" }}>
-                  Supplier
-                </th>
-
-                <th style={{ ...thStyle, width: "15%" }}>
-                  Product
-                </th>
-
-                <th style={{ ...thStyle, width: "6%" }}>
-                  HSN
-                </th>
-
-                <th style={{ ...thStyle, width: "5%" }}>
-                  Unit
-                </th>
-
-                <th
-                  style={{
-                    ...thStyle,
-                    width: "6%",
-                    textAlign: "right",
-                  }}
-                >
-                  Qty
-                </th>
-
-                <th
-                  style={{
-                    ...thStyle,
-                    width: "7%",
-                    textAlign: "right",
-                  }}
-                >
-                  Rate
-                </th>
-
-                <th
-                  style={{
-                    ...thStyle,
-                    width: "8%",
-                    textAlign: "right",
-                  }}
-                >
-                  Amount
-                </th>
-
-                <th
-                  style={{
-                    ...thStyle,
-                    width: "5%",
-                    textAlign: "center",
-                  }}
-                >
-                  GST
-                </th>
-
-                <th
-                  style={{
-                    ...thStyle,
-                    width: "8%",
-                    textAlign: "right",
-                  }}
-                >
-                  GST Amount
-                </th>
-
-                <th
-                  style={{
-                    ...thStyle,
-                    width: "8%",
-                    textAlign: "right",
-                  }}
-                >
-                  Net Amount
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredPurchases.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={14}
-                    style={{
-                      ...tdStyle,
-                      textAlign: "center",
-                      padding: "30px",
-                      color: "#6b7280",
-                      fontWeight: 600,
-                    }}
-                  >
-                    📋 No Purchase Records Found
-                  </td>
-                </tr>
-              ) : (
-                filteredPurchases.map(
-                  (purchase, purchaseIndex) => (
-                    <PurchaseRows
-                      key={purchase.id}
-                      purchase={purchase}
-                      purchaseIndex={purchaseIndex}
-                    />
-                  )
-                )
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* =================================================
-            FOOTER
-        ================================================= */}
-
-        {filteredPurchases.length > 0 && (
-          <div
-            className="purchase-report-footer"
-            style={reportFooterStyle}
-          >
-            <span>
-              Showing{" "}
-              <strong>
-                {filteredPurchases.length}
-              </strong>{" "}
-              of{" "}
-              <strong>
-                {purchases.length}
-              </strong>{" "}
-              GRN records
-            </span>
-
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                style={clearButtonStyle}
-              >
-                ✖ Clear Search
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </>
-  );
-}
-
-/* =========================================================
-   SUMMARY CARD
-========================================================= */
-
-function SummaryCard({
-  title,
-  value,
-  green = false,
-}: {
-  title: string;
-  value: string;
-  green?: boolean;
-}) {
-  return (
-    <div
-      style={{
-        ...summaryCardStyle,
-        background: green
-          ? "#f0fdf4"
-          : "#f8fafc",
-        borderColor: green
-          ? "#bbf7d0"
-          : "#d1d5db",
-      }}
-    >
-      <div style={summaryLabelStyle}>
-        {title}
-      </div>
-
-      <div
-        style={{
-          ...summaryValueStyle,
-          color: green
-            ? "#14532d"
-            : "#111827",
-        }}
-      >
-        {value}
-      </div>
+  const views: Array<[View, string]> = [["register", "Purchase Register"], ["products", "Product-wise Purchases"], ["suppliers", "Supplier-wise Purchases"], ["monthly", "Monthly Purchase"]];
+  return <section className="purchase-report" style={{ maxWidth: 1540, margin: "0 auto", padding: 14, color: "#142c3d" }}>
+    <header style={{ display: "flex", justifyContent: "space-between", alignItems: "start", flexWrap: "wrap", gap: 10 }}><div><h2 style={{ margin: 0, color: "#14532d" }}>📊 Domestic Purchase Reports</h2><p style={{ margin: "5px 0 12px", color: "#64748b", fontSize: 13 }}>Authenticated company-scoped PostgreSQL Purchase and GRN records</p></div><div className="purchase-report-no-print" style={{ display: "flex", gap: 8 }}><button type="button" style={control} onClick={() => window.print()}>Print</button><button type="button" style={control} onClick={() => downloadCsv(`uk-exim-purchases-${view}.csv`, csvRows)} disabled={!csvRows.length}>Export CSV</button></div></header>
+    <nav className="purchase-report-no-print" aria-label="Purchase reports" style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>{views.map(([key, label]) => <button key={key} type="button" aria-pressed={view === key} onClick={() => setView(key)} style={{ ...control, background: view === key ? "#14532d" : "white", color: view === key ? "white" : "#334155", borderColor: view === key ? "#15803d" : "#dbe3e8", fontWeight: 650 }}>{label}</button>)}</nav>
+    <div className="purchase-report-no-print" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 8, background: "#f8fafc", border: "1px solid #e2e8f0", padding: 10, borderRadius: 9, marginBottom: 12 }}>
+      <label>From<input type="date" value={from} onChange={event => setFrom(event.target.value)} style={{ display: "block", width: "100%", boxSizing: "border-box", padding: 7 }} /></label>
+      <label>To<input type="date" value={to} onChange={event => setTo(event.target.value)} style={{ display: "block", width: "100%", boxSizing: "border-box", padding: 7 }} /></label>
+      <label>Supplier<select value={supplierCode} onChange={event => setSupplierCode(event.target.value)} style={{ display: "block", width: "100%", padding: 7 }}><option value="">All suppliers</option>{suppliers.map(([code, name]) => <option key={code} value={code}>{code} · {name}</option>)}</select></label>
+      <label>Product<select value={productCode} onChange={event => setProductCode(event.target.value)} style={{ display: "block", width: "100%", padding: 7 }}><option value="">All products</option>{products.map(([code, name]) => <option key={code} value={code}>{code} · {name}</option>)}</select></label>
+      <label>Search<input value={search} onChange={event => setSearch(event.target.value)} placeholder="GRN, invoice, supplier, product, HSN" style={{ display: "block", width: "100%", boxSizing: "border-box", padding: 7 }} /></label>
+      <button type="button" style={{ ...control, alignSelf: "end" }} onClick={clearFilters}>Clear filters</button>
     </div>
-  );
+    {error && <div role="alert" style={{ padding: 10, borderRadius: 7, background: "#fef2f2", color: "#991b1b", marginBottom: 10 }}>{error} <button type="button" onClick={() => void load()}>Retry</button></div>}
+    {state === "loading" && <p role="status">Loading PostgreSQL Purchase Register…</p>}
+    {state === "error" && <p role="alert">Purchase report unavailable; no LocalStorage fallback is used.</p>}
+    {state === "empty" && <p role="status">No PostgreSQL Purchase records are available.</p>}
+    {state === "ready" && <div className="purchase-report-summary" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 8, marginBottom: 12 }}>{[["GRNs", filtered.length], ["Quantity", qty(totalQty)], ["Subtotal", money(subtotal)], ["GST", money(gst)], ["Purchase total", money(total)]].map(([label, value]) => <div key={String(label)} style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderTop: "3px solid #15803d", borderRadius: 8, background: "#fff" }}><div style={{ color: "#64748b", fontSize: 12 }}>{label}</div><strong style={{ display: "block", marginTop: 3, overflowWrap: "anywhere" }}>{value}</strong></div>)}</div>}
+    {state === "ready" && <div className="purchase-report-table-wrap" style={{ overflowX: "auto", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 9 }}>{table()}{filtered.length === 0 && <p role="status" style={{ padding: 14 }}>No purchases match the selected filters.</p>}</div>}
+    <style>{`.purchase-report th,.purchase-report td{padding:8px 9px;text-align:left;border-bottom:1px solid #e7edf0;vertical-align:top}.purchase-report th{background:#f1f5f9;color:#334155;position:sticky;top:0}.purchase-report tr:last-child td{border-bottom:0}@media print{body *{visibility:hidden!important}.purchase-report,.purchase-report *{visibility:visible!important}.purchase-report{position:absolute;inset:0;width:100%;max-width:none!important;padding:0!important}.purchase-report-no-print{display:none!important}.purchase-report-table-wrap{overflow:visible!important;border:0!important}.purchase-report-table{min-width:0!important;font-size:8px!important}.purchase-report th,.purchase-report td{padding:4px!important}.purchase-report-summary{grid-template-columns:repeat(5,1fr)!important}}`}</style>
+  </section>;
 }
-
-/* =========================================================
-   PURCHASE ROWS
-========================================================= */
-
-function PurchaseRows({
-  purchase,
-  purchaseIndex,
-}: {
-  purchase: Purchase;
-  purchaseIndex: number;
-}) {
-  const items = purchase.items ?? [];
-
-  /* =======================================================
-     EMPTY ITEM PROTECTION
-  ======================================================= */
-
-  if (items.length === 0) {
-    return (
-      <tr>
-        <td style={tdCenterStyle}>
-          {purchaseIndex + 1}
-        </td>
-
-        <td
-          style={{
-            ...tdStyle,
-            fontWeight: 700,
-            color: "#14532d",
-          }}
-        >
-          {purchase.purchaseNo}
-        </td>
-
-        <td style={tdStyle}>
-          {purchase.purchaseDate}
-        </td>
-
-        <td style={tdStyle}>
-          {purchase.invoiceNo || "-"}
-        </td>
-
-        <td
-          style={{
-            ...tdStyle,
-            fontWeight: 600,
-          }}
-        >
-          {purchase.supplierName}
-        </td>
-
-        <td
-          colSpan={9}
-          style={{
-            ...tdStyle,
-            textAlign: "center",
-            color: "#6b7280",
-          }}
-        >
-          No Product Items
-        </td>
-      </tr>
-    );
-  }
-
-  return (
-    <>
-      {items.map((item, itemIndex) => (
-        <tr
-          key={`${purchase.id}-${itemIndex}`}
-          style={{
-            background:
-              itemIndex % 2 === 0
-                ? "#ffffff"
-                : "#f8fafc",
-          }}
-        >
-          {/* # */}
-
-          <td style={tdCenterStyle}>
-            {itemIndex === 0
-              ? purchaseIndex + 1
-              : ""}
-          </td>
-
-          {/* GRN */}
-
-          <td
-            style={{
-              ...tdStyle,
-              fontWeight: 700,
-              color: "#14532d",
-            }}
-          >
-            {itemIndex === 0
-              ? purchase.purchaseNo
-              : ""}
-          </td>
-
-          {/* DATE */}
-
-          <td style={tdStyle}>
-            {itemIndex === 0
-              ? purchase.purchaseDate
-              : ""}
-          </td>
-
-          {/* INVOICE */}
-
-          <td style={tdStyle}>
-            {itemIndex === 0
-              ? purchase.invoiceNo || "-"
-              : ""}
-          </td>
-
-          {/* SUPPLIER */}
-
-          <td
-            style={{
-              ...tdStyle,
-              fontWeight: 600,
-            }}
-          >
-            {itemIndex === 0
-              ? purchase.supplierName
-              : ""}
-          </td>
-
-          {/* PRODUCT */}
-
-          <td
-            style={{
-              ...tdStyle,
-              fontWeight: 600,
-              whiteSpace: "normal",
-              wordBreak: "break-word",
-              lineHeight: 1.2,
-            }}
-          >
-            {item.productName}
-          </td>
-
-          {/* HSN */}
-
-          <td style={tdStyle}>
-            {item.hsn}
-          </td>
-
-          {/* UNIT */}
-
-          <td style={tdStyle}>
-            {item.unit}
-          </td>
-
-          {/* QTY */}
-
-          <td
-            style={{
-              ...tdStyle,
-              textAlign: "right",
-            }}
-          >
-            {Number(item.qty ?? 0).toFixed(2)}
-          </td>
-
-          {/* RATE */}
-
-          <td
-            style={{
-              ...tdStyle,
-              textAlign: "right",
-            }}
-          >
-            ₹{Number(item.rate ?? 0).toFixed(2)}
-          </td>
-
-          {/* AMOUNT */}
-
-          <td
-            style={{
-              ...tdStyle,
-              textAlign: "right",
-            }}
-          >
-            ₹{Number(item.amount ?? 0).toFixed(2)}
-          </td>
-
-          {/* GST */}
-
-          <td
-            style={{
-              ...tdStyle,
-              textAlign: "center",
-            }}
-          >
-            {Number(item.gst ?? 0).toFixed(2)}%
-          </td>
-
-          {/* GST AMOUNT */}
-
-          <td
-            style={{
-              ...tdStyle,
-              textAlign: "right",
-            }}
-          >
-            ₹{Number(item.gstAmount ?? 0).toFixed(2)}
-          </td>
-
-          {/* NET AMOUNT */}
-
-          <td
-            style={{
-              ...tdStyle,
-              textAlign: "right",
-              fontWeight: 700,
-              color: "#14532d",
-            }}
-          >
-            ₹{Number(item.netAmount ?? 0).toFixed(2)}
-          </td>
-        </tr>
-      ))}
-
-      {/* =================================================
-          GRN TOTAL
-      ================================================= */}
-
-      <tr
-        style={{
-          background: "#ecfdf5",
-          fontWeight: 700,
-        }}
-      >
-        <td
-          colSpan={8}
-          style={{
-            ...tdStyle,
-            textAlign: "right",
-            color: "#14532d",
-            fontWeight: 800,
-          }}
-        >
-          GRN TOTAL
-        </td>
-
-        <td
-          style={{
-            ...tdStyle,
-            textAlign: "right",
-            color: "#14532d",
-          }}
-        >
-          {Number(
-            purchase.totalQty ?? 0
-          ).toFixed(2)}
-        </td>
-
-        <td
-          style={{
-            ...tdStyle,
-            textAlign: "right",
-            color: "#14532d",
-          }}
-        >
-          -
-        </td>
-
-        <td
-          style={{
-            ...tdStyle,
-            textAlign: "right",
-            color: "#14532d",
-          }}
-        >
-          ₹
-          {Number(
-            purchase.totalAmount ?? 0
-          ).toFixed(2)}
-        </td>
-
-        <td
-          style={{
-            ...tdStyle,
-            textAlign: "center",
-            color: "#14532d",
-          }}
-        >
-          -
-        </td>
-
-        <td
-          style={{
-            ...tdStyle,
-            textAlign: "right",
-            color: "#14532d",
-          }}
-        >
-          ₹
-          {Number(
-            purchase.totalGstAmount ?? 0
-          ).toFixed(2)}
-        </td>
-
-        <td
-          style={{
-            ...tdStyle,
-            textAlign: "right",
-            fontWeight: 800,
-            color: "#14532d",
-          }}
-        >
-          ₹
-          {Number(
-            purchase.totalNetAmount ?? 0
-          ).toFixed(2)}
-        </td>
-      </tr>
-    </>
-  );
-}
-
-/* =========================================================
-   PRINT CSS
-========================================================= */
-
-const printStyles = `
-  .purchase-print-header {
-    display: none;
-  }
-
-  @media print {
-
-    @page {
-      size: A4 landscape;
-      margin: 8mm;
-    }
-
-    html,
-    body {
-      margin: 0 !important;
-      padding: 0 !important;
-      width: 100% !important;
-      background: #ffffff !important;
-    }
-
-    body * {
-      visibility: hidden !important;
-    }
-
-    .purchase-report-print,
-    .purchase-report-print * {
-      visibility: visible !important;
-    }
-
-    .purchase-report-print {
-      position: absolute !important;
-      left: 0 !important;
-      top: 0 !important;
-      width: 100% !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      background: #ffffff !important;
-      border: none !important;
-      border-radius: 0 !important;
-      box-shadow: none !important;
-      overflow: visible !important;
-    }
-
-    .purchase-screen-header {
-      display: none !important;
-    }
-
-    .purchase-print-header {
-      display: block !important;
-      text-align: center !important;
-      margin-bottom: 7px !important;
-      padding-bottom: 5px !important;
-      border-bottom: 2px solid #14532d !important;
-    }
-
-    .companyName {
-      font-size: 17px !important;
-      font-weight: 800 !important;
-      color: #111827 !important;
-      letter-spacing: 0.5px !important;
-    }
-
-    .reportTitle {
-      margin-top: 2px !important;
-      font-size: 13px !important;
-      font-weight: 800 !important;
-      color: #14532d !important;
-      letter-spacing: 0.5px !important;
-    }
-
-    .reportSubtitle {
-      margin-top: 2px !important;
-      font-size: 8px !important;
-      color: #6b7280 !important;
-    }
-
-    .purchase-summary {
-      margin-bottom: 7px !important;
-    }
-
-    .purchase-summary > div {
-      min-height: 42px !important;
-      padding: 5px 7px !important;
-      border-radius: 3px !important;
-    }
-
-    .purchase-summary div {
-      font-size: 8px !important;
-    }
-
-    .purchase-summary div div {
-      font-size: 8px !important;
-    }
-
-    .purchase-table-wrapper {
-      overflow: visible !important;
-      border: 1px solid #9ca3af !important;
-      border-radius: 0 !important;
-    }
-
-    .purchase-report-print table {
-      width: 100% !important;
-      min-width: 100% !important;
-      table-layout: fixed !important;
-      border-collapse: collapse !important;
-      font-size: 7px !important;
-    }
-
-    .purchase-report-print th {
-      padding: 4px 3px !important;
-      font-size: 7px !important;
-      line-height: 1.1 !important;
-    }
-
-    .purchase-report-print td {
-      padding: 3px !important;
-      font-size: 7px !important;
-      line-height: 1.15 !important;
-    }
-
-    .purchase-report-print tr {
-      break-inside: avoid !important;
-      page-break-inside: avoid !important;
-    }
-
-    .purchase-report-print thead {
-      display: table-header-group !important;
-    }
-
-    .purchase-report-footer {
-      margin-top: 6px !important;
-      padding: 4px 6px !important;
-      background: #ffffff !important;
-      border: 1px solid #d1d5db !important;
-      border-radius: 0 !important;
-      font-size: 7px !important;
-    }
-  }
-`;
-
-/* =========================================================
-   CONTAINER
-========================================================= */
-
-const containerStyle: CSSProperties = {
-  background: "#ffffff",
-  padding: "14px",
-  borderRadius: "10px",
-  border: "1px solid #d1d5db",
-  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-  width: "100%",
-  boxSizing: "border-box",
-  overflow: "hidden",
-};
-
-/* =========================================================
-   HEADER
-========================================================= */
-
-const headerStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: "12px",
-  marginBottom: "12px",
-  width: "100%",
-  flexWrap: "wrap",
-};
-
-const titleGroupStyle: CSSProperties = {
-  minWidth: 0,
-  flex: "1 1 auto",
-};
-
-const titleStyle: CSSProperties = {
-  margin: 0,
-  color: "#14532d",
-  fontSize: "18px",
-  fontWeight: 700,
-  lineHeight: 1.2,
-};
-
-const subtitleStyle: CSSProperties = {
-  marginTop: "4px",
-  color: "#6b7280",
-  fontSize: "11px",
-};
-
-const searchStyle: CSSProperties = {
-  width: "300px",
-  maxWidth: "40%",
-  height: "34px",
-  padding: "0 10px",
-  border: "1px solid #d1d5db",
-  borderRadius: "6px",
-  fontSize: "12px",
-  outline: "none",
-  boxSizing: "border-box",
-  flexShrink: 0,
-};
-
-const printButtonStyle: CSSProperties = {
-  height: "34px",
-  padding: "0 14px",
-  background: "#14532d",
-  color: "#ffffff",
-  border: "none",
-  borderRadius: "6px",
-  cursor: "pointer",
-  fontSize: "12px",
-  fontWeight: 700,
-  whiteSpace: "nowrap",
-};
-
-/* =========================================================
-   SUMMARY
-========================================================= */
-
-const summaryGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(5, minmax(0, 1fr))",
-  gap: "8px",
-  marginBottom: "12px",
-  width: "100%",
-};
-
-const summaryCardStyle: CSSProperties = {
-  background: "#f8fafc",
-  border: "1px solid #d1d5db",
-  borderRadius: "7px",
-  padding: "8px 10px",
-  minHeight: "58px",
-  boxSizing: "border-box",
-  minWidth: 0,
-};
-
-const summaryLabelStyle: CSSProperties = {
-  color: "#6b7280",
-  fontSize: "10px",
-  fontWeight: 600,
-  marginBottom: "5px",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-};
-
-const summaryValueStyle: CSSProperties = {
-  color: "#111827",
-  fontSize: "15px",
-  fontWeight: 800,
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-};
-
-/* =========================================================
-   TABLE
-========================================================= */
-
-const tableWrapperStyle: CSSProperties = {
-  width: "100%",
-  overflowX: "hidden",
-  overflowY: "visible",
-  border: "1px solid #d1d5db",
-  borderRadius: "7px",
-  boxSizing: "border-box",
-};
-
-const tableStyle: CSSProperties = {
-  width: "100%",
-  minWidth: "100%",
-  tableLayout: "fixed",
-  borderCollapse: "collapse",
-  fontSize: "10px",
-};
-
-const thStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
-  padding: "6px 4px",
-  textAlign: "left",
-  whiteSpace: "normal",
-  wordBreak: "break-word",
-  lineHeight: 1.15,
-  fontSize: "9px",
-  fontWeight: 700,
-  verticalAlign: "middle",
-};
-
-const tdStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
-  padding: "5px 4px",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  fontSize: "9px",
-  lineHeight: 1.2,
-  verticalAlign: "middle",
-  boxSizing: "border-box",
-};
-
-const tdCenterStyle: CSSProperties = {
-  ...tdStyle,
-  textAlign: "center",
-};
-
-/* =========================================================
-   FOOTER
-========================================================= */
-
-const reportFooterStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: "10px",
-  marginTop: "10px",
-  padding: "7px 10px",
-  background: "#f0fdf4",
-  border: "1px solid #bbf7d0",
-  borderRadius: "6px",
-  color: "#166534",
-  fontSize: "10px",
-  fontWeight: 600,
-};
-
-const clearButtonStyle: CSSProperties = {
-  border: "none",
-  background: "transparent",
-  color: "#2563eb",
-  fontSize: "10px",
-  fontWeight: 700,
-  cursor: "pointer",
-  padding: "2px 4px",
-};
